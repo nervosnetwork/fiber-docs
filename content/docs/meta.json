@@ -11,8 +11,8 @@
     "quick-start/simple-game",
     "---Tech Explanation---",
     "tech-explanation/payment-channel",
-    "tech-explanation/high-level",
     "tech-explanation/light-paper",
+    "tech-explanation/high-level",
     "tech-explanation/invoice-protocol",
     "tech-explanation/p2p-message"
     
