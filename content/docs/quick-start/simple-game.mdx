@@ -1,0 +1,856 @@
+---
+title: "Build a Game with Fiber"
+description: "Build a simple game with Fiber micropayments"
+---
+
+## Overview
+
+This tutorial will guide you through creating a simple [Phaser.js](https://phaser.io/) game that integrates with the Fiber Testnet. You'll learn how to implement real-time token transfers within a game environment, enabling instant micro-payments based on in-game actions. This demonstrates how traditional game mechanics can be seamlessly enhanced with blockchain functionality.
+
+<img className="max-w-[600px] mx-auto" src="/imgs/docs/simple-game/game-cover.png" alt="Game Cover" />
+
+The full code of the game can be found in the [github repo](https://github.com/nervosnetwork/fiber-website/tree/main/example/simple-game).
+
+## Prerequisites
+
+Before getting started, make sure you have:
+
+- [Git](https://git-scm.com/), [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/)
+- Basic understanding of TypeScript and Fiber network
+- Two running Fiber nodes (see [Running a Node](/docs/quick-start/run-a-node))
+- An open payment channel between your two nodes (see [Basic Transfer](/docs/quick-start/basic-transfer))
+- Some [CKB Testnet tokens](https://faucet.nervos.org/) in your payment channel
+
+## Project Setup
+
+### 1. Prepare two Fiber Nodes
+
+You need to setup and running two fiber Testnet nodes locally, and make sure they have at least 500 CKB liquidity in their payment channels.
+It is highly recommended to follow the [Run a Fiber Node](/docs/quick-start/run-a-node) and [Basic Transfer Example](/docs/quick-start/basic-transfer) guides to set up your nodes first.
+
+In this tutorial, we assume the info for the two nodes are:
+
+```sh
+#### node1
+
+- peerId: "QmdW4WGRUfqQ8hx92Uaufx4n3TXrJUoDP666BQwbqiDrnv",
+- RPC URL: "http://localhost:8227"
+- address:
+    "/ip4/127.0.0.1/tcp/8228/p2p/QmdW4WGRUfqQ8hx92Uaufx4n3TXrJUoDP666BQwbqiDrnv",
+
+#### node2
+
+- peerId: "QmcFpUnjRvMyqbFBTn94wwF8LZodvPWpK39Wg9pYr2i4TQ",
+- RPC URL: "http://localhost:8237"
+- address:
+    "/ip4/127.0.0.1/tcp/8238/p2p/QmcFpUnjRvMyqbFBTn94wwF8LZodvPWpK39Wg9pYr2i4TQ",
+```
+
+You can change the info to your own nodes in the following steps.
+
+### 2. Create a New Phaser.js Project
+
+Since the game design is not the focus of this tutorial,
+we'll simply take a Phaser.js demo project and integrate the Fiber payment.
+The demo project can be found in the [github repo](https://github.com/RetricSu/phaser-ts-game-example).
+It is a simple game with Typescript support that lets you shoot the enemy ship and dodge its attacks to score as many points as possible in a short amount of time.
+
+```bash
+# git clone the repo
+git clone https://github.com/RetricSu/phaser-ts-game-example.git
+cd phaser-ts-game-example
+# install dependencies
+pnpm install
+```
+
+### 3. Set Up Vite Configuration
+
+Next, let's edit the `vite.config.ts` file for bundling our two fiber local nodes since the RPC of nodes is not cors-enabled.
+
+```typescript
+import { defineConfig } from "vite";
+import tailwindcss from "@tailwindcss/vite";
+
+export default defineConfig({
+    base: "./",
+    plugins: [tailwindcss()],
+    server: {
+        proxy: {
+            "/node1-api": {
+                target: "http://localhost:8227",
+                changeOrigin: true,
+            },
+            "/node2-api": {
+                target: "http://localhost:8237",
+                changeOrigin: true,
+            },
+        },
+    },
+});
+```
+
+The proxy configuration redirects API calls to your local Fiber nodes. Adjust the ports to match your node configuration.
+
+## Implementing the Fiber Integration
+
+### 1. Create the Fiber RPC Class
+
+Most interaction with the Fiber network is done through the RPC API. So let's create a wrapper for the Fiber RPC API in our typescript project.
+
+We'll use `RequestorJsonRpc` from `@ckb-ccc/core` to help us create the RPC client.
+
+First, install the dependencies:
+
+```bash
+pnpm add @ckb-ccc/core
+```
+
+Then we'll create a `fiber` folder to host all the related code of fiber network in the `src` folder.
+
+Create a file at `src/fiber/rpc.ts` and add the `FiberRPC` class:
+
+<details>
+<summary>View full code of src/fiber/rpc.ts</summary>
+
+```typescript
+import { Hex, RequestorJsonRpc } from "@ckb-ccc/core";
+// Interface definitions for Fiber RPC methods
+interface ConnectPeerParams {
+  address: string;
+}
+
+interface ListChannelsParams {
+  peer_id: string;
+}
+
+interface NewInvoiceParams {
+  amount: Hex;
+  currency: string;
+  description: string;
+  expiry: string;
+  final_cltv: string;
+  payment_preimage: string;
+  hash_algorithm?: string;
+}
+
+interface SendPaymentParams {
+  invoice: string;
+}
+
+export class FiberRPC {
+  constructor(private readonly baseUrl: string) {}
+
+  /**
+   * Connect to a peer in the Fiber network
+   */
+  async connectPeer(params: ConnectPeerParams) {
+    return this.call("connect_peer", [params]);
+  }
+
+  /**
+   * List channels for a specific peer
+   */
+  async listChannels(params: ListChannelsParams) {
+    return this.call("list_channels", [params]);
+  }
+
+  /**
+   * Create a new payment invoice
+   */
+  async newInvoice(params: NewInvoiceParams) {
+    return this.call("new_invoice", [params]);
+  }
+
+  /**
+   * Send a payment using an invoice
+   */
+  async sendPayment(params: SendPaymentParams) {
+    return this.call("send_payment", [params]);
+  }
+
+  /**
+   * Make a generic RPC call to the Fiber node
+   */
+  private async call(method: string, params: any[]): Promise<any> {
+    try {
+      const response = await fetch(this.baseUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: "1",
+          jsonrpc: "2.0",
+          method,
+          params,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+      }
+
+      const result = await response.json();
+      if (result.error) {
+        throw new Error(`RPC error: ${JSON.stringify(result.error)}`);
+      }
+
+      return result.result;
+    } catch (error) {
+      console.error(`Error calling ${method}:`, error);
+      throw error;
+    }
+  }
+}
+```
+</details>
+
+Note: Take [Fiber RPC Documentation](https://github.com/nervosnetwork/fiber/blob/main/src/rpc/README.md) as reference to implement the `FiberRPC` class.
+
+### 2. Create the FiberNode Class
+
+Next, create a helper class to manage Fiber node operations at `src/fiber/node.ts`:
+
+<details>
+<summary>View full code of src/fiber/node.ts</summary>
+
+```typescript
+import { Hex } from "@ckb-ccc/core";
+import { FiberRPC } from "./rpc";
+
+export class FiberNode {
+    public readonly rpc: FiberRPC;
+
+    constructor(
+        public readonly url: string,
+        public readonly peerId: string,
+        public readonly address: string,
+    ) {
+        this.rpc = new FiberRPC(url);
+    }
+
+    private generateRandomPaymentImage() {
+        // use crypto to generate a 32 byte random hash
+        const paymentHash = crypto.getRandomValues(new Uint8Array(32));
+        return (
+            "0x" +
+            Array.from(paymentHash)
+                .map((b) => b.toString(16).padStart(2, "0"))
+                .join("")
+        );
+    }
+
+    async createCKBInvoice(amount: Hex, description: string) {
+        const paymentImage = this.generateRandomPaymentImage();
+        return await this.rpc.newInvoice({
+            amount,
+            currency: "Fibt",
+            description,
+            expiry: "0xe10",
+            final_cltv: "0x28",
+            payment_preimage: paymentImage,
+        });
+    }
+
+    async sendPayment(invoice: string) {
+        return await this.rpc.sendPayment({
+            invoice,
+        });
+    }
+}
+```
+
+</details>
+
+### 3. Create Fiber Integration Main Module
+
+Now, create the main Fiber integration file at `src/fiber/index.ts`:
+
+<details>
+<summary>View full code of src/fiber/index.ts</summary>
+
+```typescript
+import { Hex } from "@ckb-ccc/core";
+import { FiberNode } from "./node";
+
+export const amountPerPoint = 1 * 10 ** 8; // 1 CKB per point
+
+const node1 = {
+    peerId: "QmdW4WGRUfqQ8hx92Uaufx4n3TXrJUoDP666BQwbqiDrnv",
+    address:
+        "/ip4/127.0.0.1/tcp/8228/p2p/QmdW4WGRUfqQ8hx92Uaufx4n3TXrJUoDP666BQwbqiDrnv",
+    url: "/node1-api",
+};
+
+const node2 = {
+    peerId: "QmcFpUnjRvMyqbFBTn94wwF8LZodvPWpK39Wg9pYr2i4TQ",
+    address:
+        "/ip4/127.0.0.1/tcp/8238/p2p/QmcFpUnjRvMyqbFBTn94wwF8LZodvPWpK39Wg9pYr2i4TQ",
+    url: "/node2-api",
+};
+
+export async function prepareNodes() {
+    const bossNode = new FiberNode(node1.url, node1.peerId, node1.address);
+    const playerNode = new FiberNode(node2.url, node2.peerId, node2.address);
+    console.log("bossNode", bossNode);
+    console.log("playerNode", playerNode);
+
+    await bossNode.rpc.connectPeer({
+        address: playerNode.address,
+    });
+
+    const myChannels = await bossNode.rpc.listChannels({
+        peer_id: playerNode.peerId,
+    });
+    const activeChannel = myChannels.channels.filter(
+        (channel) => channel.state.state_name === "CHANNEL_READY",
+    );
+    console.log("activeChannel", activeChannel);
+    return { bossNode, playerNode };
+}
+
+export async function payPlayerPoints(
+    bossNode: FiberNode,
+    playerNode: FiberNode,
+    points: number,
+) {
+    const amount: Hex = `0x${(amountPerPoint * points).toString(16)}`;
+
+    const invoice = await playerNode.createCKBInvoice(
+        amount,
+        "player hit the boss!",
+    );
+    const result = await bossNode.sendPayment(invoice.invoice_address);
+    console.log(`boss pay player ${points} CKB`);
+    console.log("invoice", invoice);
+    console.log("payment result", result);
+}
+
+export async function payBossPoints(
+    bossNode: FiberNode,
+    playerNode: FiberNode,
+    points: number,
+) {
+    const amount: Hex = `0x${(amountPerPoint * points).toString(16)}`;
+    const invoice = await bossNode.createCKBInvoice(
+        amount,
+        "boss hit the player!",
+    );
+    const result = await playerNode.sendPayment(invoice.invoice_address);
+    console.log(`player pay boss ${points} CKB`);
+    console.log("invoice", invoice);
+    console.log("payment result", result);
+}
+
+```
+
+</details>
+
+Pay attention to the `payPlayerPoints` and `payBossPoints` functions — they handle CKB payments between players when the player hits the enemy ship or when the boss hits the player.
+
+We defined that payment rate as 1 CKB per point in `amountPerPoint`, meaning that if the player score 10 points, the boss will pay 10 CKB to the player and vice versa. All payments are made in real-time through the Fiber network.
+
+## Integrating Micro-payment with Game Mechanics
+
+Now that the Fiber integration is set up, let's integrate it with our Phaser.js game.
+
+### 1. Edit the Main Scene
+
+The main file to edit is `src/scenes/MainScene.ts`. We'll start by adding some properties in the `MainScene` class to host the Fiber nodes and track the score.
+
+```typescript
++ import { prepareNodes, payPlayerPoints, payBossPoints } from "../fiber";
+
+  export class MainScene extends Scene {
+      player: Player | null = null;
+      enemy_blue: BlueEnemy | null = null;
+      cursors!: Types.Input.Keyboard.CursorKeys;
++     bossNode: any = null;
++     playerNode: any = null;
++     bossPoints: number = 0;
++     playerPoints: number = 0;
+```
+
+Next, we need to initialize the Fiber nodes and the score in the `init` function. Note that `init` needs to be changed to an async function so that we can await for the Fiber nodes initialization.
+
+```typescript
+async init(): Promise<void> {
+        this.cameras.main.fadeIn(1000, 0, 0, 0);
+        this.scene.launch("MenuScene");
+
+        // Reset points
+        this.points = 0;
+        this.bossPoints = 0;
+        this.playerPoints = 0;
+        this.game_over_timeout = 20;
+
+        // Initialize Fiber nodes
+        try {
+            const { bossNode, playerNode } = await prepareNodes();
+            this.bossNode = bossNode;
+            this.playerNode = playerNode;
+            console.log("Fiber nodes initialized successfully");
+        } catch (error) {
+            console.error("Failed to initialize Fiber nodes:", error);
+        }
+    }
+```
+
+Next, let's look at the `setupCollisions` function. We need to pay CKB to the player when the player hits the enemy ship, and to the boss when the boss hits the player.
+
+```typescript
+setupCollisions(): void {
+  // ...existing code...
+
+  // Overlap enemy with bullets
+  // ...existing code...
+  typedBullet.destroyBullet();
+  this.enemy_blue.damage(this.player.x, this.player.y);
+  this.points += 10;
+  this.playerPoints += 10;
+
+  // Call payPlayerPoints when player hits enemy
+  if (this.bossNode && this.playerNode) {
+      try {
+          await payPlayerPoints(
+              this.bossNode,
+              this.playerNode,
+              10,
+          );
+      } catch (error) {
+          console.error("Failed to score point:", error);
+      }
+  }
+
+  // existing code...
+
+  // Overlap player with enemy bullets
+  // existing code...
+  this.points -= 10;
+  this.bossPoints += 10;
+
+  // Call payBossPoints when enemy hits player
+  if (this.bossNode && this.playerNode) {
+      try {
+          await payBossPoints(
+              this.bossNode,
+              this.playerNode,
+              10,
+          );
+      } catch (error) {
+          console.error(
+              "Failed to process lose point:",
+              error,
+          );
+      }
+  }
+```
+
+In case you need the full code of the `MainScene`:
+
+<details>
+<summary>View full code of src/scenes/MainScene.ts</summary>
+
+```typescript
+import { Scene, Input, Types } from "phaser";
+import { Player } from "../gameobjects/Player";
+import { BlueEnemy } from "../gameobjects/BlueEnemy";
+import { Bullet } from "../gameobjects/Bullet";
+import { prepareNodes, payPlayerPoints, payBossPoints } from "../fiber";
+
+export class MainScene extends Scene {
+    player: Player | null = null;
+    enemy_blue: BlueEnemy | null = null;
+    cursors!: Types.Input.Keyboard.CursorKeys;
+    bossNode: any = null;
+    playerNode: any = null;
+    bossPoints: number = 0;
+    playerPoints: number = 0;
+
+    points: number = 0;
+    game_over_timeout: number = 20;
+
+    constructor() {
+        super("MainScene");
+    }
+
+    async init(): Promise<void> {
+        this.cameras.main.fadeIn(1000, 0, 0, 0);
+        this.scene.launch("MenuScene");
+
+        // Reset points
+        this.points = 0;
+        this.bossPoints = 0;
+        this.playerPoints = 0;
+        this.game_over_timeout = 20;
+
+        // Initialize Fiber nodes
+        try {
+            const { bossNode, playerNode } = await prepareNodes();
+            this.bossNode = bossNode;
+            this.playerNode = playerNode;
+            console.log("Fiber nodes initialized successfully");
+        } catch (error) {
+            console.error("Failed to initialize Fiber nodes:", error);
+        }
+    }
+
+    create(): void {
+        this.add.image(0, 0, "background").setOrigin(0, 0);
+        this.add.image(0, this.scale.height, "floor").setOrigin(0, 1);
+
+        // Player
+        this.player = new Player({ scene: this });
+
+        // Enemy
+        this.enemy_blue = new BlueEnemy(this);
+
+        // Cursor keys
+        this.setupControls();
+
+        // Setup collisions
+        this.setupCollisions();
+
+        // This event comes from MenuScene
+        this.game.events.on("start-game", () => {
+            this.scene.stop("MenuScene");
+            this.scene.launch("HudScene", {
+                remaining_time: this.game_over_timeout,
+            });
+
+            if (this.player) {
+                this.player.start();
+            }
+
+            if (this.enemy_blue) {
+                this.enemy_blue.start();
+            }
+
+            // Game Over timeout
+            this.time.addEvent({
+                delay: 1000,
+                loop: true,
+                callback: () => {
+                    if (this.game_over_timeout === 0) {
+                        // You need remove the event listener to avoid duplicate events.
+                        this.game.events.removeListener("start-game");
+                        // It is necessary to stop the scenes launched in parallel.
+                        this.scene.stop("HudScene");
+                        this.scene.start("GameOverScene", {
+                            points: this.points,
+                            playerPoints: this.playerPoints,
+                            bossPoints: this.bossPoints,
+                        });
+                    } else {
+                        this.game_over_timeout--;
+                        const hudScene = this.scene.get("HudScene");
+                        if (
+                            hudScene &&
+                            typeof (hudScene as any).update_timeout ===
+                                "function"
+                        ) {
+                            (hudScene as any).update_timeout(
+                                this.game_over_timeout,
+                            );
+                        }
+                    }
+                },
+            });
+        });
+    }
+
+    setupControls(): void {
+        this.cursors = this.input.keyboard.createCursorKeys();
+
+        // @ts-ignore - We know this.cursors is not null at this point
+        this.cursors.space.on("down", () => {
+            if (this.player) {
+                this.player.fire();
+            }
+        });
+
+        this.input.on("pointerdown", (pointer: Input.Pointer) => {
+            if (this.player) {
+                this.player.fire(pointer.x, pointer.y);
+            }
+        });
+    }
+
+    setupCollisions(): void {
+        // Overlap enemy with bullets
+        if (this.player && this.enemy_blue) {
+            this.physics.add.overlap(
+                this.player.bullets,
+                this.enemy_blue,
+                async (_enemy, bullet) => {
+                    const typedBullet = bullet as unknown as Bullet;
+                    if (
+                        typedBullet.destroyBullet &&
+                        this.player &&
+                        this.enemy_blue
+                    ) {
+                        typedBullet.destroyBullet();
+                        this.enemy_blue.damage(this.player.x, this.player.y);
+                        this.points += 10;
+                        this.playerPoints += 10;
+
+                        // Call payPlayerPoints when player hits enemy
+                        if (this.bossNode && this.playerNode) {
+                            try {
+                                await payPlayerPoints(
+                                    this.bossNode,
+                                    this.playerNode,
+                                    10,
+                                );
+                            } catch (error) {
+                                console.error("Failed to score point:", error);
+                            }
+                        }
+
+                        const hudScene = this.scene.get("HudScene");
+                        if (
+                            hudScene &&
+                            typeof (hudScene as any).update_points ===
+                                "function"
+                        ) {
+                            (hudScene as any).update_points(this.points);
+                        }
+                    }
+                },
+            );
+
+            // Overlap player with enemy bullets
+            this.physics.add.overlap(
+                this.enemy_blue.bullets,
+                this.player,
+                async (_player, bullet) => {
+                    const typedBullet = bullet as unknown as Bullet;
+                    if (typedBullet.destroyBullet) {
+                        typedBullet.destroyBullet();
+                        this.cameras.main.shake(100, 0.01);
+                        this.cameras.main.flash(300, 255, 10, 10, false);
+                        this.points -= 10;
+                        this.bossPoints += 10;
+
+                        // Call payBossPoints when enemy hits player
+                        if (this.bossNode && this.playerNode) {
+                            try {
+                                await payBossPoints(
+                                    this.bossNode,
+                                    this.playerNode,
+                                    10,
+                                );
+                            } catch (error) {
+                                console.error(
+                                    "Failed to process lose point:",
+                                    error,
+                                );
+                            }
+                        }
+
+                        const hudScene = this.scene.get("HudScene");
+                        if (
+                            hudScene &&
+                            typeof (hudScene as any).update_points ===
+                                "function"
+                        ) {
+                            (hudScene as any).update_points(this.points);
+                        }
+                    }
+                },
+            );
+        }
+    }
+
+    update(): void {
+        if (this.player) {
+            this.player.update();
+        }
+
+        if (this.enemy_blue) {
+            this.enemy_blue.update();
+        }
+
+        // Player movement entries
+        if (this.player) {
+            if (this.cursors.up.isDown) {
+                this.player.move("up");
+            }
+            if (this.cursors.down.isDown) {
+                this.player.move("down");
+            }
+        }
+    }
+}
+```
+</details>
+
+### 2. Edit the GameOver Scene
+
+The `GameOverScene` is the scene that will be launched when the game is over.
+The original code only display the final scoring points of the player.
+We need to display the earn/lose CKB amount to the scene too.
+
+<details>
+<summary>View full code of src/scenes/GameOverScene.ts</summary>
+
+```typescript
+import { Scene } from "phaser";
+
+interface GameOverSceneInitData {
+    points?: number;
+    playerPoints?: number;
+    bossPoints?: number;
+}
+
+export class GameOverScene extends Scene {
+    end_points: number = 0;
+    player_points: number = 0;
+    boss_points: number = 0;
+
+    constructor() {
+        super("GameOverScene");
+    }
+
+    init(data: GameOverSceneInitData): void {
+        this.cameras.main.fadeIn(1000, 0, 0, 0);
+        this.end_points = data.points || 0;
+        this.player_points = data.playerPoints || 0;
+        this.boss_points = data.bossPoints || 0;
+    }
+
+    create(): void {
+        // Backgrounds
+        this.add.image(0, 0, "background").setOrigin(0, 0);
+        this.add.image(0, this.scale.height, "floor").setOrigin(0, 1);
+
+        // Rectangles to show the text
+        // Background rectangles
+        this.add
+            .rectangle(
+                0,
+                this.scale.height / 2,
+                this.scale.width,
+                120,
+                0xffffff,
+            )
+            .setAlpha(0.8)
+            .setOrigin(0, 0.5);
+        this.add
+            .rectangle(
+                0,
+                this.scale.height / 2 + 105,
+                this.scale.width,
+                90,
+                0x000000,
+            )
+            .setAlpha(0.8)
+            .setOrigin(0, 0.5);
+
+        const gameover_text = this.add.bitmapText(
+            this.scale.width / 2,
+            this.scale.height / 2,
+            "knighthawks",
+            "GAME\nOVER",
+            62,
+            1,
+        );
+        gameover_text.setOrigin(0.5, 0.5);
+        gameover_text.postFX.addShine();
+
+        this.add
+            .bitmapText(
+                this.scale.width / 2,
+                this.scale.height / 2 + 85,
+                "pixelfont",
+                `Your POINTS: ${this.end_points}`,
+                24,
+            )
+            .setOrigin(0.5, 0.5);
+
+        this.add
+            .bitmapText(
+                this.scale.width / 2,
+                this.scale.height / 2 + 110,
+                "pixelfont",
+                `GAIN: ${this.player_points} CKB`,
+                20,
+            )
+            .setOrigin(0.5, 0.5);
+
+        this.add
+            .bitmapText(
+                this.scale.width / 2,
+                this.scale.height / 2 + 135,
+                "pixelfont",
+                `LOSS: ${this.boss_points} CKB`,
+                20,
+            )
+            .setOrigin(0.5, 0.5);
+
+        this.add
+            .bitmapText(
+                this.scale.width / 2,
+                this.scale.height / 2 + 170,
+                "pixelfont",
+                "CLICK TO RESTART",
+                24,
+            )
+            .setOrigin(0.5, 0.5);
+
+        // Click to restart
+        this.time.addEvent({
+            delay: 1000,
+            callback: () => {
+                this.input.on("pointerdown", () => {
+                    this.scene.start("MainScene");
+                });
+            },
+        });
+    }
+}
+
+```
+</details>
+
+## Running the Game
+
+All good now! Let's run your game!
+
+```sh
+pnpm dev
+```
+
+Before running your game, make sure your Fiber nodes are running and have an open payment channel between them. You can follow the [Run a Fiber Node](/docs/quick-start/run-a-node) and [Basic Transfer Example](/docs/quick-start/basic-transfer) guides to set up your nodes.
+
+If everything is set up correctly, you should be able to click and play the game like this:
+
+<img className="max-w-[600px] mx-auto" src="/imgs/docs/simple-game/game-running.png" alt="Game Running" />
+
+Open the browser console to view the payment logs. When the game is over, you'll see the final scores along with the payment info, like this:
+
+<img className="max-w-[600px] mx-auto" src="/imgs/docs/simple-game/game-over.png" alt="Game Over" />
+
+## Conclusion
+
+In this tutorial, you've learned how to integrate the Fiber network with a Phaser.js game to enable real-time token transfers based on in-game actions. This approach opens up new possibilities for blockchain-based gaming, including:
+
+- Real-time microtransactions without gas fees
+- Play-to-earn mechanics with instant payments
+- Token-based in-game economies
+
+By leveraging Fiber's Layer 2 scaling solution, you can build games with blockchain features that don't compromise on user experience or performance.
+
+For a production environment and more advanced use cases, consider implementing:
+
+- Channel opening logic with player matching
+- On-chain settlement of final scores when the game ends, including proper channel closure
+- Error handling for insufficient channel balance
+- Security measures for channel management
+- Multi-player token pools
+- Conditional payments based on game achievements
+- Assets trading through Fiber network channels
+- ...
+
+Happy coding, and enjoy building your blockchain-enabled games!

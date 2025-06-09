@@ -1,0 +1,20 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "---Introduction---",
+    "index",
+    "---Quick Start---",
+    "quick-start/run-a-node",
+    "quick-start/basic-transfer",
+    "quick-start/transfer-stablecoin",
+    "quick-start/connect-nodes",
+    "quick-start/simple-game",
+    "---Tech Explanation---",
+    "tech-explanation/payment-channel",
+    "tech-explanation/high-level",
+    "tech-explanation/light-paper",
+    "tech-explanation/invoice-protocol",
+    "tech-explanation/p2p-message"
+    
+  ]
+} 
