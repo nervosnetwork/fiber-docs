@@ -61,7 +61,7 @@ export default function HomePage() {
               <p className="text-muted-foreground mb-4">
                 Get up and running with Fiber Network in minutes. Learn how to run a node, make transfers, and connect with other nodes.
               </p>
-              <div className="flex items-center text-primary group-hover:translate-x-1 transition-transform">
+              <div className="flex items-center text-primary">
                 <span className="font-medium">Read Docs</span>
                 <ArrowRightIcon className="w-4 h-4 ml-2" />
               </div>
@@ -78,7 +78,7 @@ export default function HomePage() {
               <p className="text-muted-foreground mb-4">
                 Dive deep into the technical details of Fiber Network, including payment channels, protocols, and architecture.
               </p>
-              <div className="flex items-center text-primary group-hover:translate-x-1 transition-transform">
+              <div className="flex items-center text-primary">
                 <span className="font-medium">Learn More</span>
                 <ArrowRightIcon className="w-4 h-4 ml-2" />
               </div>
