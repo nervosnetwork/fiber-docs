@@ -1,0 +1,238 @@
+---
+title: "Decoding Fiber: A Scalable, Privacy-by-Default P2P Finance Network"
+description: A source code-level exploration of Fiber's architecture and key modules.
+author: YuKang Chen
+date: 2025-03-07
+---
+
+## Overview
+
+Fiber is a Lightning-compatible peer-to-peer payment and swap network built on CKB, the base layer of [Nervos Network](https://www.nervos.org/). Fiber is designed to enable fast, secure, and efficient off-chain payment solutions, particularly for **micropayments** and **high-frequency** transactions. 
+
+Inspired by Bitcoin’s Lightning Network, Fiber leverages CKB’s unique architecture and offers the following key features:
+
+- **Multi-Asset Support**: Fiber is not limited to a single currency; it supports transactions involving multiple assets, paving the way for complex cross-chain financial applications.
+- **Cross-Chain Interoperability**: Fiber is natively designed to interact with Lightning Networks on other UTXO-based blockchains (such as Bitcoin), improving cross-chain asset liquidity and network compatibility.
+- **Flexible State Management**: Thanks to CKB’s Cell model, Fiber efficiently manages channel states, reducing the complexity of off-chain interactions.
+- **Programmability**: Built on CKB’s Turing-complete smart contracts architecture, Fiber enables more complex conditional execution and transaction rules, extending the use cases of payment channels.
+
+This article presents a **source code-level** exploration of Fiber's architecture, key modules, as well as an overview of its future development plans.
+
+## **Prerequisites**
+
+- **Rust and Actor Framework**: Fiber is entirely implemented in Rust and follows the [Actor Model](https://github.com/slawlor/ractor) programming paradigm. It relies on the community-maintained [slawlor/ractor](https://github.com/slawlor/ractor) framework.
+- **Lightning Network**: Fiber follows the core principles of Lightning Network. Resources such as [*Mastering the Lightning Network*](https://github.com/lnbook/lnbook) and [BOLTs](https://github.com/lightning/bolts) are highly recommended for understanding the concepts.
+- **CKB Transactions and Contracts**: Fiber interacts with CKB nodes via RPC, making a solid understanding of [CKB contract](https://docs.nervos.org/docs/script/intro-to-script) development essential.
+
+## Key Modules
+
+At a high level, a Fiber node consists of several key modules:
+
+![Fiber node module.png](/imgs/docs/high-level/image.png)
+
+- Obsolete image
+    
+![Pasted image 20250206211458.png](/imgs/docs/high-level/Pasted_image_20250206211458.png)
+    
+
+**Key Modules Overview**
+
+- **Network Actor:** Facilitates communication between nodes and channels, managing both internal and external messages along with related management operations.
+- **Network Graph**: Maintains a node’s view of the entire network, storing data on all nodes and channels while dynamically updating through gossip messages. When receiving a payment request, a node uses the network graph to find a route to the recipient.
+- **PaymentSession**: Manages the lifecycle of a payment.
+- [**fiber-sphinx](https://github.com/cryptape/fiber-sphinx) :** A Rust library for [Onion](https://en.wikipedia.org/wiki/Onion_routing) packet encryption and decryption. In Fiber, this ensures sensitive payment details are hidden from intermediate nodes, enhancing security and anonymity.
+- **Gossip**: A protocol for sharing channel/node information, facilitating payment path discovery and updates.
+- **Watchtower**: Monitors channels for fraudulent transactions. If a peer submits an outdated commitment transaction, the watchtower issues a revocation transaction as a penalty.
+- **Cross Hub**: Enables cross-chain interoperability. For example, a payer can send Bitcoin through the Lightning Network, while the recipient receives CKB. The cross hub handles the conversion, mapping Bitcoin payments and invoices to Fiber’s system.
+- [**Fiber-Scripts**](https://github.com/nervosnetwork/fiber-scripts/tree/main): A separate repository containing two main contracts:
+    - [**Funding Lock**](https://github.com/nervosnetwork/fiber-scripts/tree/main/contracts/funding-lock): A contract for locking funds, utilizing the `ckb-auth` library to implement a 2-of-2 multi-signature scheme for channel funding.
+    - [**Commitment Lock**](https://github.com/nervosnetwork/fiber-scripts/tree/main/contracts/commitment-lock): Implements the [Daric](https://eprint.iacr.org/2022/1295) protocol as Fiber’s penalty mechanism to achieve optimal storage and bounded closure.
+
+### Efficient Channel Management with the Actor Model
+
+The Lightning Network is essentially a peer-to-peer (P2P) system, where nodes communicate via network messages, updating internal states accordingly. The Actor Model aligns well with this setup:
+
+![Screenshot 2025-02-20 at 4.28.38 PM.png](/imgs/docs/high-level/Screenshot_2025-02-20_at_4.28.38_PM.png)
+
+- obsolete image
+    
+    ![image.png](/imgs/docs/high-level/image%201.png)
+    
+
+One potential concern with the Actor Model is its **memory footprint** and **runtime efficiency**. We conducted a [performance test](https://github.com/contrun/ractor/blob/a74cc0f6f9e2b4699991fc9902f10a59f06e4ed8/ractor/examples/bench_memory_usage.rs), showing that 0.9 GB of memory can support 100,000 actors (each with a 1 KB state), processing 100 messages per actor within 10 seconds—demonstrating acceptable performance.
+
+Unlike `rust-lightning`, which relies on complex [locking mechanisms](https://github.com/lightningdevkit/rust-lightning/blob/b8b1ef3149f26992625a03d45c0307bfad70e8bd/lightning/src/ln/channelmanager.rs#L1167) to maintain data consistency, Fiber’s Actor Model simplifies implementation by eliminating the need for locks to protect data updates. Messages are processed sequentially in an actor’s message queue. When a message handler completes its tasks, the updated [channel state is written to the database](https://github.com/nervosnetwork/fiber/blob/81014d36502b76e2637dfa414b5a3ee494942c41/src/fiber/channel.rs#L2276), streamlining the persistence process.
+
+Almost all modules in Fiber use the Actor Model. The [Network Actor](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/network.rs#L694-L789) handles communication both within and across nodes. For example, if Node A wants to send an "Open Channel" message to Node B, the process follows these steps:
+
+1. The `Channel Actor` in Node A (`Actor 0` in this case) sends the message to the `Network Actor` in Node B.
+2. The `Network Actor` transmits the message using [Tentacle](https://github.com/nervosnetwork/tentacle/tree/master), a lower-level networking layer.
+3. The `Network Actor` in Node B receives the message and forwards it to the corresponding `Channel Actor`(`Actor 0/1/…/n`).
+    
+    ![Screenshot 2025-02-20 at 4.29.12 PM.png](/imgs/docs/high-level/Screenshot_2025-02-20_at_4.29.12_PM.png)
+    
+
+- obsolete image
+    
+    ![Pasted image 20250205191731.png](/imgs/docs/high-level/Pasted_image_20250205191731.png)
+    
+
+For each new channel, Fiber creates a corresponding [ChannelActor](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/channel.rs#L301-L308), where the `ChannelActorState` maintains all the necessary data for the channel.
+
+Another major advantage of the Actor Model is its ability to map **HTLC (Hash Time-Locked Contracts)**-related operations directly to specific functions. For example, in the process of forwarding an HTLC across multiple nodes:
+
+- Node A’s `Actor 0` handles the `AddTlc` operation via [handle_add_tlc_command](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/channel.rs#L1251).
+- Node B’s `Actor 1` handles the corresponding peer message via [handle_add_tlc_peer_message](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/channel.rs#L1069).
+
+![Screenshot 2025-02-20 at 4.29.54 PM.png](/imgs/docs/high-level/Screenshot_2025-02-20_at_4.29.54_PM.png)
+
+- obsolete image
+    
+    ![Pasted image 20250205190443.png](/imgs/docs/high-level/Pasted_image_20250205190443.png)
+    
+
+The **HTLC management** within channels is one of the most complex aspects of the Lightning Network, primarily due to the dependency of channel state changes on peer interactions. Both sides of a channel can have simultaneous HTLC operations.
+
+Fiber adopts `rust-lightning`’s approach of using a [state machine to track HTLC states](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/channel.rs#L2463-L2496), where state transitions occur based on `commitment_sign` and `revoke_and_ack` messages. The `AddTlc` operation and state transitions for both peers are as follows:
+
+![image.png](/imgs/docs/high-level/image%202.png)
+
+- obsolete image
+    
+    ![Pasted image 20250206212102.png](/imgs/docs/high-level/Pasted_image_20250206212102.png)
+    
+
+### Optimized Payment Processing and Multi-Hop Routing
+
+Each Fiber node maintains a representation of the network through a **Network Graph**, essentially a **bidirectional directed graph**, where:
+
+- Each **Fiber node** represents a **vertex**.
+- Each **channel** represents an **edge**.
+
+For privacy reasons, the actual balance partition of a channel is not broadcasted across the network. Instead, the edge weight represents the channel capacity.
+
+Before initiating a payment, the sender performs pathfinding to discover a route to the recipient. If multiple paths available, the sender must determine the optimal one by considering various factors. Finding the best path in a graph with incomplete information is a complex engineering challenge. A detailed discussion of this issue can be found in *[Mastering Lightning Network](https://github.com/lnbook/lnbook/blob/develop/12_path_finding.asciidoc#pathfinding-what-problem-are-we-solving)*.
+
+![Screenshot 2025-02-20 at 4.31.01 PM.png](/imgs/docs/high-level/Screenshot_2025-02-20_at_4.31.01_PM.png)
+
+- obsolete image
+    
+    ![Pasted image 20250206104403.png](/imgs/docs/high-level/Pasted_image_20250206104403.png)
+    
+
+In Fiber, users initiate payments via [RPC requests](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/rpc/payment.rs#L171-L209). When a node receives a payment request, it creates a corresponding [PaymentSession](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/network.rs#L1866-L1871) to track the payment lifecycle.
+
+The quality of pathfinding directly impacts network efficiency and payment success rates. Currently, Fiber uses a variant of [Dijkstra’s algorithm](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm). The implementation can be found [here](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/graph.rs#L914-L925).
+
+However, unlike the standard Dijkstra algorithm, Fiber’s routing expands **backward from the target** toward the source. During the search, the algorithm considers multiple factors:
+
+- Payment success probability
+- Transaction fee
+- HTLC lock time
+
+Routes are ranked by computing a [distance metric](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/graph.rs#L1110). **Probability estimation** is derived from past payment results and analysis, implemented in the [eval_probability module](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/history.rs#L481-L506).
+
+Once the path is determined, the next step is to [construct an Onion Packet](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/network.rs#L1634-L1656). Then the source node sends an [AddTlcCommand](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/network.rs#L1657-L1667) to start the payment. The payment status will be updated asynchronously. Whether the HTLC succeeds or fails, the network actor processes the result [via event notifications](https://github.com/nervosnetwork/fiber/blob/b5c38a800e94aaa368a4c8a8699f5db0c08ecfbd/src/fiber/network.rs#L1501-L1507).
+
+### Reliable Payment Retries and Failure Handling
+
+Payments in Fiber may require **multiple retries** due to various factors, with a common failure scenario being:
+
+- The **channel capacity** used in the Network Graph is an **upper bound**.
+- The actual **available liquidity** might be **insufficient** to complete the payment.
+
+When a payment fails due to liquidity constraints:
+
+- The system **returns an error** and **updates** the **Network Graph**.
+- The node **automatically initiates** [a new pathfinding attempt](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/network.rs#L1767-L1772).
+
+This **dynamic retry mechanism** ensures that payments have a **higher chance of success** despite fluctuating network conditions.
+
+### Peer Broadcasting with Gossip Protocol
+
+Fiber nodes exchange information about **new nodes** and **channels** by broadcasting messages. The [Gossip module](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/gossip.rs#L293-L331) implements the [routing gossip protocol defined in BOLTs 7](https://github.com/lightning/bolts/blob/master/07-routing-gossip.md).  The key technical decisions were documented in the PR: [Refactor gossip protocol](https://github.com/nervosnetwork/fiber/pull/308).
+
+When a node starts for the first time, it connects to its initial peers using addresses specified in the configuration file under [`bootnode_addrs`](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/network.rs#L3169-L3174).
+
+Fiber supports three types of broadcast messages:
+
+- `NodeAnnouncement`
+- `ChannelAnnouncement`
+- `ChannelUpdate`
+
+The raw broadcast data received is stored in the [storage module](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/store/store.rs#L482-L711), allowing messages to be efficiently indexed using a combination of `timestamp + message_id`. This enables quicker responses to query requests from peer nodes.
+
+When a node starts, the Graph module loads all stored messages using [load_from_store](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/graph.rs#L361) to rebuild its network graph.
+
+Fiber propagates gossip messages using a subscription-based model.
+
+1. A node actively sends a broadcast message filter (`BroadcastMessagesFilter`) to a peer.
+2. When the peer receives this filter, it creates a corresponding [PeerFilterActor](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/gossip.rs#L599-L614), which subscribes to gossip messages.
+
+This subscription model allows nodes to efficiently receive newly stored gossip messages after a specific cursor, enabling them to dynamically update their network graph, because the network graph also subscribes to gossip messages. The logic for retrieving these messages is implemented in [this section](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/gossip.rs#L1027-L1049).
+
+### **Enhancing Privacy with Onion Encryption & Decryption**
+
+For privacy and security consideration, payments’ TLC is propagated across multiple nodes using Onion encryption. Each node only accesses the minimal necessary details, such as:
+
+- The amount of the received TLC
+- The expiry of the TLC
+- The next node in the payment route
+
+This approach ensures that a node cannot access other sensitive details, including the total length of the payment route. The payment sender encrypts the payment details using onion encryption, and each hop must obfuscate the information before forwarding the TLC to the next node.
+
+In case of an error occurs at any hop during payment forwarding, the affected node sends back an error message along the reverse route to the sender. This error message is also onion-encrypted, ensuring that intermediate nodes cannot decipher its content—only the sender can decrypt it.
+
+We examined the [onion packet implementation](https://github.com/lightningdevkit/rust-lightning/blob/master/lightning/src/ln/onion_utils.rs) in rust-lightning and found it to be tightly coupled with rust-lightning’s internal data structures, limiting its generalization. Therefore, we built [fiber-sphinx](https://github.com/cryptape/fiber-sphinx/blob/develop/docs/spec.md) from scratch. For more details, refer to the project spec and the [developer’s presentation slides](https://link.excalidraw.com/p/readonly/C6mOdLUnx0PkGWHwrnQs).
+
+The key Onion Encryption & Decryption steps in Fiber include:
+
+- **Creating the Onion Packet for Sending Payments**
+    
+    Before sending a payment, the sender [creates an onion packet](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/network.rs#L1640-L1666), included in the `AddTlcCommand` sent to the first node in the payment route.
+    
+- **Onion Decryption at Each Hop**
+    - When a node in the payment route receives a TLC, it [decrypts one layer](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/channel.rs#L920-L937) of the onion packet, similar to peeling an onion.
+    - If the node is the final recipient, it processes the payment settlement logic.
+    - If the node is not the recipient, it continues processing the TLC and then [forwards the remaining onion packet](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/channel.rs#L1037-L1064) to the next hop.
+- **Generating an Onion Packet for Error Messages**
+    
+    If an error occurs during TLC forwarding, the node [creates a new onion packet containing the error message](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/channel.rs#L774-L797) and sends it back to the previous node.
+    
+- **Decrypting Error Messages at the Payment Sender**
+    
+    When the sender receives a TLC fail event, it [decrypts the onion packet containing the error](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/network.rs#L1518-L1527). Based on the error details, the sender can decide whether to resend and update the network graph accordingly.
+    
+    ![Screenshot 2025-02-20 at 4.31.32 PM.png](/imgs/docs/high-level/Screenshot_2025-02-20_at_4.31.32_PM.png)
+    
+    - obsolete image
+        
+        ![image.png](/imgs/docs/high-level/image%203.png)
+        
+
+### Preventing Channels from Fraud via Watchtower
+
+Watchtower is an important security mechanism in the Lightning Network, primarily used to protect offline users from potential fund theft. It maintains fairness and security by real-time monitoring on-chain transactions and executing penalty transactions when violations are detected.
+
+Fiber's watchtower implementation is in the [WatchtowerActor](https://github.com/nervosnetwork/fiber/blob/b5c38a800e94aaa368a4c8a8699f5db0c08ecfbd/src/watchtower/actor.rs#L73-L124). This actor listens for key events in the Fiber node. For example：
+
+- When a new channel is created, it receives a `RemoteTxComplete` event, while the watchtower inserts a corresponding record into the database to start monitoring this channel.
+- When the channel is closed through upon mutual agreement, it receives a `ChannelClosed` event, while the watchtower removes the corresponding record from the database.
+
+During **TLC interaction**s in the channel, the watchtower receives `RemoteCommitmentSigned` and `RevokeAndAckReceived` events, updating the `revocation_data` and `settlement_data` stored in the database respectively. These fields will be used later to create revocation and settlement transactions.
+
+Watchtower's **penalty mechanism** ensures that old commitment transactions are not used in a on-chain transaction by [comparing the `commitment_number`](https://github.com/nervosnetwork/fiber/blob/b5c38a800e94aaa368a4c8a8699f5db0c08ecfbd/src/watchtower/actor.rs#L266). If a violation is detected, the watchtower constructs a **revocation transaction** and submits it on-chain to penalize the offender. Otherwise, it constructs and sends a **settlement transaction**.
+
+## **Other Technical Decisions**
+
+- **Storage**: We use RocksDB as the storage layer, leveraging its scheme-less storage design to simplify encoding and decoding structs with `serde`. Data migration remains a challenge, which we address by [this standalone program](https://github.com/nervosnetwork/fiber/blob/develop/migrate/src/main.rs).
+- **Serialization**: Messages between nodes are serialized and deserialized using [Molecule](https://github.com/nervosnetwork/molecule), bringing efficiency, compatibility, and security advantages. It ensures determinism, meaning the same message serializes identically on all nodes, which is crucial for signature generation and verification.
+
+## **Future Prospects**
+
+Fiber is still in the early stages of active development. Looking ahead, we plan to make further improvements in the following areas:
+
+- Fix unhandled corner cases to enhance overall robustness;
+- Improve the cross-chain hub (currently in the prototype verification stage) by introducing payment session functionality to make cross-chain transactions more user-friendly;
+- Refine the payment routing algorithm, potentially introducing multi-path feature and other path-finding strategies to accommodate diverse user preferences and needs;
+- Expand contract functionality, including version-based revocation mechanisms and more secure Point Time-Locked Contracts.
