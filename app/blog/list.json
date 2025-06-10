@@ -1,0 +1,47 @@
+[
+  {
+    "id": "fiber-network-launch",
+    "title": "Introducing Fiber Network: The Future of Blockchain Infrastructure",
+    "excerpt": "Today marks a significant milestone in blockchain technology. Fiber Network brings unprecedented scalability and security to decentralized applications.",
+    "date": "2024-01-15",
+    "readTime": "5 min read",
+    "tags": ["Launch", "Network", "Blockchain"],
+    "author": "Fiber Team"
+  },
+  {
+    "id": "smart-contracts-guide",
+    "title": "Building Your First Smart Contract on Fiber",
+    "excerpt": "A comprehensive guide to getting started with smart contract development on Fiber Network. Learn the fundamentals and best practices.",
+    "date": "2024-01-08",
+    "readTime": "8 min read",
+    "tags": ["Tutorial", "Smart Contracts", "Development"],
+    "author": "Dev Team"
+  },
+  {
+    "id": "security-audit-results",
+    "title": "Fiber Network Security Audit: Complete Transparency",
+    "excerpt": "We believe in complete transparency. Here are the results of our comprehensive security audit conducted by leading blockchain security firms.",
+    "date": "2024-01-03",
+    "readTime": "6 min read",
+    "tags": ["Security", "Audit", "Transparency"],
+    "author": "Security Team"
+  },
+  {
+    "id": "mainnet-performance",
+    "title": "Mainnet Performance Report: Q4 2023",
+    "excerpt": "Our quarterly performance report showcasing network statistics, transaction throughput, and ecosystem growth metrics.",
+    "date": "2023-12-28",
+    "readTime": "4 min read",
+    "tags": ["Performance", "Analytics", "Report"],
+    "author": "Analytics Team"
+  },
+  {
+    "id": "developer-tools-update",
+    "title": "Developer Tools Update: Enhanced CLI and SDK",
+    "excerpt": "New features and improvements to our developer toolchain, making it easier than ever to build on Fiber Network.",
+    "date": "2023-12-20",
+    "readTime": "7 min read",
+    "tags": ["Tools", "SDK", "CLI", "Developer Experience"],
+    "author": "Developer Relations"
+  }
+]
