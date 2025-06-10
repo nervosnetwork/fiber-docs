@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import { categories, showcaseProjects } from "./data";
 
 function getLanguageColor(language: string) {
@@ -11,6 +14,7 @@ function getLanguageColor(language: string) {
       "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
     Java: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200",
     Bruno: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    HTML: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
   };
   return (
     colors[language] ||
@@ -19,6 +23,18 @@ function getLanguageColor(language: string) {
 }
 
 export default function ShowcasePage() {
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  
+  // Filter projects based on selected category
+  const filteredProjects = selectedCategory === "All" 
+    ? showcaseProjects 
+    : showcaseProjects.filter(project => project.category === selectedCategory);
+
+  const handleCardClick = (project: any) => {
+    // Open GitHub URL in new tab when card is clicked
+    window.open(project.githubUrl, '_blank', 'noopener noreferrer');
+  };
+
   return (
     <main className="flex flex-1 flex-col px-4 py-8">
       <div className="max-w-7xl mx-auto w-full">
@@ -35,7 +51,12 @@ export default function ShowcasePage() {
           {categories.map((category) => (
             <button
               key={category}
-              className="px-4 py-2 text-sm font-medium rounded-full border border-fd-border hover:border-fd-primary/50 hover:bg-fd-primary/10 transition-all duration-200"
+              onClick={() => setSelectedCategory(category)}
+              className={`px-4 py-2 text-sm font-medium rounded-full border transition-all duration-200 ${
+                selectedCategory === category
+                  ? "border-fd-primary bg-fd-primary text-fd-primary-foreground"
+                  : "border-fd-border hover:border-fd-primary/50 hover:bg-fd-primary/10"
+              }`}
             >
               {category}
             </button>
@@ -44,13 +65,14 @@ export default function ShowcasePage() {
 
         {/* Projects Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {showcaseProjects.map((project) => (
+          {filteredProjects.map((project) => (
             <div
               key={project.id}
-              className="group border border-fd-border rounded-lg overflow-hidden hover:border-fd-primary/50 transition-all duration-200 hover:shadow-lg bg-fd-background"
+              onClick={() => handleCardClick(project)}
+              className="group border border-fd-border rounded-lg overflow-hidden hover:border-fd-primary/50 transition-all duration-200 hover:shadow-lg bg-fd-background cursor-pointer flex flex-col"
             >
               {/* Project Content */}
-              <div className="p-6">
+              <div className="p-6 flex flex-col flex-1">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-lg font-semibold text-fd-foreground group-hover:text-fd-primary transition-colors">
                     {project.title}
@@ -69,12 +91,12 @@ export default function ShowcasePage() {
                   ))}
                 </div>
 
-                <p className="text-sm text-fd-muted-foreground mb-4 line-clamp-3">
+                <p className="text-sm text-fd-muted-foreground mb-4 line-clamp-3 flex-1">
                   {project.description}
                 </p>
 
                 {/* Footer */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mt-auto">
                   <span
                     className={`text-xs px-2 py-1 rounded-full font-medium ${getLanguageColor(
                       project.language
@@ -83,7 +105,7 @@ export default function ShowcasePage() {
                     {project.language}
                   </span>
 
-                  <div className="flex">
+                  <div className="flex" onClick={(e) => e.stopPropagation()}>
                     <Link
                       href={project.githubUrl}
                       className="p-2 text-fd-muted-foreground hover:text-fd-foreground transition-colors"
@@ -126,6 +148,15 @@ export default function ShowcasePage() {
             </div>
           ))}
         </div>
+
+        {/* Show message when no projects match filter */}
+        {filteredProjects.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-fd-muted-foreground">
+              No projects found for the selected category.
+            </p>
+          </div>
+        )}
 
         {/* Call to Action */}
         <div className="text-center bg-fd-muted/30 rounded-lg p-12 border border-fd-border">

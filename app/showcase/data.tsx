@@ -1,5 +1,38 @@
 // Mock showcase projects data - in a real app, this would come from a database or API
 export const showcaseProjects = [
+  // Developer Tools
+  {
+    id: "fiber-sdk",
+    title: "Fiber SDK",
+    description:
+      "JS SDK for building dApps on Fiber Network. Integrate with CCC, the CKB JS SDK",
+    category: "Developer Tools",
+    githubUrl: "https://github.com/ckb-devrel/ccc/pull/194",
+    tags: ["SDK", "Development"],
+    stars: 678,
+    language: "TypeScript",
+  },
+  {
+    id: "fiber-docker",
+    title: "Fiber Docker",
+    description:
+      "Docker image that contains Fiber Node and ckb-cli for easy deployment.",
+    githubUrl: "https://github.com/Flouse/ckb-fiber-docker",
+    category: "Developer Tools",
+    tags: ["Docker", "Development"],
+    language: "TypeScript",
+  },
+  {
+    id: "fiber-agent-bun-js",
+    title: "Fiber Agent with Bun.js",
+    description:
+      "A server and CLI tool writing in typescript to manage Fiber Node.",
+    githubUrl: "https://github.com/Keith-CY/fiber-agent",
+    category: "Developer Tools",
+    tags: ["Bun.js", "CLI", "Development"],
+    language: "TypeScript",
+  },
+
   // Demo & Examples
   {
     id: "simple-game",
@@ -20,42 +53,6 @@ export const showcaseProjects = [
     category: "Demo & Examples",
     tags: ["Python", "Testnet"],
     language: "Python",
-  },
-
-  // Developer Tools
-  {
-    id: "fiber-agent-bun-js",
-    title: "Fiber Agent with Bun.js",
-    description:
-      "A server and CLI tool writing in typescript to manage Fiber Node.",
-    githubUrl: "https://github.com/Keith-CY/fiber-agent",
-    category: "Developer Tools",
-    tags: ["Bun.js", "CLI", "Development"],
-    language: "TypeScript",
-  },
-  {
-    id: "fiber-docker",
-    title: "Fiber Docker",
-    description:
-      "Docker image that contains Fiber Node and ckb-cli for easy deployment.",
-    githubUrl: "https://github.com/Flouse/ckb-fiber-docker",
-    category: "Developer Tools",
-    tags: ["Docker", "Development"],
-    language: "TypeScript",
-  },
-  {
-    id: "fiber-sdk",
-    title: "Fiber SDK",
-    description:
-      "Comprehensive development toolkit for building on Fiber Network. Includes CLI tools, libraries, and code generators.",
-    category: "Developer Tools",
-    image: "/api/placeholder/400/250?text=Fiber+SDK",
-    githubUrl: "https://github.com/nervosnetwork/fiber-sdk",
-    demoUrl: "https://docs.fiber.network/sdk",
-    tags: ["SDK", "Development"],
-    stars: 678,
-    language: "TypeScript",
-    status: "Active",
   },
 
   // Testing & Monitoring
@@ -103,26 +100,28 @@ export const showcaseProjects = [
     id: "testnet-visualization",
     title: "Testnet Visualization",
     description: "Visual representation of the Testnet",
-    githubUrl: "http://16.162.99.28:8120/view.html",
+    githubUrl:
+      "https://github.com/gpBlockchain/CkbLightningNetworkVisualization",
+    demoUrl: "http://16.162.99.28:8120/view.html",
     category: "Network & Resources",
-    tags: ["Testing"],
-    language: "Python",
+    tags: ["Visualization", "Network"],
+    language: "HTML",
   },
   {
     id: "testnet-explorer",
     title: "Testnet Explorer",
     description: "Browse the Fiber Testnet",
-    githubUrl: "https://testnet.explorer.nervos.org/fiber/graph/nodes",
+    githubUrl: "https://github.com/nervosnetwork/ckb-explorer",
+    demoUrl: "https://testnet.explorer.nervos.org/fiber/graph/nodes",
     category: "Network & Resources",
-    tags: ["Testing"],
-    language: "Python",
+    tags: ["Explorer", "Network"],
+    language: "TypeScript",
   },
 ];
 
 export const categories = [
   "All",
   "Demo & Examples",
-  "Finance & Payment",
   "Testing & Monitoring",
   "Developer Tools",
   "Network & Resources",
