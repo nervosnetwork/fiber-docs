@@ -161,10 +161,10 @@ export default function ShowcasePage() {
         {/* Call to Action */}
         <div className="text-center bg-fd-muted/30 rounded-lg p-12 border border-fd-border">
           <h3 className="text-2xl font-semibold mb-4">
-            Build the Next Small Thing
+            Build the Next New Thing
           </h3>
           <p className="text-fd-muted-foreground mb-6 max-w-2xl mx-auto">
-            Ready to create something small on Fiber Network? Get started with
+            Ready to create something new on Fiber Network? Get started with
             our documentation and join a growing community of builders.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
