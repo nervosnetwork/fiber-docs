@@ -9,4 +9,5 @@ export interface BlogPost {
   authorUrl?: string;
   type: "devlog" | "blog";
   url?: string;
+  rawMarkdown?: string; // Full raw markdown content for devlogs
 }

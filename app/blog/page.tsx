@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { blog } from "@/lib/source";
-import { calculateReadingTime, formatDate, getFiberDevLogLists } from "./util";
+import { calculateReadingTime, formatDate } from "./util";
 import { BlogPost } from "./type";
+import { getFiberDevLogLists } from "./devlog";
 
 export default async function BlogPage() {
   const documentPosts: BlogPost[] = blog.getPages().map((page) => {
@@ -37,16 +38,11 @@ export default async function BlogPage() {
     post: BlogPost;
     children: React.ReactNode;
   }) => {
-    if (post.type === "devlog" && post.url) {
+    if (post.type === "devlog") {
       return (
-        <a
-          href={post.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block"
-        >
+        <Link href={`/blog/d/${encodeURIComponent(post.id)}`} className="block">
           {children}
-        </a>
+        </Link>
       );
     } else {
       return (
