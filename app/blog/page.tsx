@@ -1,10 +1,10 @@
-import Link from 'next/link';
-import { blog } from '@/lib/source';
-import { calculateReadingTime, formatDate } from './util';
+import Link from "next/link";
+import { blog } from "@/lib/source";
+import { calculateReadingTime, formatDate, getFiberDevLogLists } from "./util";
+import { BlogPost } from "./type";
 
-export default function BlogPage() {
-  // Get all blog posts from MDX files
-  const blogPosts = blog.getPages().map((page, index) => {
+export default async function BlogPage() {
+  const documentPosts: BlogPost[] = blog.getPages().map((page) => {
     const data = page.data;
     return {
       id: page.slugs[0], // Use the slug as ID
@@ -14,8 +14,48 @@ export default function BlogPage() {
       readTime: data.readTime || calculateReadingTime(data.content?.toString() || ''),
       tags: data.tags || [],
       author: data.author || 'Fiber Team',
+      type: "blog" as const,
     };
-  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Sort by date, newest first
+  })
+
+  let devlogPosts: BlogPost[] = [];
+  try {
+    devlogPosts = await getFiberDevLogLists(20);
+  } catch (error) {
+    console.error("Error fetching devlog posts:", error);
+    // Continue without devlogs if there's an error
+  }
+
+  const allPosts = [...documentPosts, ...devlogPosts].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
+  const PostLink = ({
+    post,
+    children,
+  }: {
+    post: BlogPost;
+    children: React.ReactNode;
+  }) => {
+    if (post.type === "devlog" && post.url) {
+      return (
+        <a
+          href={post.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
+        >
+          {children}
+        </a>
+      );
+    } else {
+      return (
+        <Link href={`/blog/p/${post.id}`} className="block">
+          {children}
+        </Link>
+      );
+    }
+  };
 
   return (
     <main className="flex flex-1 flex-col px-4 py-8">
@@ -30,12 +70,12 @@ export default function BlogPage() {
 
         {/* Blog Posts List */}
         <div className="space-y-6">
-          {blogPosts.map((post, index) => (
-            <Link key={post.id} href={`/blog/p/${post.id}`} className="block">
+          {allPosts.map((post, index) => (
+            <PostLink key={post.id} post={post}>
               <article className="group relative border border-fd-border rounded-lg p-6 hover:border-fd-primary/50 transition-all duration-200 hover:shadow-lg bg-fd-background/50 cursor-pointer">
                 {/* Post Number - Retro Style */}
                 <div className="absolute -left-3 -top-3 w-8 h-8 bg-fd-primary text-fd-primary-foreground rounded-full flex items-center justify-center text-sm font-mono font-bold shadow-lg">
-                  {String(index + 1).padStart(2, '0')}
+                  {String(index + 1).padStart(2, "0")}
                 </div>
 
                 {/* Post Content */}
@@ -64,9 +104,13 @@ export default function BlogPage() {
                     {post.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="px-2 py-1 text-xs font-medium bg-fd-muted text-fd-muted-foreground rounded-full hover:bg-fd-primary/10 hover:text-fd-primary transition-colors"
+                        className={`px-2 py-1 text-xs font-medium rounded-full transition-colors ${
+                          post.type === "devlog"
+                            ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                            : "bg-fd-muted text-fd-muted-foreground hover:bg-fd-primary/10 hover:text-fd-primary"
+                        }`}
                       >
-                        #{tag.toLowerCase().replace(/\s+/g, '')}
+                        #{tag.toLowerCase().replace(/\s+/g, "")}
                       </span>
                     ))}
                   </div>
@@ -89,10 +133,19 @@ export default function BlogPage() {
                   </svg>
                 </div>
               </article>
-            </Link>
+            </PostLink>
           ))}
         </div>
+
+        {/* No posts message */}
+        {allPosts.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-fd-muted-foreground">
+              No blog posts found.
+            </p>
+          </div>
+        )}
       </div>
     </main>
   );
-} 
+}
