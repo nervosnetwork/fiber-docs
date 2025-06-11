@@ -8,6 +8,7 @@ import {
 import { notFound } from "next/navigation";
 import { createRelativeLink } from "fumadocs-ui/mdx";
 import { getMDXComponents } from "@/mdx-components";
+import { VersionBadge } from "@/components/VersionBadge";
 
 export default async function Page(props: {
   params: Promise<{ slug?: string[] }>;
@@ -23,6 +24,17 @@ export default async function Page(props: {
       <div className="mb-4">
         <DocsTitle className="mb-4">{page.data.title}</DocsTitle>
         <DocsDescription>{page.data.description}</DocsDescription>
+        <VersionBadge
+          status={page.data.status}
+          author={page.data.author}
+          authorUrl={page.data.authorUrl}
+          date={
+            typeof page.data.date === "string"
+              ? page.data.date
+              : page.data.date.toLocaleDateString()
+          }
+          dependencies={page.data.dependencies}
+        />
       </div>
 
       <DocsBody>
