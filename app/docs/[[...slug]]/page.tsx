@@ -1,13 +1,13 @@
-import { source } from '@/lib/source';
+import { source } from "@/lib/source";
 import {
   DocsPage,
   DocsBody,
   DocsDescription,
   DocsTitle,
-} from 'fumadocs-ui/page';
-import { notFound } from 'next/navigation';
-import { createRelativeLink } from 'fumadocs-ui/mdx';
-import { getMDXComponents } from '@/mdx-components';
+} from "fumadocs-ui/page";
+import { notFound } from "next/navigation";
+import { createRelativeLink } from "fumadocs-ui/mdx";
+import { getMDXComponents } from "@/mdx-components";
 
 export default async function Page(props: {
   params: Promise<{ slug?: string[] }>;
@@ -20,8 +20,11 @@ export default async function Page(props: {
 
   return (
     <DocsPage toc={page.data.toc} full={page.data.full}>
-      <DocsTitle>{page.data.title}</DocsTitle>
-      <DocsDescription>{page.data.description}</DocsDescription>
+      <div className="mb-4">
+        <DocsTitle className="mb-4">{page.data.title}</DocsTitle>
+        <DocsDescription>{page.data.description}</DocsDescription>
+      </div>
+
       <DocsBody>
         <MDXContent
           components={getMDXComponents({
@@ -45,8 +48,14 @@ export async function generateMetadata(props: {
   const page = source.getPage(params.slug);
   if (!page) notFound();
 
+  const author = page.data.author;
+  const description =
+    page.data.description ||
+    (author ? `${page.data.title} - By ${author}` : page.data.title);
+
   return {
     title: page.data.title,
-    description: page.data.description,
+    description,
+    authors: author ? [{ name: author, url: page.data.authorUrl }] : undefined,
   };
 }
