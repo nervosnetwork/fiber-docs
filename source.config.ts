@@ -31,10 +31,10 @@ export const docs = defineDocs({
   },
 });
 
-// Define blog collection for blog posts in the app/blog/p directory
+// Define blog collection for blog posts in the content/blog directory
 export const blogPosts = defineCollections({
   type: "doc",
-  dir: "app/blog/p",
+  dir: "content/blog",
   schema: frontmatterSchema.extend({
     author: z.string().optional().default("Fiber Team"),
     authorUrl: z.string().url().optional(),
