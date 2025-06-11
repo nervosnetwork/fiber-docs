@@ -13,12 +13,19 @@ export interface DevLogsCache {
   limit: number;
 }
 
-// Cache expiration time in milliseconds (5 minutes)
-const CACHE_EXPIRATION = 5 * 60 * 1000;
+// Cache expiration time in milliseconds (10 minutes for production)
+const CACHE_EXPIRATION = process.env.NODE_ENV === 'production' ? 10 * 60 * 1000 : 5 * 60 * 1000;
+
+// Use a more persistent cache strategy for production
 let devLogsCache: DevLogsCache | null = null;
 
-export const getFiberDevLogLists = async (limit: number = 10) => {
+// Add graceful degradation for production
+const FALLBACK_DEVLOGS: BlogPost[] = [];
+
+export const getFiberDevLogLists = async (limit: number = 10): Promise<BlogPost[]> => {
   const now = Date.now();
+  
+  // Check cache first
   if (
     devLogsCache &&
     devLogsCache.limit === limit &&
@@ -28,13 +35,12 @@ export const getFiberDevLogLists = async (limit: number = 10) => {
     return devLogsCache.data;
   }
 
+  // Graceful degradation if no GitHub token
   if (!GITHUB_TOKEN) {
-    console.error(
-      "GitHub token is not available. Please set the GITHUB_TOKEN environment variable."
+    console.warn(
+      "GitHub token is not available. Falling back to empty devlogs list. Please set the GITHUB_TOKEN environment variable for production."
     );
-    throw new Error(
-      "GitHub token is not available. Please set the GITHUB_TOKEN environment variable."
-    );
+    return FALLBACK_DEVLOGS;
   }
 
   try {
@@ -62,13 +68,13 @@ export const getFiberDevLogLists = async (limit: number = 10) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${GITHUB_TOKEN}`, // Replace with your GitHub token or provide via env
+        Authorization: `Bearer ${GITHUB_TOKEN}`,
       },
       body: JSON.stringify({ query }),
     });
 
     if (!response.ok) {
-      throw new Error(`GitHub API error: ${response.status}`);
+      throw new Error(`GitHub API error: ${response.status} - ${response.statusText}`);
     }
 
     const data = await response.json();
@@ -119,11 +125,25 @@ export const getFiberDevLogLists = async (limit: number = 10) => {
 
     return formattedData;
   } catch (error) {
-    throw new Error("Error fetching CKB dev logs: " + error);
+    console.error("Error fetching CKB dev logs:", error);
+    
+    // Graceful degradation: return cached data if available, otherwise empty array
+    if (devLogsCache && devLogsCache.data.length > 0) {
+      console.warn("Using stale cached data due to API error");
+      return devLogsCache.data;
+    }
+    
+    console.warn("Falling back to empty devlogs list due to API error");
+    return FALLBACK_DEVLOGS;
   }
 };
 
-export const getFiberDevLogById = async (id: string) => {
-  const devLogs = await getFiberDevLogLists();
-  return devLogs.find((devLog) => devLog.id === id);
+export const getFiberDevLogById = async (id: string): Promise<BlogPost | undefined> => {
+  try {
+    const devLogs = await getFiberDevLogLists();
+    return devLogs.find((devLog) => devLog.id === id);
+  } catch (error) {
+    console.error("Error fetching devlog by ID:", error);
+    return undefined;
+  }
 };

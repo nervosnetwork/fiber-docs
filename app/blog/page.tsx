@@ -145,3 +145,6 @@ export default async function BlogPage() {
     </main>
   );
 }
+
+// Add ISR for production performance
+export const revalidate = 300; // Revalidate every 5 minutes

@@ -1,19 +1,28 @@
-# fiber-docs
+# Fiber Documentation
 
-This is a Next.js application generated with
-[Create Fumadocs](https://github.com/fuma-nama/fumadocs).
+Welcome to the Fiber documentation repository! This contains the official documentation for the Fiber project, built with [Fumadocs](https://fumadocs.vercel.app/).
 
-Run development server:
+## Getting Started
 
 ```bash
-npm run dev
-# or
+pnpm install
 pnpm dev
-# or
-yarn dev
 ```
 
-Open http://localhost:3000 with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+## Environment Variables
+
+For production deployment, you'll need to set up the following environment variables:
+
+### Required for Devlog Functionality
+
+```bash
+# GitHub Personal Access Token for fetching devlog discussions
+# Create at: https://github.com/settings/tokens
+# Required scopes: 'public_repo'
+GITHUB_TOKEN=your_github_personal_access_token_here
+```
 
 ## Explore
 
