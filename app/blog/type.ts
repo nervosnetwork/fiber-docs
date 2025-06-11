@@ -6,6 +6,7 @@ export interface BlogPost {
   readTime: string;
   tags: string[];
   author: string;
+  authorUrl?: string;
   type: "devlog" | "blog";
-  url?: string; // GitHub URL for devlogs
+  url?: string;
 }

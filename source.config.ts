@@ -11,7 +11,11 @@ import { z } from 'zod';
 // see https://fumadocs.vercel.app/docs/mdx/collections#define-docs
 export const docs = defineDocs({
   docs: {
-    schema: frontmatterSchema,
+    schema: frontmatterSchema.extend({
+      author: z.string().optional(),
+      authorUrl: z.string().url().optional(),
+      date: z.string().date().or(z.date()).optional(),
+    }),
   },
   meta: {
     schema: metaSchema,
@@ -24,6 +28,7 @@ export const blogPosts = defineCollections({
   dir: 'app/blog/p',
   schema: frontmatterSchema.extend({
     author: z.string().optional().default('Fiber Team'),
+    authorUrl: z.string().url().optional(),
     date: z.string().date().or(z.date()).optional(),
     readTime: z.string().optional(),
     tags: z.array(z.string()).optional().default([]),
