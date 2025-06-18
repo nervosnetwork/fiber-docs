@@ -1,10 +1,9 @@
 import { blog } from "@/lib/source";
 import { calculateReadingTime } from "./util";
 import { BlogPost } from "./type";
-import { getFiberDevLogLists } from "./devlog";
-import BlogClientFilter from "./BlogClientFilter";
+import BlogWithDevlogs from "./BlogWithDevlogs";
 
-export default async function BlogPage() {
+export default function BlogPage() {
   const documentPosts: BlogPost[] = blog.getPages().map((page) => {
     const data = page.data;
     return {
@@ -26,18 +25,6 @@ export default async function BlogPage() {
     };
   });
 
-  let devlogPosts: BlogPost[] = [];
-  try {
-    devlogPosts = await getFiberDevLogLists(20);
-  } catch (error) {
-    console.error("Error fetching devlog posts:", error);
-    // Continue without devlogs if there's an error
-  }
-
-  const allPosts = [...documentPosts, ...devlogPosts].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
-
   return (
     <main className="flex flex-1 flex-col px-4 py-8">
       <div className="max-w-4xl mx-auto w-full">
@@ -49,11 +36,8 @@ export default async function BlogPage() {
           </p>
         </div>
 
-        <BlogClientFilter allPosts={allPosts} />
+        <BlogWithDevlogs documentPosts={documentPosts} />
       </div>
     </main>
   );
 }
-
-// Add ISR for production performance
-export const revalidate = 300; // Revalidate every 5 minutes
