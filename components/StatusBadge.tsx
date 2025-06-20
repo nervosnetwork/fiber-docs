@@ -3,10 +3,13 @@ import {
   StableStateIcon,
   NeedsUpdateStateIcon,
   DeprecatedStateIcon,
+  LatestStateIcon,
 } from "./icons";
 import { Tooltip } from "./Tooltip";
+import { LatestVersions } from "@/lib/config";
 
 export enum VersionStatus {
+  Latest = "latest",
   Stable = "stable",
   NeedsUpdate = "needs-update",
   Deprecated = "deprecated",
@@ -35,12 +38,10 @@ enum ComparisonResult {
   HIGHER = 1,
 }
 
-const requiredVersions = {
-  "Fiber Node": "0.5.1",
-};
-
 // Static configurations - defined once
 const STATUS_COLORS = {
+  [VersionStatus.Latest]:
+    "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700",
   [VersionStatus.Stable]:
     "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700",
   [VersionStatus.NeedsUpdate]:
@@ -50,15 +51,18 @@ const STATUS_COLORS = {
 } as const;
 
 const STATUS_DESCRIPTIONS = {
+  [VersionStatus.Latest]:
+    "The documentation is up-to-date and matches the latest development.",
   [VersionStatus.Stable]:
-    "The documentation is stable for reading and slightly left behind the latest main dependency version.",
+    "The documentation may be slightly left behind the latest development but is stable for reading.",
   [VersionStatus.NeedsUpdate]:
-    "The documentation may be outdated for reading since it left behind breaking changes in the latest main dependency version.",
+    "The documentation may be outdated for reading since it left behind breaking changes in the latest development.",
   [VersionStatus.Deprecated]:
     "The documentation is deprecated for reading and will be removed in the future.",
 } as const;
 
 const STATUS_ICONS = {
+  [VersionStatus.Latest]: <LatestStateIcon />,
   [VersionStatus.Stable]: <StableStateIcon />,
   [VersionStatus.NeedsUpdate]: <NeedsUpdateStateIcon />,
   [VersionStatus.Deprecated]: <DeprecatedStateIcon />,
@@ -122,6 +126,7 @@ const analyzeVersionCompatibility = (
   let hasBreakingChanges = false;
   let hasMinorUpdates = false;
   let hasDeprecatedVersions = false;
+  let hasExactMatches = false;
 
   for (const dep of dependencies) {
     const currentVersion = apiVersions[dep.name];
@@ -154,21 +159,31 @@ const analyzeVersionCompatibility = (
         break;
 
       case ComparisonResult.EQUAL:
-        // Versions match - no issues
+        // Versions match exactly
+        hasExactMatches = true;
         break;
     }
   }
 
-  return { hasBreakingChanges, hasMinorUpdates, hasDeprecatedVersions };
+  return {
+    hasBreakingChanges,
+    hasMinorUpdates,
+    hasDeprecatedVersions,
+    hasExactMatches,
+  };
 };
 
 const determineStatusFromAnalysis = (
   analysis: ReturnType<typeof analyzeVersionCompatibility>
 ): VersionStatus => {
-  const { hasBreakingChanges, hasMinorUpdates, hasDeprecatedVersions } =
-    analysis;
+  const {
+    hasBreakingChanges,
+    hasMinorUpdates,
+    hasDeprecatedVersions,
+    hasExactMatches,
+  } = analysis;
 
-  // Priority order: Deprecated > Needs Update > Stable
+  // Priority order: Deprecated > Needs Update > Latest > Stable
   if (hasDeprecatedVersions) {
     return VersionStatus.Deprecated;
   }
@@ -177,12 +192,17 @@ const determineStatusFromAnalysis = (
     return VersionStatus.NeedsUpdate;
   }
 
+  // If all dependencies have exact matches (and no breaking changes or deprecated versions)
+  if (hasExactMatches && !hasMinorUpdates) {
+    return VersionStatus.Latest;
+  }
+
   return VersionStatus.Stable;
 };
 
 const determineStatus = (
   dependencies: Dependency[],
-  apiVersions: Record<string, string> = requiredVersions
+  apiVersions: Record<string, string> = LatestVersions
 ): VersionStatus => {
   if (dependencies.length === 0) {
     return VersionStatus.Stable;
