@@ -25,7 +25,6 @@ export default async function Page(props: {
         <DocsTitle className="mb-4">{page.data.title}</DocsTitle>
         <DocsDescription>{page.data.description}</DocsDescription>
         <VersionBadge
-          status={page.data.status}
           author={page.data.author}
           authorUrl={page.data.authorUrl}
           date={
