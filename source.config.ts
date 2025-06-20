@@ -23,7 +23,6 @@ export const docs = defineDocs({
       authorUrl: z.string().url().optional(),
       date: z.string().date().or(z.date()),
       dependencies: z.array(dependencySchema).optional(),
-      status: z.enum(["stable", "needs-update", "deprecated"]).optional(),
     }),
   },
   meta: {
