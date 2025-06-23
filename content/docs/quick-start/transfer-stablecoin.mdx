@@ -171,13 +171,13 @@ Start each node in a separate terminal:
 
 ```sh
 # Terminal 1
-RUST_LOG=info ./fnn -c node1/config.yml -d node1
+FIBER_SECRET_KEY_PASSWORD='password1' RUST_LOG=info ./fnn -c node1/config.yml -d node1
 
 # Terminal 2
-RUST_LOG=info ./fnn -c node2/config.yml -d node2
+FIBER_SECRET_KEY_PASSWORD='password2' RUST_LOG=info ./fnn -c node2/config.yml -d node2
 
 # Terminal 3
-RUST_LOG=info ./fnn -c node3/config.yml -d node3
+FIBER_SECRET_KEY_PASSWORD='password3' RUST_LOG=info ./fnn -c node3/config.yml -d node3
 ```
 
 ## Creating Stablecoin Payment Channels

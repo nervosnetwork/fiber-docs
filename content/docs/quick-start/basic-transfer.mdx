@@ -161,11 +161,11 @@ services:
 ```sh
 # Start Node 1
 cd node1
-RUST_LOG=info ./fnn -c config.yml -d .
+FIBER_SECRET_KEY_PASSWORD='password1' RUST_LOG=info ./fnn -c config.yml -d .
 
 # Start Node 2 (in a different terminal)
 cd node2
-RUST_LOG=info ./fnn -c config.yml -d .
+FIBER_SECRET_KEY_PASSWORD='password2' RUST_LOG=info ./fnn -c config.yml -d .
 ```
 
 ### 2. Connect the Nodes

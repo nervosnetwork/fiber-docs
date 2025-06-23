@@ -79,8 +79,10 @@ head -n 1 ./ckb/exported-key > ./ckb/key
 
 Launch your node with logging enabled:
 
+(You need to set a `FIBER_SECRET_KEY_PASSWORD` environment variable in the startup command to encrypt your wallet private key file. I used 123 here for demo purposes, but I recommend using a strong password.)
+
 ```sh
-RUST_LOG=info ./fnn -c config.yml -d .
+FIBER_SECRET_KEY_PASSWORD='123' RUST_LOG=info ./fnn -c config.yml -d .
 ```
 
 The node will start syncing with the Testnet and output logs to the console. You can redirect the output to a file if needed.
