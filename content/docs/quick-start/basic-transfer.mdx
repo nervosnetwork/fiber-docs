@@ -1,11 +1,11 @@
 ---
 title: Basic Transfer Example
 description: Learn how to set up and execute transfers between two nodes
-date: 2025-04-24
+date: 2025-06-25
 dependencies:
   - name: Fiber Node
-    minVersion: "0.5.0"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.5.0"
+    minVersion: "0.5.1"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.5.1"
 ---
 
 ## Overview
@@ -34,7 +34,7 @@ cd fiber
 cargo build --release
 ```
 
-This document used the [v0.5.0 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.5.0) throughout the guide.
+This document used the [v0.5.1 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.5.1) throughout the guide.
 
 ### 2. Create Data Directories
 
@@ -161,11 +161,11 @@ services:
 ```sh
 # Start Node 1
 cd node1
-RUST_LOG=info ./fnn -c config.yml -d .
+FIBER_SECRET_KEY_PASSWORD='password1' RUST_LOG=info ./fnn -c config.yml -d .
 
 # Start Node 2 (in a different terminal)
 cd node2
-RUST_LOG=info ./fnn -c config.yml -d .
+FIBER_SECRET_KEY_PASSWORD='password2' RUST_LOG=info ./fnn -c config.yml -d .
 ```
 
 ### 2. Connect the Nodes

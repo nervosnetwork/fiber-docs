@@ -1,11 +1,11 @@
 ---
 title: "Run a Fiber Node"
 description: "Learn how to run a Testnet node on your local machine"
-date: 2025-04-24
+date: 2025-06-25
 dependencies:
   - name: Fiber Node
-    minVersion: "0.5.0"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.5.0"
+    minVersion: "0.5.1"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.5.1"
 ---
 
 ## Overview
@@ -31,7 +31,7 @@ cd fiber
 cargo build --release
 ```
 
-This document used the [v0.5.0 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.5.0) throughout the guide.
+This document used the [v0.5.1 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.5.1) throughout the guide.
 
 ### 2. Create Node Directory
 
@@ -79,8 +79,10 @@ head -n 1 ./ckb/exported-key > ./ckb/key
 
 Launch your node with logging enabled:
 
+(You need to set a `FIBER_SECRET_KEY_PASSWORD` environment variable in the startup command to encrypt your wallet private key file. I used 123 here for demo purposes, but I recommend using a strong password.)
+
 ```sh
-RUST_LOG=info ./fnn -c config.yml -d .
+FIBER_SECRET_KEY_PASSWORD='123' RUST_LOG=info ./fnn -c config.yml -d .
 ```
 
 The node will start syncing with the Testnet and output logs to the console. You can redirect the output to a file if needed.
