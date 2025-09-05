@@ -8,7 +8,7 @@ date: 2025-03-07
 
 ## Overview
 
-Fiber is a Lightning-compatible peer-to-peer payment and swap network built on CKB, the base layer of [Nervos Network](https://www.nervos.org/). Fiber is designed to enable fast, secure, and efficient off-chain payment solutions, particularly for **micropayments** and **high-frequency** transactions. 
+Fiber is a Lightning-compatible peer-to-peer payment and swap network built on CKB, the base layer of [Nervos Network](https://www.nervos.org/). Fiber is designed to enable fast, secure, and efficient off-chain payment solutions, particularly for **micropayments** and **high-frequency** transactions.
 
 Inspired by Bitcoin’s Lightning Network, Fiber leverages CKB’s unique architecture and offers the following key features:
 
@@ -29,19 +29,14 @@ This article presents a **source code-level** exploration of Fiber's architectur
 
 At a high level, a Fiber node consists of several key modules:
 
-![Fiber node module.png](/imgs/docs/high-level/image.png)
+![image](/imgs/docs/high-level/key-module.png)
 
-- Obsolete image
-    
-![Pasted image 20250206211458.png](/imgs/docs/high-level/Pasted_image_20250206211458.png)
-    
-
-**Key Modules Overview**
+### Overview
 
 - **Network Actor:** Facilitates communication between nodes and channels, managing both internal and external messages along with related management operations.
 - **Network Graph**: Maintains a node’s view of the entire network, storing data on all nodes and channels while dynamically updating through gossip messages. When receiving a payment request, a node uses the network graph to find a route to the recipient.
 - **PaymentSession**: Manages the lifecycle of a payment.
-- [**fiber-sphinx](https://github.com/cryptape/fiber-sphinx) :** A Rust library for [Onion](https://en.wikipedia.org/wiki/Onion_routing) packet encryption and decryption. In Fiber, this ensures sensitive payment details are hidden from intermediate nodes, enhancing security and anonymity.
+- [**fiber-sphinx**](https://github.com/cryptape/fiber-sphinx) : A Rust library for [Onion](https://en.wikipedia.org/wiki/Onion_routing) packet encryption and decryption. In Fiber, this ensures sensitive payment details are hidden from intermediate nodes, enhancing security and anonymity.
 - **Gossip**: A protocol for sharing channel/node information, facilitating payment path discovery and updates.
 - **Watchtower**: Monitors channels for fraudulent transactions. If a peer submits an outdated commitment transaction, the watchtower issues a revocation transaction as a penalty.
 - **Cross Hub**: Enables cross-chain interoperability. For example, a payer can send Bitcoin through the Lightning Network, while the recipient receives CKB. The cross hub handles the conversion, mapping Bitcoin payments and invoices to Fiber’s system.
@@ -53,12 +48,7 @@ At a high level, a Fiber node consists of several key modules:
 
 The Lightning Network is essentially a peer-to-peer (P2P) system, where nodes communicate via network messages, updating internal states accordingly. The Actor Model aligns well with this setup:
 
-![Screenshot 2025-02-20 at 4.28.38 PM.png](/imgs/docs/high-level/Screenshot_2025-02-20_at_4.28.38_PM.png)
-
-- obsolete image
-    
-    ![image.png](/imgs/docs/high-level/image%201.png)
-    
+![image](/imgs/docs/high-level/actor-model.png)
 
 One potential concern with the Actor Model is its **memory footprint** and **runtime efficiency**. We conducted a [performance test](https://github.com/contrun/ractor/blob/a74cc0f6f9e2b4699991fc9902f10a59f06e4ed8/ractor/examples/bench_memory_usage.rs), showing that 0.9 GB of memory can support 100,000 actors (each with a 1 KB state), processing 100 messages per actor within 10 seconds—demonstrating acceptable performance.
 
@@ -69,14 +59,8 @@ Almost all modules in Fiber use the Actor Model. The [Network Actor](https://git
 1. The `Channel Actor` in Node A (`Actor 0` in this case) sends the message to the `Network Actor` in Node B.
 2. The `Network Actor` transmits the message using [Tentacle](https://github.com/nervosnetwork/tentacle/tree/master), a lower-level networking layer.
 3. The `Network Actor` in Node B receives the message and forwards it to the corresponding `Channel Actor`(`Actor 0/1/…/n`).
-    
-    ![Screenshot 2025-02-20 at 4.29.12 PM.png](/imgs/docs/high-level/Screenshot_2025-02-20_at_4.29.12_PM.png)
-    
 
-- obsolete image
-    
-    ![Pasted image 20250205191731.png](/imgs/docs/high-level/Pasted_image_20250205191731.png)
-    
+![image](/imgs/docs/high-level/actor-1.png)
 
 For each new channel, Fiber creates a corresponding [ChannelActor](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/channel.rs#L301-L308), where the `ChannelActorState` maintains all the necessary data for the channel.
 
@@ -85,41 +69,26 @@ Another major advantage of the Actor Model is its ability to map **HTLC (Hash Ti
 - Node A’s `Actor 0` handles the `AddTlc` operation via [handle_add_tlc_command](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/channel.rs#L1251).
 - Node B’s `Actor 1` handles the corresponding peer message via [handle_add_tlc_peer_message](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/channel.rs#L1069).
 
-![Screenshot 2025-02-20 at 4.29.54 PM.png](/imgs/docs/high-level/Screenshot_2025-02-20_at_4.29.54_PM.png)
-
-- obsolete image
-    
-    ![Pasted image 20250205190443.png](/imgs/docs/high-level/Pasted_image_20250205190443.png)
-    
+![image](/imgs/docs/high-level/actor-2.png)
 
 The **HTLC management** within channels is one of the most complex aspects of the Lightning Network, primarily due to the dependency of channel state changes on peer interactions. Both sides of a channel can have simultaneous HTLC operations.
 
 Fiber adopts `rust-lightning`’s approach of using a [state machine to track HTLC states](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/channel.rs#L2463-L2496), where state transitions occur based on `commitment_sign` and `revoke_and_ack` messages. The `AddTlc` operation and state transitions for both peers are as follows:
 
-![image.png](/imgs/docs/high-level/image%202.png)
-
-- obsolete image
-    
-    ![Pasted image 20250206212102.png](/imgs/docs/high-level/Pasted_image_20250206212102.png)
-    
+![image](/imgs/docs/high-level/htlc.png)
 
 ### Optimized Payment Processing and Multi-Hop Routing
 
-Each Fiber node maintains a representation of the network through a **Network Graph**, essentially a **bidirectional directed graph**, where:
+Each Fiber node maintains a representation of the network through a **Network Grap**, essentially a **bidirectional directed graph**, where:
 
 - Each **Fiber node** represents a **vertex**.
 - Each **channel** represents an **edge**.
 
 For privacy reasons, the actual balance partition of a channel is not broadcasted across the network. Instead, the edge weight represents the channel capacity.
 
-Before initiating a payment, the sender performs pathfinding to discover a route to the recipient. If multiple paths available, the sender must determine the optimal one by considering various factors. Finding the best path in a graph with incomplete information is a complex engineering challenge. A detailed discussion of this issue can be found in *[Mastering Lightning Network](https://github.com/lnbook/lnbook/blob/develop/12_path_finding.asciidoc#pathfinding-what-problem-are-we-solving)*.
+Before initiating a payment, the sender performs pathfinding to discover a route to the recipient. If multiple paths available, the sender must determine the optimal one by considering various factors. Finding the best path in a graph with incomplete information is a complex engineering challenge. A detailed discussion of this issue can be found in [*Mastering Lightning Network*](https://github.com/lnbook/lnbook/blob/develop/12_path_finding.asciidoc#pathfinding-what-problem-are-we-solving).
 
-![Screenshot 2025-02-20 at 4.31.01 PM.png](/imgs/docs/high-level/Screenshot_2025-02-20_at_4.31.01_PM.png)
-
-- obsolete image
-    
-    ![Pasted image 20250206104403.png](/imgs/docs/high-level/Pasted_image_20250206104403.png)
-    
+![image](/imgs/docs/high-level/multihop.png)
 
 In Fiber, users initiate payments via [RPC requests](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/rpc/payment.rs#L171-L209). When a node receives a payment request, it creates a corresponding [PaymentSession](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/network.rs#L1866-L1871) to track the payment lifecycle.
 
@@ -172,7 +141,7 @@ Fiber propagates gossip messages using a subscription-based model.
 
 This subscription model allows nodes to efficiently receive newly stored gossip messages after a specific cursor, enabling them to dynamically update their network graph, because the network graph also subscribes to gossip messages. The logic for retrieving these messages is implemented in [this section](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/gossip.rs#L1027-L1049).
 
-### **Enhancing Privacy with Onion Encryption & Decryption**
+### Enhancing Privacy with Onion Encryption & Decryption
 
 For privacy and security consideration, payments’ TLC is propagated across multiple nodes using Onion encryption. Each node only accesses the minimal necessary details, such as:
 
@@ -204,12 +173,8 @@ The key Onion Encryption & Decryption steps in Fiber include:
     
     When the sender receives a TLC fail event, it [decrypts the onion packet containing the error](https://github.com/nervosnetwork/fiber/blob/e7bb8874e308445fdf63a5bc538fc00c100f3dc9/src/fiber/network.rs#L1518-L1527). Based on the error details, the sender can decide whether to resend and update the network graph accordingly.
     
-    ![Screenshot 2025-02-20 at 4.31.32 PM.png](/imgs/docs/high-level/Screenshot_2025-02-20_at_4.31.32_PM.png)
-    
-    - obsolete image
-        
-        ![image.png](/imgs/docs/high-level/image%203.png)
-        
+
+![image](/imgs/docs/high-level/decrypt-receive.png)
 
 ### Preventing Channels from Fraud via Watchtower
 
@@ -229,7 +194,7 @@ Watchtower's **penalty mechanism** ensures that old commitment transactions are 
 - **Storage**: We use RocksDB as the storage layer, leveraging its scheme-less storage design to simplify encoding and decoding structs with `serde`. Data migration remains a challenge, which we address by [this standalone program](https://github.com/nervosnetwork/fiber/blob/develop/migrate/src/main.rs).
 - **Serialization**: Messages between nodes are serialized and deserialized using [Molecule](https://github.com/nervosnetwork/molecule), bringing efficiency, compatibility, and security advantages. It ensures determinism, meaning the same message serializes identically on all nodes, which is crucial for signature generation and verification.
 
-## **Future Prospects**
+## Future Prospects
 
 Fiber is still in the early stages of active development. Looking ahead, we plan to make further improvements in the following areas:
 
