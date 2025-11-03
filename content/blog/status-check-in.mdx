@@ -1,0 +1,105 @@
+---
+title: What's Up with Fiber? A Status Check-In
+description: 1.5 years on, progress, challenges, and what’s next.
+author: Developer Relations
+date: 2025-11-03
+---
+
+Lately, we've seen some folks in the community wondering about Fiber's recent progress. Fair question. Payment channel networks are one of the toughest areas in blockchain — progress doesn't always make headlines.
+
+Fiber kicked off in June 2024, [launched mainnet](https://x.com/FiberDevs/status/1895486339505893880) in March 2025, and has now been running internally for about one year and a half. It's a good time to share an update — what Fiber's been building, where it stands today, and where it's headed.
+
+## Where We Are
+First things first — Fiber development has never stopped.
+Seriously. You can see ongoing updates on both [X](https://x.com/FiberDevs/) and [GitHub](https://github.com/nervosnetwork/fiber).
+
+Fiber is a payment channel protocol built on CKB — just like what Lightning is for Bitcoin. It's also part of the Nervos' layered design: Layer 1 = CKB, Layer 2 = Fiber. From the very beginning, Nervos has always been about building a layered network.
+
+Fiber's challenges mainly come down to two aspects:
+- **Technical complexity**: Payment channels themselves are difficult — arguably even more complex than blockchains.
+- **Ecosystem & killer app**: Even if the protocol side goes smoothly, it still needs an ecosystem and killer apps to shine — and that part takes time.
+In the past, Nervos has had other L2 projects like Godwoken and Axon. Today, the focus has shifted toward Fiber for payment channels, and [Perun]( https://www.reddit.com/r/NervosNetwork/comments/1im2sjf/nervos_ckb_perun_payments_channel_ama/) exploring state channels.
+
+Channel networks have always been central to Nervos' layered network vision — not some short-term hype cycle or bull-market buzzword, but a direction clearly stated in its [whitepaper](https://github.com/nervosnetwork/rfcs/blob/master/rfcs/0002-ckb/0002-ckb.md) and vision statement from the start.
+
+Nervos' technical path has consistently been **PoW + UTXO + Layer 2 channels** — a stable and purposeful design choice.
+
+## Engineering Updates
+To give a clearer picture of the engineering depth involved, here's a snapshot of what we've been tackling in recent months:
+- **Security audit & fixes**
+Fiber underwent a security audit, which identified several issues. We spent more than one month addressing these to ensure Fiber’s security meets a high standard.
+
+- **Large-scale stress testing**
+We conducted large-scale internal testing, which revealed performance issues and resource utilization problems that are not easily detected during regular development. These have been (and continue to be) fixed to make the network more robust under real-world load.
+- **Extreme-case contract resilience**
+We've identified potential risks in the contracts under extreme scenarios. Now we're upgrading contract logic and watchtower-related code to mitigate them.
+
+**Other Challenges**
+
+- For payment channels, any party can exit at any time, potentially triggering a **channel closure**.
+
+- Another major challenge is **routing**. Node only has partial network information, making it difficult to find the optimal path. As far as we know, there is no widely accepted best practice yet. 
+
+To address this, we've been experimenting with Multipath Payments (MPP) to improve routing reliability and efficiency. [MPP](https://bitcoinops.org/en/topics/multipath-payments) was first proposed in Lightning Network, and Fiber aims to adapt this approach to the Nervos ecosystem.
+
+The challenges extend further:
+- How to improve the routing success rate?
+- To be a service node, you need to open channels with many peers, which requires locking significant liquidity and managing complex channel flows.
+
+That said, Fiber doesn't shy away from its difficulties. The challenges stem from its deliberate design choices: **a P2P topology, strong privacy, and dynamic payment routing**. These are all hard, open problems. Lightning and Fiber both are still exploring.
+
+## What Fiber Is Solving
+Fiber's position is the Layer 2 payment channel network for CKB — similar to Lightning for Bitcoin, plus extended for CKB's multi-asset and programmable features.
+
+Among all Layer 2 approaches, channel networks (including Lightning, Fiber, Perun, etc.) stand out with their unique mix of properties — with regard to L1s and other L2 approaches like rollups. 
+
+Fiber's advantages are: low latency, low cost, and strong privacy — all while preserving near-L1-level security.
+
+- **Low latency**: Transactions settle directly between involved peers, no waiting for global consensus.
+- **Low fees**: only path-related fees apply in each payment; no network-wide overhead (since no global consensus).
+- **High privacy**: only the peers involved in a payment route see the transaction; the rest of the network remains unaware (since no global consensus). 
+We've been working on Atomic Multipath Payments (AMP) to provide high privacy and secure multi-path payments. Originally proposed in the Lightning Network, [AMP](https://bitcoinops.org/en/topics/atomic-multipath) is being adapted for Fiber on Nervos.
+
+Privacy is fundamental for real-world payments. 
+And let's be clear: privacy ≠ anonymity, and wanting privacy ≠ being shady.
+
+Just two quick examples:
+- **Business-to-Consumer**: A company paying employees in stablecoins — imagine if all salaries were public on-chain. Not okay.
+- **Consumer-to-Business**: A milk tea shop accepts stablecoins. Its competitors could literally track its daily revenue from the blockchain. Not okay.
+
+In short, privacy isn't optional — it's the baseline for any real economy. (BTW, MEV can be seen as a symptom of missing privacy.)
+
+It's important to note that all this assumes near-L1 security. Sure, you could achieve similar performance with centralized systems — but that means inheriting the downsides of Web2 all over again.
+
+## What Fiber Could Enable
+Fiber's core protocol is still evolving, but the goal is clear: to be an instant, private, and low-cost payment network built for the future.
+
+Some possible use cases:
+- **Media streaming by micropayments**: no accounts, no credit cards, no subscriptions — pay per second, literally.
+- **Streaming swaps**: instant multi-asset swaps (USDI ↔ CKB ↔ BTC) over multiple paths.
+- **Streaming AI**: pay per token or per reply — every message is a payment.
+- **Gaming**: instant micro-settlement after each action/command in P2P duels or group matches
+- **Tipping** in social networks
+- [**P2P markets for bandwidth/storage/computation**](https://talk.nervos.org/t/can-we-pay-nodes-similar-to-pow-miners-using-the-secondary-issuance/8957/5): p2p messaging for demand/supply matching, erasure coding for data redundancy, and stablecoin in channels for payments. 
+- [**Incentivized BitTorrent**](https://talk.nervos.org/t/can-we-pay-nodes-similar-to-pow-miners-using-the-secondary-issuance/8957/6): integrating Fiber micropayments into DHT file sharing so uploads earn and downloads pay, discouraging freeloaders while keeping users anonymous. 
+- **Autonomous Vehicles & Machine economy**: self-driving charge passengers per distance and use the payment for recharge, parking, or even making way on the road (if the passenger is running late) by paying nearby cars small amounts to let it pass.
+- **Virtual agent economy**: your AI assistant paying other agents for booking flights, hotels, or concert tickets — no accounts or cards needed.
+
+Some of these sound futuristic, some are already starting to happen. 
+They'll depend not just on technology, but also on ecosystem growth and market timing.
+
+## A Long-Term Road
+We get it — ecosystems evolve at their own pace. Protocol layer moves slow and steady, while applications iterate fast.
+
+Fiber is never about chasing narratives or hype. It's a long-term pillar of Nervos' architecture. 
+
+Its goal: enable open finance that is scalable, programmable, and privacy-friendly, all while preserving PoW-based security and decentralization that make the system trustworthy at its core.
+
+In short: Fiber's here to stay, and we're still building.
+
+---
+**More reading on Fiber**:
+
+- [Architecture & Key modules](https://docs.fiber.world/docs/tech-explanation/high-level)
+- [Nervos' advantage ](https://docs.fiber.world/docs/tech-explanation/light-paper#advantages-of-nervos-ckbs)
+- [Inspirations from LN]( https://docs.fiber.world/docs/tech-explanation/light-paper#inspiration-from-the-lightning-network) 
