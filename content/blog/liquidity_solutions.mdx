@@ -1,0 +1,227 @@
+---
+title: A Survey of Liquidity Solutions for Fiber Network
+description: We reviewed 11 liquidity solutions to figure out the optimal approach for Fiber
+author: Developer Relations
+date: 2025-11-18
+---
+
+## Surveyed Solutions
+
+### 01 Shaduf++
+
+Paper: [*Shaduf++: Non-Cycle and Privacy-Preserving Payment Channel Rebalancing*](https://eprint.iacr.org/2022/388)
+
+
+The intermediate user can shift funds between adjacent channels.
+
+Say there're two channels. Channel Beta is between Alice and Bob with the distribution: (Alice: 10, Bob: 20). Another Channel Gamma is between Bob and Carol with the distribution: (Bob: 1, Carol: 19). Bob can shift 10 from (Alice, Bob) to (Bob, Carol) and the distributions become:
+
+- (Alice: 10, Bob: 10)
+- (Bob: 11, Carol: 19)
+
+![image](content/blog/img/Shaduf.png)
+
+**Limitations:**
+- Users can only shift funds between channels after recording the binding via an on-chain transaction.
+- Channels binding will specify the max allowed shifted-out amount in both channels.
+- For each channel, the sum of all max allowed shifted-out amount in all recorded bindings should be no greater than the channel capability. All the information is available on-chain so anyone can verify this. This is also the reason that shift requires an on-chain transaction to record the binding.
+
+**How to use:**
+
+- It can be used as a fallback that when a forwarding node has no enough balance in the outbound channel. If it has enough fund in the inbound channel, it can try to shift funds between channels.
+- A node can scan its channels and schedule shifts in advance to improve the funds distributions in these channels.
+
+### 02 Split
+
+Paper: [*Study and Implementation of Split Multi-Channel Rebalancing Strategy for Off-Chain Payments*](http://ijns.jalaxy.com.tw/contents/ijns-v27-n4/ijns-2025-v27-n4-p838-849.pdf)
+
+This paper has brief introduction to Revive and Shaduf as well.
+
+![image](content/blog/img/split.jpg)
+*B→C→D→B are performing Revive, C→E→F are performing Shaduf*
+
+Split is a rebalancing planning algorithm. It monitors the traffic in the network and generates a rebalancing plan to shift funds between channels. In simple words, it automate the execution of Shaduf.
+
+The planning algorithm is based on another paper: P. Li, T. Miyazaki, and W. Zhou, [*Secure balance planning of off-blockchain payment channel networks*](https://dl.acm.org/doi/10.1109/INFOCOM41043.2020.9155375). The core contribution is PnP, a balance planning service that determines how much funding should be initially deposited into payment channels given estimated payment demands among network nodes.
+
+### 03 Horcrux
+
+Paper: [*Horcrux: Synthesize, Split, Shift and Stay Alive Preventing Channel Depletion via Universal and Enhanced Multi-hop Payments*](https://eprint.iacr.org/2024/1338)
+
+This protocol is like an automatic Shaduf++ on payments. It establishes a Virtual Channel along the payment path to implement funds shifting.
+
+Other virtual channel designs:
+
+- Stefan Dziembowski, Lisa Eckey, Sebastian Faust, Julia Hesse, and Kristina Hosátková. [*Multi-party virtual state channels*](https://eprint.iacr.org/2019/571). 
+- Stefan Dziembowski, Sebastian Faust, and Kristina Hosátková. [*General state channel networks*](eprint.iacr.org/2018/320). 
+- Aggelos Kiayias and Orfeas Stefanos Thyfronitis Litos. [*Elmo: Recursive virtual payment channels for bitcoin*](eprint.iacr.org/2021/747).
+- Lukas Aumayr, Pedro Moreno-Sanchez, Aniket Kate, and Matteo Maffei. [*Breaking and fixing virtual channels: Domino attack and donner*](eprint.iacr.org/2021/855).
+
+### 04 Musketeer
+
+Paper: Avarikioti, Z., Schmid, S., & Tiwari, S. (2023). [*Musketeer: Incentive-Compatible Rebalancing for Payment Channel Networks*](https://eprint.iacr.org/2023/938)
+
+All users submit their liquidity and bid.
+- **Liquidity**: How much sellers are willing to allocate for routing/rebalancing.
+- **Bid**: How much buyers are willing to pay for rebalancing the channel.
+
+The protocol generates rebalancing plan based on the global liquidity and bid submissions.
+
+### 05 Starship
+
+Paper: Xu, M., Yu, W., Shang, G., Qi, G., Duan, D., Wang, S., Li, K., Zhang, Y., & Cheng, X. (2025), [*Starfish: Rebalancing Multi-Party Off-Chain Payment Channels*](https://doi.org/10.48550/arXiv.2504.20536)
+
+Shaduf requires N on-chain transactions to submit bindings. Starship batches these transactions in a star topology, where a central hub connects to N peers. However, the batch requires synchronous consensus from all N+1 parties. The paper uses atomic broadcast, but other BFT consensus algorithms also work.
+
+### 06 Cycle
+
+Paper: Hong, Z., Guo, S., Zhang, R., Li, P., Zhan, Y., & Chen, W. (2022), [*Cycle: Sustainable Off-Chain Payment Channel Network with Asynchronous Rebalancing*](https://ieeexplore.ieee.org/document/9833795/). 
+
+Rebalancing for a cycle topology. All parties in the cycle maintain a global offset Delta via a consensus algorithm using off-chain messages. In all the channels in the cycle, it is assumed that amount of Delta balance has been transferred from the sender to the receiver.
+
+For example, for the cycle consisting of 3 channels:
+
+- Alice to Bob: Alice 0, Bob 200
+- Bob to Charlie: Bob 0, Charlie 200
+- Charlie to Alice: Charlie 0, Alice 200
+
+After applying the global offset Delta = -100, the balance becomes:
+
+- Alice to Bob: Alice 100, Bob 100
+- Bob to Charlie: Bob 100, Charlie 100
+- Charlie to Alice: Charlie 100, Alice 100
+
+Instead of sending real payments to rebalance the channel, Cycle turns the problem into how parties reach consensus on the global offset Delta.
+
+### 07 Lightning Pool
+
+Paper: Osuntokun, O., Fromknecht, C., Paulino, W., Gugger, O., & Halseth, J. (n.d.), [*Lightning Pool: A Non-Custodial Channel Lease Marketplace*](https://github.com/lightninglabs/pool-paper/blob/main/liquidity.pdf)
+
+Lightning Pool solves liquidity problem using an auction on inbound channel bandwidth. Sellers promise to create channels with the required duration, and buyers pay the lease fee to these inbound channels.
+
+To support the channel lease market place, fiber must support following features:
+
+- Single funded channels. The inbound channel is fully funded by the seller.
+- A mechanism to ensure sellers pay the lease fee. Sellers can pay the fee off-chain or promise to pay when they receive funds from the lease channels.
+- A mechanism to ensure a channel is open for the required duration.
+
+See also:
+- [闪电网络：技术与用户体验（五）：流动性获取](https://www.btcstudy.org/2024/03/01/lightning-network-technology-improvement-and-users-experience-part-5/)
+- [Liquidity Ads](t.co/g5aUinzoPl) by Blockstream
+- [Amboss Space Magma](https://amboss.space/magma)
+
+### 08 Submarine Swap
+
+Atomic swap between L1 (CKB) and L2 (Fiber). If Alice wants inbound channel, she can pays the service provider Bob on Fiber (so Bob will have balance to forward payments to Alice), and Bob will pay back the received funds to Alice on CKB.
+
+See also:
+- [Loop | Builder's Guide](https://docs.lightning.engineering/lightning-network-tools/loop)
+- [闪电网络：技术与用户体验（五）：流动性获取](https://www.btcstudy.org/2024/03/01/lightning-network-technology-improvement-and-users-experience-part-5/)
+
+### 09 Zero-Conf Channels
+When users trust the service provider, users can send funds to the service provider on chain and the service provider will open channels to users and transfer the funds after deducting the fee immediately. Users can confirm the channel immediately after receiving the fund tx without waiting for confirmations on-chain.
+
+### 10 JIT (Just-In-Time) Channels
+When the service provider forwards HTLC to a user and the user has not enough inbound bandwidth, the service provider will open a new channel to provide inbound bandwidth for the user. The service provider can ask users to pay the fee via other channels using the same payment hash.
+
+### 11 Liquidity Ads
+
+[Extensible Liquidity Ads by t-bast · Pull Request #1153 · lightning/bolts](https://github.com/lightning/bolts/pull/1153)
+
+Liquidity Ads create a decentralized marketplace where nodes advertise their willingness to sell liquidity at specific rates. Buyers can discover these offers through the Lightning gossip protocol and request liquidity when opening dual-funded channels or performing splices. This eliminates the need for centralized liquidity marketplaces and provides market-driven pricing for channel capacity.
+
+The specification introduces a **`payment_type`** field enabling multiple fee payment methods. Some examples:
+
+- **FROM_CHANNEL_BALANCE:** Fees deducted immediately from the buyer's channel balance during the funding negotiation.
+- **FROM_HTLC:** Fees deducted from future HTLCs routed through the channel, enabling zero-balance onboarding
+- **FROM_FUTURE_HTLC:** Deferred fee payment from subsequent payment flow
+- **EXTERNAL_PAYMENT:** Out-of-band payment mechanisms
+
+## Research Roadmap
+
+The next step is to delve into each solution based on priority, listed from highest to lowest below.
+
+### Submarine Swaps
+
+Submarine swaps enable atomic exchanges between on-chain CKB and off-chain Fiber channels, providing a trustless mechanism for users to manage liquidity without custodial risk.
+
+**Why Most Suitable for Fiber:**
+
+- Leverages existing HTLC infrastructure already implemented in Fiber
+- Provides immediate liquidity access without protocol changes
+- Non-custodial and trustless, aligning with decentralization principles
+- Solves the critical inbound capacity problem for new users
+
+**Implementation Plan:**
+
+- Develop submarine swap service provider infrastructure. The commitment lock script may just work for the on-chain part of the swap.
+- Create both normal swaps (on-chain to Lightning) and reverse swaps (Lightning to on-chain)
+- Establish competitive fee structures (base fee + percentage)
+
+More see:
+- [Lightning Loop Swap Case Study](https://www.notion.so/cryptape/Lightning-Loop-Swap-Case-Study-2ae8f0d3781e80239d4ae115a7d8c5f5)
+- [Fiber Submarine Swap Product Design Reference](https://www.notion.so/cryptape/Fiber-Submarine-Swap-Product-Design-Reference-2af8f0d3781e8087b7c3f0b4c4f8a275)
+
+### Liquidity Ads
+
+Liquidity Ads create a decentralized marketplace where nodes advertise their willingness to sell liquidity at specific rates, discoverable via the network gossip protocol. Buyers can request liquidity during dual-funded channel creation or splices, with flexible fee payment methods.
+
+**Why Most Suitable for Fiber:**
+
+- Enables decentralized, market-driven liquidity pricing
+- Integrates naturally with dual-funded channels and splicing (if supported)
+- Reduces reliance on centralized liquidity providers
+- Supports multiple fee payment models (e.g., from HTLCs, future payments, or external)
+
+**Implementation Plan:**
+
+- Evaluate compatibility with Fiber’s current channel funding model
+- Implement support for dual-funded channels and splicing if not already available
+- Adopt or adapt the `payment_type` field and associated fee mechanisms
+- Integrate Liquidity Ads into Fiber’s gossip protocol for offer discovery
+- Develop tooling for nodes to publish and consume liquidity advertisements
+
+### JIT (Just-In-Time) Channels
+
+JIT channels allow users to receive Lightning payments immediately without pre-established channels, with the sender opening channels on-the-fly when first payment arrives or receivers have no enough inbound capacity.
+
+**Why Most Suitable for Fiber:**
+
+- Dramatically lowers user onboarding friction
+- Reduces upfront capital requirements for end users
+- Proven successful in Lightning Network ecosystem
+
+**Implementation Plan:**
+
+- Research LSPS2/bLIP-52
+- Report on how to build LSP infrastructure with automated channel management
+- Implement fee deduction mechanism from first received payment
+- Implement single-funded channel support if not already available
+- Implement zero-conf channel support if not already available
+- Create standardized API for wallet integrations
+
+### Liquidity Pool Marketplace
+
+A channel lease marketplace where liquidity sellers auction inbound bandwidth to buyers needing receiving capacity.
+
+**Why Most Suitable for Fiber:**
+
+- Creates sustainable economic incentives for liquidity providers
+- Addresses the "inbound liquidity" problem systematically
+- Enables price discovery for liquidity services
+
+**Implementation Plan:**
+
+- Implement single-funded channel support if not already available
+- Implement zero-conf channel support if not already available
+- Design and implement smart contracts to support lease channels
+- Design marketplace API for buyers and sellers
+- Design auction mechanism for channel leases (duration-based pricing)
+
+### Solutions to Watch
+
+These solutions are inefficient and costly to maintain; we can monitor them for future developments.
+
+- Shaduf++
+- Cycle
+- Split
