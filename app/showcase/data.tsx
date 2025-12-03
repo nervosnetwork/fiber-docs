@@ -52,7 +52,7 @@ export const showcaseProjects = [
       "Retro phaser.js game with micro-payments for continues and high score rewards. Built with Phaser.js and real-time token transfers.",
     category: "Demo & Examples",
     githubUrl:
-      "https://github.com/nervosnetwork/fiber-docs/tree/main/examples/simple-game",
+      "https://github.com/nervosnetwork/fiber-docs/tree/master/example/simple-game",
     tags: ["Phaser.js", "Micro-payments"],
     language: "TypeScript",
   },
