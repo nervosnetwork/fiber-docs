@@ -35,6 +35,17 @@ export const showcaseProjects = [
 
   // Demo & Examples
   {
+    id: "fiber-wasm-demo",
+    title: "Fiber WASM Demo",
+    description:
+      "A simple demo showcasing Fiber's capabilities using WebAssembly.",
+    githubUrl: "https://github.com/officeyutong/fiber-wasm-demo",
+    demoUrl: "https://fiber-wasm-demo.vercel.app/",
+    category: "Demo & Examples",
+    tags: ["WASM", "WebAssembly"],
+    language: "TypeScript",
+  },
+  {
     id: "simple-game",
     title: "Micro-payment Game",
     description:
@@ -96,6 +107,17 @@ export const showcaseProjects = [
   },
 
   // Network & Resources
+  {
+    id: "fiber-simulator",
+    title: "Fiber Simulator",
+    description: "Simulate Fiber Network for educational purposes",
+    githubUrl:
+      "https://github.com/chenyukang/fiber-world/blob/main/simulate.html",
+    demoUrl: "https://fiber-world.vercel.app/simulate.html",
+    category: "Network & Resources",
+    tags: ["Simulation", "Network"],
+    language: "HTML",
+  },
   {
     id: "testnet-visualization",
     title: "Testnet Visualization",
