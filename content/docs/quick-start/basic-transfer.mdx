@@ -106,7 +106,7 @@ fiber:
             args: 0x3cb7c0304fe53f75bb5727e2484d0beae4bd99d979813c6fc97c3cca569f10f6
         - cell_dep:
             out_point:
-              tx_hash: 0x5a5288769cecde6451cb5d301416c297a6da43dc3ac2f3253542b4082478b19b # ckb_auth
+              tx_hash: 0x12c569a258dd9c5bd99f632bb8314b1263b90921ba31496467580d6b79dd14a7 # ckb_auth
               index: 0x0
             dep_type: code
     - name: CommitmentLock
@@ -121,7 +121,7 @@ fiber:
             args: 0xf7e458887495cf70dd30d1543cad47dc1dfe9d874177bf19291e4db478d5751b
         - cell_dep:
             out_point:
-              tx_hash: 0x5a5288769cecde6451cb5d301416c297a6da43dc3ac2f3253542b4082478b19b #ckb_auth
+              tx_hash: 0x12c569a258dd9c5bd99f632bb8314b1263b90921ba31496467580d6b79dd14a7 #ckb_auth
               index: 0x0
             dep_type: code
 
@@ -201,7 +201,7 @@ curl -s -X POST \
     "params": [{
       "peer_id": "QmcFpUnjRvMyqbFBTn94wwF8LZodvPWpK39Wg9pYr2i4TQ",
       "funding_amount": "0xba43b7400",
-      "commitment_delay_epoch": "0x20001000003"
+      "public": true
     }]
   }' http://localhost:8227
 ```
@@ -259,11 +259,14 @@ payment_preimage="0x$(openssl rand -hex 32)"
 
  Once the request is sent, you can get the invoice ID from the response:
 
-```sh
+```json
 {
   "id": "42",
   "jsonrpc": "2.0",
-  "result": "fibt100000000001p..."
+  "result": {
+    "invoice_address": "fibt100000000001p...",
+    "invoice": { ... }
+  }
 }
 ```
 
