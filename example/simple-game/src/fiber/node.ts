@@ -30,7 +30,6 @@ export class FiberNode {
             currency: "Fibt",
             description,
             expiry: "0xe10",
-            final_cltv: "0x28",
             payment_preimage: paymentImage,
         });
     }
