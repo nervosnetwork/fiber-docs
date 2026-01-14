@@ -1,15 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Zap, 
-  Layers, 
-  ArrowLeftRight, 
-  CircleDollarSign, 
-  Activity,
-  Network
-} from 'lucide-react';
-
 export default function App() {
   const [stage, setStage] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
