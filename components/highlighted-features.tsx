@@ -10,6 +10,7 @@ export default function HighlightedFeatures() {
           <span className="text-tertiary">Hightlighted</span> Features
         </>
       }
+      showDivider={false}
     >
       <Section>
         <div className="self-stretch h-[560px] lg:h-[720px] border-t border-b border-invisible relative">
