@@ -1,0 +1,83 @@
+---
+title: From Protocol Completion to Real-World Usability
+description: Fiber 2025 Review & 2026 Outlook
+author: Quake
+date: 2026-01-22
+---
+
+Fiber has made significant strides over the past year. As we move further into 2026, it’s a good moment to reflect on what we accomplished in 2025 and share our plans for the year ahead. 
+
+## Current Status
+
+Fiber has moved well beyond the design and single-channel validation stages. It is now protocol-complete, increasingly network-tested, and steadily moving toward broader integration and adoption.
+
+### Protocol Completion
+
+- The **full channel lifecycle** (open, update, close, and dispute) is defined.
+- **Multi-hop payments** across channels are supported at the protocol level.
+- **State commitment, forwarding rules**, and **failure handling** are specified with real network behavior.
+
+### Engineering Progress
+
+- A working Rust-based core implementation is in place.
+- Channel state machines and routing-related logic are implemented.
+- The corresponding on-chain contracts and scripts have been implemented to support channel settlement, state verification, and dispute handling.
+
+In addition, we have been running extensive multi-node, multi-hop network tests over the past year. These tests focused on realistic network scenarios and revealed real issues, including:
+
+- Fund safety edge cases
+- Performance bottlenecks under load
+- Node stability and recovery issues
+
+A significant portion of recent work has been dedicated to fixing these issues and hardening the system. As a result, Fiber is not just protocol-complete, but increasingly network-tested.
+
+## Positioning Fiber: Lessons from the Lightning Network
+
+To set expectations, it’s useful to compare Fiber’s development with that of the Lightning Network.
+
+Lightning went through several phases: 
+
+1. A proposal
+2. Single channel implementation
+3. Multi-hop routing and real network engineering
+4. Broader wallet adoption and ecosystem maturity
+
+Fiber today is closer to Lightning’s early network phase. This means Fiber is beyond validating basic channel correctness — we are actively validating network behavior under realistic conditions.
+
+At the same time, we remain careful not to prematurely lock in higher-level assumptions. Lessons from Lightning remain valid: early decisions may impose long-term constraints.
+
+Our guiding principle is: **advance network capability while keeping the protocol flexible enough to evolve**.
+
+## Key Challenges
+
+Fiber’s progress has not been without hurdles. We are carefully managing two main areas:
+
+**Protocol complexity** 
+
+Features like routing, multi-asset support, and watchtowers introduce significant complexity. We focus on stabilizing the core first before layering additional functionality.
+
+**Designing for a more expressive base layer** 
+
+Unlike Bitcoin, CKB is Turing-complete, which gives us much more room to experiment. This also means assumptions from Bitcoin or Lightning do not always apply. We keep the protocol design and implementation flexible, avoiding patterns that might be unnecessarily restrictive.
+
+## 2026 Outlook: Bringing Fiber to Users
+
+Looking forward, our work focuses on three main areas:
+
+**Wallet Integration**
+
+We are actively integrating Fiber with JoyID, making Fiber usable for a real wallet. This helps validate our API design, UX assumptions, and end-to-end flow under realistic user scenarios.
+
+**Business-Facing Enablement**
+
+We will improve documentation and build demos to showcase Fiber’s advantages, particularly in scenarios such as high-frequency payments, low-latency interactions, and off-chain coordination that would be inefficient on-chain.
+
+These demos are not marketing material but concrete references that help wallets, developers, and potential partners understand when and why to use Fiber.
+
+**Liquidity Solutions**
+
+Liquidity remains a core challenge for both Lightning and Fiber. We will study and reuse the proven solutions from Lightning Network where applicable (e.g., channel management, rebalancing techniques, and liquidity pools). We will also explore Fiber-specific liquidity designs to see what works best in our environment.
+
+## Final Remarks
+
+2025 has been a year of solidifying Fiber’s foundation — from protocol design to real-world network testing. Building on this strong foundation, we are now focusing on real-world usability, developer enablement, and liquidity solutions. In 2026, we aim to bring Fiber closer to users, wallets, and developers while continuing to explore innovations that make off-chain payments more practical, efficient, and flexible.
