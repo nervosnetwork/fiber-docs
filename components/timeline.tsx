@@ -14,7 +14,7 @@ export default function Timeline() {
           <button
             data-hovered="false"
             data-orientation="Horizontal"
-            className="w-44 h-[60px] p-2 border border-primary flex justify-center items-center gap-sm cursor-pointer hover:bg-layer-02 transition-colors"
+            className="hidden md:flex w-44 h-[60px] p-2 border border-white justify-center items-center gap-sm cursor-pointer hover-invert"
             onClick={() => window.open('https://github.com/nervosnetwork/fiber/discussions', '_blank')}
           >
             <div className="w-6 h-6 relative flex items-center justify-center">
@@ -32,7 +32,7 @@ export default function Timeline() {
         </div>
       }
     >
-      <div className="self-stretch flex justify-between items-end">
+      <div className="self-stretch flex flex-col md:flex-row md:justify-between md:items-end gap-8">
         <div className="w-[923px] inline-flex flex-col justify-start items-start">
           <div className="self-stretch p-md border border-invisible inline-flex justify-start items-center gap-sm">
             <div className="w-4 h-4 bg-white rounded-full" />
@@ -135,7 +135,7 @@ export default function Timeline() {
             <div className="text-primary text-h2">2025 Q4</div>
           </div>
         </div>
-        <div className="w-56 relative overflow-hidden">
+        <div className="w-56 relative overflow-hidden hidden md:block">
           <Image
             src="/fiber.svg"
             alt="Fiber"
@@ -145,6 +145,25 @@ export default function Timeline() {
           />
         </div>
       </div>
+      <button
+        data-hovered="false"
+        data-orientation="Horizontal"
+        className="md:hidden w-full h-[60px] p-2 border border-white flex justify-center items-center gap-sm cursor-pointer hover-invert"
+        onClick={() => window.open('https://github.com/nervosnetwork/fiber/discussions', '_blank')}
+        style={{ marginTop: '32px' }}
+      >
+        <div className="w-6 h-6 relative flex items-center justify-center">
+          <Image
+            src="/external.svg"
+            alt="External"
+            width={20}
+            height={20}
+          />
+        </div>
+        <div className="w-28 text-center text-primary text-button">
+          VIEW DEV LOG
+        </div>
+      </button>
     </Section>
   );
 }

@@ -8,12 +8,22 @@ export default function Footer() {
       </div>
       <div className="text-display text-primary text-center">Join Our Community</div>
       <div className="flex justify-start items-center gap-md">
-        <div className="w-12 h-12 relative">
+        <a 
+          href="https://x.com/@FiberDevs" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="w-12 h-12 relative cursor-pointer hover:opacity-80 transition-opacity"
+        >
           <Image src="/twitter.svg" alt="Twitter" fill className="object-contain" />
-        </div>
-        <div className="w-12 h-12 relative">
+        </a>
+        <a 
+          href="https://github.com/nervosnetwork/fiber" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="w-12 h-12 relative cursor-pointer hover:opacity-80 transition-opacity"
+        >
           <Image src="/github.svg" alt="GitHub" fill className="object-contain" />
-        </div>
+        </a>
         <div className="w-12 h-12 relative">
           <Image src="/substack.svg" alt="Substack" fill className="object-contain" />
         </div>

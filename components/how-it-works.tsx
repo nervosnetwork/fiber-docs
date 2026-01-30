@@ -26,7 +26,7 @@ export default function HowItWorks() {
                     alt="Work 1"
                     width={800}
                     height={600}
-                    className="w-full"
+                    className="w-full px-0 md:px-[20px] lg:px-[40px]"
                   />
                   <div className="w-2/3 self-center text-center">
                     An off-chain payment channel allows two parties to lock
@@ -46,7 +46,7 @@ export default function HowItWorks() {
                     alt="Work 2"
                     width={800}
                     height={600}
-                    className="w-full"
+                    className="w-full px-0 md:px-[20px] lg:px-[40px]"
                   />
                   <div className="w-3/4 self-center text-center">
                     Hash Time-Locked Contracts (HTLC) ensure secure off-chain
@@ -67,7 +67,7 @@ export default function HowItWorks() {
                     alt="Work 3"
                     width={800}
                     height={600}
-                    className="w-full"
+                    className="w-full px-0 md:px-[20px] lg:px-[40px]"
                   />
                   <div className="w-2/3 self-center text-center">
                     Multi-hop routing enables payments to be securely relayed
@@ -87,7 +87,7 @@ export default function HowItWorks() {
                     alt="Work 4"
                     width={800}
                     height={600}
-                    className="w-full"
+                    className="w-full px-0 md:px-[20px] lg:px-[40px]"
                   />
                   <div className="w-2/3 self-center text-center">
                     The Watchtower service monitors on-chain payment channels,

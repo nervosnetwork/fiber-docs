@@ -16,7 +16,7 @@ interface AnimatingEdge {
 
 const CONFIG = {
   nodeRadius: 4,
-  hitRadius: 10,
+  hitRadius: 15,
   ringRadius: 6,
   hopDuration: 500, // ms
   resetDelay: 1500, // ms
@@ -71,7 +71,10 @@ export default function TransactionPathVisualizer() {
   const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 864, height: 530 });
+  const [displaySize, setDisplaySize] = useState({ width: 864, height: 530 });
   const [nodes, setNodes] = useState<Node[]>([]);
+  const [showFirstTimeTooltip, setShowFirstTimeTooltip] = useState(true);
+  const dprRef = useRef(1);
   
   // Animation State
   const animationState = useRef({
@@ -87,6 +90,9 @@ export default function TransactionPathVisualizer() {
   const adj = useRef<Map<number, number[]>>(new Map());
 
   useEffect(() => {
+    // Set DPR on client side only
+    dprRef.current = window.devicePixelRatio || 1;
+    
     // Build adjacency list
     baseNodes.forEach(n => adj.current.set(n.id, []));
     edgeList.forEach(([src, dst]) => {
@@ -111,7 +117,10 @@ export default function TransactionPathVisualizer() {
         height = 185;
       }
       
-      setCanvasSize({ width, height });
+      const dpr = window.devicePixelRatio || 1;
+      dprRef.current = dpr;
+      setCanvasSize({ width: width * dpr, height: height * dpr });
+      setDisplaySize({ width, height });
       
       // Scale nodes based on canvas size
       const scaleX = (width - CONFIG.padding * 2) / (BASE_WIDTH - CONFIG.padding * 2);
@@ -268,7 +277,9 @@ export default function TransactionPathVisualizer() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const dpr = dprRef.current;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // Scale by DPR
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
 
     // 1. Draw Static Edges
     ctx.lineWidth = 1;
@@ -353,8 +364,9 @@ export default function TransactionPathVisualizer() {
     // 3. Draw Nodes
     nodes.forEach(node => {
       const isHovered = !isAnimating && hoveredNodeId === node.id;
+      const isFirstTimeHighlight = !isAnimating && showFirstTimeTooltip && node.id === 4 && !hoveredNodeId;
       
-      let shouldHighlight = isHovered;
+      let shouldHighlight = isHovered || isFirstTimeHighlight;
       
       if (isAnimating) {
         // Check if this is the final node and it's in glow state
@@ -402,27 +414,41 @@ export default function TransactionPathVisualizer() {
       const text = "Click a node to trace a transaction path";
       ctx.font = "12px sans-serif";
       const textMetrics = ctx.measureText(text);
-      const w = textMetrics.width + 16;
-      const h = 24;
+      const w = textMetrics.width;
+      const h = 16;
       
       let tx = node.x - w / 2;
       let ty = node.y - 20 - h;
 
       if (tx < 0) tx = 4;
-      if (tx + w > canvas.width) tx = canvas.width - w - 4;
+      if (tx + w > displaySize.width) tx = displaySize.width - w - 4;
       if (ty < 0) ty = node.y + 20;
-
-      ctx.fillStyle = "rgba(40, 40, 40, 0.9)";
-      ctx.strokeStyle = "#555";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(tx, ty, w, h, 4);
-      ctx.fill();
-      ctx.stroke();
 
       ctx.fillStyle = "#fff";
       ctx.textBaseline = 'middle';
-      ctx.fillText(text, tx + 8, ty + h/2);
+      ctx.fillText(text, tx, ty + h/2);
+    }
+
+    // 5. First-time Tooltip (on node 4)
+    if (!isAnimating && showFirstTimeTooltip && !hoveredNodeId) {
+      const node = getNodeById(4);
+      
+      const text = "Click a node to trace a transaction path";
+      ctx.font = "12px sans-serif";
+      const textMetrics = ctx.measureText(text);
+      const w = textMetrics.width;
+      const h = 16;
+      
+      let tx = node.x - w / 2;
+      let ty = node.y - 20 - h;
+
+      if (tx < 0) tx = 4;
+      if (tx + w > displaySize.width) tx = displaySize.width - w - 4;
+      if (ty < 0) ty = node.y + 20;
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, tx, ty + h/2);
     }
 
     animationState.current.animationFrameId = requestAnimationFrame(loop);
@@ -438,7 +464,7 @@ export default function TransactionPathVisualizer() {
         cancelAnimationFrame(animationState.current.animationFrameId);
       }
     };
-  }, [isAnimating, hoveredNodeId, nodes]);
+  }, [isAnimating, hoveredNodeId, nodes, displaySize]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (isAnimating) {
@@ -460,7 +486,9 @@ export default function TransactionPathVisualizer() {
     for (const n of nodes) {
       const dx = pos.x - n.x;
       const dy = pos.y - n.y;
-      if (Math.sqrt(dx*dx + dy*dy) <= CONFIG.hitRadius) {
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      
+      if (dist <= CONFIG.hitRadius) {
         found = n.id;
         break;
       }
@@ -470,7 +498,23 @@ export default function TransactionPathVisualizer() {
   };
 
   const handleClick = () => {
-    if (isAnimating || !hoveredNodeId) return;
+    if (isAnimating || !hoveredNodeId) {
+      // Debug: log on empty click
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        console.log('=== Canvas Debug Info ===');
+        console.log('Canvas actual width x height:', canvas.width, 'x', canvas.height);
+        console.log('Canvas CSS width x height:', rect.width, 'x', rect.height);
+        console.log('Display size:', displaySize);
+        console.log('Canvas size state:', canvasSize);
+        console.log('DPR:', dprRef.current);
+        console.log('Total nodes:', nodes.length);
+        console.log('First 3 nodes:', nodes.slice(0, 3));
+      }
+      return;
+    }
+    setShowFirstTimeTooltip(false);
     startTransaction(hoveredNodeId);
   };
 
@@ -484,7 +528,8 @@ export default function TransactionPathVisualizer() {
         className="shadow-[0_0_20px_rgba(0,0,0,0.5)]"
         style={{
           cursor: hoveredNodeId && !isAnimating ? 'pointer' : 'default',
-          imageRendering: 'pixelated'
+          width: `${displaySize.width}px`,
+          height: `${displaySize.height}px`
         }}
         onMouseMove={handleMouseMove}
         onClick={handleClick}

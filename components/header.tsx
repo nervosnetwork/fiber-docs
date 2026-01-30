@@ -90,7 +90,7 @@ export default function Header() {
 
         {/* Mobile & Tablet Dropdown Menu */}
         {isMenuOpen && (
-          <div className="lg:hidden absolute top-full left-0 w-full flex flex-col bg-[#0A0A0A] z-[100000]">
+          <div className="lg:hidden fixed top-full left-0 w-full h-[calc(100vh-var(--header-height,80px))] flex flex-col bg-[#0A0A0A] z-[100000]">
             <Link href="/docs" className="self-stretch py-5 inline-flex justify-center items-center gap-2.5 cursor-pointer group transition-all duration-200 hover:bg-[#FFFFFF]">
               <div className="justify-center text-[#FFFFFF] group-hover:text-[#0A0A0A] text-2xl font-normal font-['Atkinson_Hyperlegible'] leading-7 transition-colors duration-200">DOCUMENTATION</div>
             </Link>

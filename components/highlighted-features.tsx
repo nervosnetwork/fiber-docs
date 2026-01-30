@@ -7,7 +7,7 @@ export default function HighlightedFeatures() {
     <Section
       title={
         <>
-          <span className="text-tertiary">Hightlighted</span> Features
+          <span className="text-tertiary">Highlighted</span> Features
         </>
       }
       showDivider={false}

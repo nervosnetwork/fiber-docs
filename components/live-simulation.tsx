@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Section from './section';
+import NetworkControlPanel from './network-control-panel';
 
 export default function LiveSimulation() {
   return (
@@ -11,7 +12,7 @@ export default function LiveSimulation() {
             <span className="text-tertiary"> Fiber Network </span>
             Simulation
           </div>
-          <button
+          {/* <button
             data-hovered="false"
             data-orientation="Horizontal"
             className="w-44 h-[60px] p-2 border border-primary flex justify-center items-center gap-sm cursor-pointer hover:bg-layer-02 transition-colors"
@@ -28,11 +29,11 @@ export default function LiveSimulation() {
             <div className="w-28 text-center text-primary text-button">
               VIEW SIMULATION
             </div>
-          </button>
+          </button> */}
         </div>
       }
     >
-      <></>
+    <NetworkControlPanel/>
     </Section>
   );
 }
