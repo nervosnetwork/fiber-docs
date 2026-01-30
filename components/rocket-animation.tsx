@@ -80,11 +80,11 @@ export default function App() {
   return (
     <div 
       ref={containerRef}
-      className="w-full h-full bg-[#050505] text-zinc-100 font-sans flex flex-col items-center justify-center overflow-x-hidden overflow-y-hidden"
+      className="w-full h-full  text-zinc-100 font-sans flex flex-col items-center justify-center overflow-x-hidden overflow-y-hidden"
     >
       
       {/* --- LEVEL 1: TOP CARDS (Fiber & Lightning) --- */}
-      <div className="flex gap-[200px] mb-0 z-20" style={{ width: 'calc(100%)' }}>
+      <div className="flex gap-[20px] md:gap-[40px] mb-0 z-20" style={{ width: 'calc(100%)' }}>
         
         {/* Card 1: Fiber Network */}
         <div className={`transition-all duration-700 transform flex-1 ${stage >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
@@ -105,24 +105,24 @@ export default function App() {
       </div>
 
       {/* --- CONNECTOR 1: Y-SHAPE MERGE --- */}
-      <div className="relative h-40 w-full">
+      <div className="relative h-20 md:h-40 w-full">
         
         {/* Top Vertical Lines */}
-        <div className="absolute top-0 left-0 w-full flex justify-between" style={{ paddingLeft: 'calc((100% - 200px) / 4)', paddingRight: 'calc((100% - 200px) / 4)' }}>
+        <div className="absolute top-0 left-0 w-full flex justify-between" style={{ paddingLeft: 'calc((100% - 20px) / 4)', paddingRight: 'calc((100% - 20px) / 4)' }}>
            {/* Left Line */}
-           <div className={`w-[1px] bg-[#F2F2F2] transition-all duration-500 ease-linear ${stage >= 2 ? 'h-20 opacity-100' : 'h-0 opacity-0'}`}></div>
+           <div className={`w-[1px] bg-[#F2F2F2] transition-all duration-500 ease-linear ${stage >= 2 ? 'h-10 md:h-20 opacity-100' : 'h-0 opacity-0'}`}></div>
            {/* Right Line */}
-           <div className={`w-[1px] bg-[#F2F2F2] transition-all duration-500 ease-linear ${stage >= 2 ? 'h-20 opacity-100' : 'h-0 opacity-0'}`}></div>
+           <div className={`w-[1px] bg-[#F2F2F2] transition-all duration-500 ease-linear ${stage >= 2 ? 'h-10 md:h-20 opacity-100' : 'h-0 opacity-0'}`}></div>
         </div>
 
         {/* Horizontal Connector */}
-        <div className={`absolute top-20 h-[1px] bg-[#F2F2F2] transition-all duration-500 ease-out ${
+        <div className={`absolute top-10 md:top-20 h-[1px] bg-[#F2F2F2] transition-all duration-500 ease-out ${
           stage >= 3 ? 'opacity-100' : 'opacity-0'
-        }`} style={{ left: 'calc((100% - 200px) / 4)', right: 'calc((100% - 200px) / 4)', width: stage >= 3 ? 'calc(100% - (100% - 200px) / 2)' : '0' }}></div>
+        }`} style={{ left: 'calc((100% - 20px) / 4)', right: 'calc((100% - 20px) / 4)', width: stage >= 3 ? 'calc(100% - (100% - 20px) / 2)' : '0' }}></div>
 
         {/* Center Dropper to Middle Card */}
-        <div className={`absolute top-20 left-1/2 -translate-x-1/2 w-[1px] bg-[#F2F2F2] transition-all duration-500 ease-linear ${
-          stage >= 4 ? 'h-20 opacity-100' : 'h-0 opacity-0'
+        <div className={`absolute top-10 md:top-20 left-1/2 -translate-x-1/2 w-[1px] bg-[#F2F2F2] transition-all duration-500 ease-linear ${
+          stage >= 4 ? 'h-10 md:h-20 opacity-100' : 'h-0 opacity-0'
         }`}></div>
 
       </div>
