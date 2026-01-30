@@ -24,9 +24,14 @@ export default function Footer() {
         >
           <Image src="/github.svg" alt="GitHub" fill className="object-contain" />
         </a>
-        <div className="w-12 h-12 relative">
-          <Image src="/substack.svg" alt="Substack" fill className="object-contain" />
-        </div>
+        <a 
+          href="https://discord.gg/TVfWn5fHkN" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="w-12 h-12 relative cursor-pointer hover:opacity-80 transition-opacity"
+        >
+          <Image src="/discord.svg" alt="Discord" fill className="object-contain" />
+        </a>
       </div>
     </div>
   );

@@ -28,20 +28,19 @@ export default function FeaturedProjects() {
             <div className="self-stretch inline-flex justify-between items-start">
               <div className="text-primary text-h4">Fiber SDK</div>
               <div className="hidden md:flex justify-end items-center gap-xs">
-                <Image
-                  src="/github.svg"
-                  alt="GitHub"
-                  width={16}
-                  height={16}
-                  className="opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
-                />
-                <Image
-                  src="/external.svg"
-                  alt="External"
-                  width={16}
-                  height={16}
-                  className="opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
-                />
+                <a
+                  href="https://github.com/ckb-devrel/ccc/pull/194"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Image
+                    src="/github.svg"
+                    alt="GitHub"
+                    width={16}
+                    height={16}
+                    className="opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
+                  />
+                </a>
               </div>
             </div>
             <div className="inline-flex flex-wrap justify-start items-center gap-xs">
@@ -61,20 +60,19 @@ export default function FeaturedProjects() {
               the CKB JS SDK
             </div>
             <div className="md:hidden absolute bottom-4 left-4 inline-flex justify-start items-center gap-xs">
-              <Image
-                src="/github.svg"
-                alt="GitHub"
-                width={16}
-                height={16}
-                className="opacity-50 cursor-pointer"
-              />
-              <Image
-                src="/external.svg"
-                alt="External"
-                width={16}
-                height={16}
-                className="opacity-50 cursor-pointer"
-              />
+              <a
+                href="https://github.com/ckb-devrel/ccc/pull/194"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Image
+                  src="/github.svg"
+                  alt="GitHub"
+                  width={16}
+                  height={16}
+                  className="opacity-50 cursor-pointer"
+                />
+              </a>
             </div>
           </div>
         </div>
@@ -88,20 +86,32 @@ export default function FeaturedProjects() {
             <div className="self-stretch inline-flex justify-between items-start">
               <div className="text-primary text-h4">Fiber WASM Demo</div>
               <div className="hidden md:flex justify-end items-center gap-xs">
-                <Image
-                  src="/github.svg"
-                  alt="GitHub"
-                  width={16}
-                  height={16}
-                  className="opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
-                />
-                <Image
-                  src="/external.svg"
-                  alt="External"
-                  width={16}
-                  height={16}
-                  className="opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
-                />
+                <a
+                  href="https://github.com/officeyutong/fiber-wasm-demo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Image
+                    src="/github.svg"
+                    alt="GitHub"
+                    width={16}
+                    height={16}
+                    className="opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
+                  />
+                </a>
+                <a
+                  href="https://fiber-wasm-demo.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Image
+                    src="/external.svg"
+                    alt="External"
+                    width={16}
+                    height={16}
+                    className="opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
+                  />
+                </a>
               </div>
             </div>
             <div className="inline-flex flex-wrap justify-start items-center gap-xs">
@@ -121,20 +131,32 @@ export default function FeaturedProjects() {
               Webassembly
             </div>
             <div className="md:hidden absolute bottom-4 left-4 inline-flex justify-start items-center gap-xs">
-              <Image
-                src="/github.svg"
-                alt="GitHub"
-                width={16}
-                height={16}
-                className="opacity-50 cursor-pointer"
-              />
-              <Image
-                src="/external.svg"
-                alt="External"
-                width={16}
-                height={16}
-                className="opacity-50 cursor-pointer"
-              />
+              <a
+                href="https://github.com/officeyutong/fiber-wasm-demo"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Image
+                  src="/github.svg"
+                  alt="GitHub"
+                  width={16}
+                  height={16}
+                  className="opacity-50 cursor-pointer"
+                />
+              </a>
+              <a
+                href="https://fiber-wasm-demo.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Image
+                  src="/external.svg"
+                  alt="External"
+                  width={16}
+                  height={16}
+                  className="opacity-50 cursor-pointer"
+                />
+              </a>
             </div>
           </div>
         </div>
@@ -148,20 +170,19 @@ export default function FeaturedProjects() {
             <div className="self-stretch inline-flex justify-between items-start">
               <div className="text-primary text-h4">Micro-payment Game</div>
               <div className="hidden md:flex justify-end items-center gap-xs">
-                <Image
-                  src="/github.svg"
-                  alt="GitHub"
-                  width={16}
-                  height={16}
-                  className="opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
-                />
-                <Image
-                  src="/external.svg"
-                  alt="External"
-                  width={16}
-                  height={16}
-                  className="opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
-                />
+                <a
+                  href="https://github.com/nervosnetwork/fiber-docs/tree/master/example/simple-game"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Image
+                    src="/github.svg"
+                    alt="GitHub"
+                    width={16}
+                    height={16}
+                    className="opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
+                  />
+                </a>
               </div>
             </div>
             <div className="inline-flex flex-wrap justify-start items-center gap-xs">
@@ -181,24 +202,26 @@ export default function FeaturedProjects() {
               high score rewards.
             </div>
             <div className="md:hidden absolute bottom-4 left-4 inline-flex justify-start items-center gap-xs">
-              <Image
-                src="/github.svg"
-                alt="GitHub"
-                width={16}
-                height={16}
-                className="opacity-50 cursor-pointer"
-              />
-              <Image
-                src="/external.svg"
-                alt="External"
-                width={16}
-                height={16}
-                className="opacity-50 cursor-pointer"
-              />
+              <a
+                href="https://github.com/nervosnetwork/fiber-docs/tree/master/example/simple-game"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Image
+                  src="/github.svg"
+                  alt="GitHub"
+                  width={16}
+                  height={16}
+                  className="opacity-50 cursor-pointer"
+                />
+              </a>
             </div>
           </div>
         </div>
-        <div
+        <a
+          href="https://docs.fiber.world/showcase"
+          target="_blank"
+          rel="noopener noreferrer"
           data-hovered="false"
           data-orientation="Vertical"
           className="w-1/2 lg:w-48 md:h-48 p-sm border border-invisible inline-flex flex-col justify-center items-center gap-xs cursor-pointer hover-invert"
@@ -208,7 +231,7 @@ export default function FeaturedProjects() {
             <div className="md:inline">VIEW ALL</div>
             <div className="md:inline md:before:content-[' ']">PROJECTS</div>
           </div>
-        </div>
+        </a>
       </div>
     </Section>
   );
