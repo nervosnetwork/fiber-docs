@@ -45,7 +45,7 @@ export default function HighlightedFeatures() {
       }
     >
       <Section>
-        <div className="self-stretch h-[560px] lg:h-[720px] border-t border-b border-invisible relative">
+        <div className="self-stretch h-[560px] border-t border-b border-invisible relative" style={{ height: 'max(480px, calc(100vh - 128px))' }}>
           {/* Mobile: stacking effect without separate headers */}
           <div
             className="lg:hidden absolute inset-0 overflow-y-auto scrollbar-hide"
@@ -83,26 +83,27 @@ export default function HighlightedFeatures() {
             {features.map((feature, index) => (
               <div 
                 key={feature.title}
-                className="sticky"
+                className="sticky flex flex-col w-full"
                 style={{
                   top: `${index * 56}px`,
+                  height: 'max(480px, calc(100vh - 128px))',
                 }}
               >
                 {/* Sticky header - high z-index to stay above all content */}
                 <div 
-                  className="w-full p-4 bg-layer-01 border border-invisible relative"
+                  className="w-full p-4 bg-layer-01 border border-invisible relative flex-shrink-0"
                   style={{
                     zIndex: 100 + index,
                   }}
                 >
                   <div className="text-secondary text-base font-normal font-['Inter'] leading-6">
-                    {String(index + 1).padStart(2, '0')} {feature.title}
+                    {index + 1}/{features.length} {feature.title}
                   </div>
                 </div>
                 
                 {/* Content with background to cover previous content - lower z-index */}
                 <div 
-                  className="h-[664px] bg-black relative"
+                  className="bg-black relative flex items-center flex-1"
                   style={{
                     zIndex: index + 1,
                   }}

@@ -42,7 +42,7 @@ export default function HomePage() {
         <NetworkComparison />
         <RocketAnimationSection />
         <HighlightedFeatures />
-        <FAQ isMobile={isMobile} />
+        <FAQ />
         <Timeline />
         <FeaturedProjects />
       </main>

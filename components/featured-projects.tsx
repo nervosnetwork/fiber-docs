@@ -228,8 +228,8 @@ export default function FeaturedProjects() {
         >
           <Image src="/external.svg" alt="Arrow" width={20} height={20} />
           <div className="text-primary text-button md:whitespace-nowrap" style={{ lineHeight: '16px' }}>
-            <div className="md:inline">VIEW ALL</div>
-            <div className="md:inline md:before:content-[' ']">PROJECTS</div>
+            <div className="md:inline">VIEW ALL </div>
+            <div className="md:inline">PROJECTS</div>
           </div>
         </a>
       </div>

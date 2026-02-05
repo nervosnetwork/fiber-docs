@@ -33,7 +33,7 @@ export default function Timeline() {
       }
     >
       <div className="self-stretch flex flex-col md:flex-row md:justify-between md:items-end gap-8">
-        <div className="w-[923px] inline-flex flex-col justify-start items-start">
+        <div className=" inline-flex flex-col justify-start items-start">
           <div className="self-stretch p-md border border-invisible inline-flex justify-start items-center gap-sm">
             <div className="w-4 h-4 bg-white rounded-full" />
             <div className="text-primary text-h2">2024 Q3</div>

@@ -1,11 +1,7 @@
 import Section from './section';
 import Accordion from './accordion';
 
-interface FAQProps {
-  isMobile: boolean;
-}
-
-export default function FAQ({ isMobile }: FAQProps) {
+export default function FAQ() {
   return (
     <Section
       title={
@@ -18,7 +14,7 @@ export default function FAQ({ isMobile }: FAQProps) {
           <div className="md:hidden">Questions</div>
         </div>
       }
-      layout={isMobile ? 'vertical' : 'horizontal'}
+      layout="responsive"
     >
       <Accordion
         items={[

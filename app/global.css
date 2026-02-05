@@ -604,14 +604,14 @@ h4, .text-h4 {
 /* Channel Notification Slide Animation */
 @keyframes slideLeft {
   0% {
-    transform: translateX(0) translateY(-50%);
+    transform: translateX(0);
     opacity: 1;
   }
   90% {
     opacity: 1;
   }
   100% {
-    transform: translateX(-800%) translateY(-50%);
+    transform: translateX(-800%);
     opacity: 0;
   }
 }

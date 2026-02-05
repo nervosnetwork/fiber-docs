@@ -84,21 +84,21 @@ export default function App() {
     >
       
       {/* --- LEVEL 1: TOP CARDS (Fiber & Lightning) --- */}
-      <div className="flex gap-[20px] md:gap-[40px] mb-0 z-20" style={{ width: 'calc(100%)' }}>
+      <div className="flex gap-[20px] md:gap-[40px] lg:gap-[200px] mb-0 z-20" style={{ width: 'calc(100%)' }}>
         
         {/* Card 1: Fiber Network */}
         <div className={`transition-all duration-700 transform flex-1 ${stage >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          <div className="w-full p-lg border border-dashed border-invisible inline-flex flex-col justify-center items-center gap-xs">
-            <img src="/logo-s.svg" alt="Fiber Network" className="w-6 h-6" />
-            <div className="text-primary text-h4">Fiber Network</div>
+          <div className="w-full h-full p-lg border border-dashed border-invisible flex flex-col justify-center items-center gap-xs min-h-[100px]">
+            <img src="/logo-s.svg" alt="Fiber Network" className="w-6 h-6 flex-shrink-0" />
+            <div className="text-primary text-h4 text-center leading-tight">Fiber Network</div>
           </div>
         </div>
 
         {/* Card 2: Lightning Network */}
         <div className={`transition-all duration-700 delay-100 transform flex-1 ${stage >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          <div className="w-full p-lg border border-dashed border-invisible inline-flex flex-col justify-center items-center gap-xs">
-            <img src="/lightning.svg" alt="Lightning Network" className="w-6 h-6" />
-            <div className="text-primary text-h4">Lightning Network</div>
+          <div className="w-full h-full p-lg border border-dashed border-invisible flex flex-col justify-center items-center gap-xs min-h-[100px]">
+            <img src="/lightning.svg" alt="Lightning Network" className="w-6 h-6 flex-shrink-0" />
+            <div className="text-primary text-h4 text-center leading-tight">Lightning Network</div>
           </div>
         </div>
 

@@ -74,6 +74,7 @@ export default function TransactionPathVisualizer() {
   const [displaySize, setDisplaySize] = useState({ width: 864, height: 530 });
   const [nodes, setNodes] = useState<Node[]>([]);
   const [showFirstTimeTooltip, setShowFirstTimeTooltip] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   const dprRef = useRef(1);
   
   // Animation State
@@ -103,6 +104,8 @@ export default function TransactionPathVisualizer() {
     // Handle responsive canvas size and scale nodes
     const updateCanvasSize = () => {
       let width, height;
+      const isMobileView = window.innerWidth < 768;
+      
       if (window.innerWidth >= 1024) {
         // Desktop
         width = 864;
@@ -121,6 +124,7 @@ export default function TransactionPathVisualizer() {
       dprRef.current = dpr;
       setCanvasSize({ width: width * dpr, height: height * dpr });
       setDisplaySize({ width, height });
+      setIsMobile(isMobileView);
       
       // Scale nodes based on canvas size
       const scaleX = (width - CONFIG.padding * 2) / (BASE_WIDTH - CONFIG.padding * 2);
@@ -407,8 +411,8 @@ export default function TransactionPathVisualizer() {
       ctx.shadowBlur = 0;
     });
 
-    // 4. Hover Tooltip (Only if idle)
-    if (!isAnimating && hoveredNodeId) {
+    // 4. Hover Tooltip (Only if idle and not mobile)
+    if (!isAnimating && hoveredNodeId && !isMobile) {
       const node = getNodeById(hoveredNodeId);
       
       const text = "Click a node to trace a transaction path";
@@ -429,8 +433,8 @@ export default function TransactionPathVisualizer() {
       ctx.fillText(text, tx, ty + h/2);
     }
 
-    // 5. First-time Tooltip (on node 4)
-    if (!isAnimating && showFirstTimeTooltip && !hoveredNodeId) {
+    // 5. First-time Tooltip (on node 4, not on mobile)
+    if (!isAnimating && showFirstTimeTooltip && !hoveredNodeId && !isMobile) {
       const node = getNodeById(4);
       
       const text = "Click a node to trace a transaction path";
@@ -464,7 +468,7 @@ export default function TransactionPathVisualizer() {
         cancelAnimationFrame(animationState.current.animationFrameId);
       }
     };
-  }, [isAnimating, hoveredNodeId, nodes, displaySize]);
+  }, [isAnimating, hoveredNodeId, nodes, displaySize, isMobile]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (isAnimating) {
