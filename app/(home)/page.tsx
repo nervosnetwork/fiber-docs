@@ -12,6 +12,8 @@ import HighlightedFeatures from '@/components/highlighted-features';
 import FAQ from '@/components/faq';
 import Timeline from '@/components/timeline';
 import FeaturedProjects from '@/components/featured-projects';
+import StackedCards from '@/components/stacked-cards';
+import Section from '@/components/section';
 
 export default function HomePage() {
   const [isMobile, setIsMobile] = useState(false);
@@ -20,10 +22,10 @@ export default function HomePage() {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
+
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
@@ -33,7 +35,7 @@ export default function HomePage() {
       <div className="absolute top-10 right-0 z-10">
         <TransactionPathVisualizer />
       </div>
-      
+
       <main className="flex flex-col p-4 md:p-10">
         <HeroTitle />
         <NetworkStats />
@@ -41,7 +43,16 @@ export default function HomePage() {
         <LiveSimulation />
         <NetworkComparison />
         <RocketAnimationSection />
-        <HighlightedFeatures />
+        {/* <HighlightedFeatures /> */}
+        <section
+          className={`self-stretch inline-flex flex-col justify-start items-start mb-[64px]`}
+        >
+          <h1 className="self-stretch justify-center text-primary ">
+            <span className="text-tertiary">Highlighted</span> Features
+          </h1>
+        </section>
+
+        <StackedCards />
         <FAQ />
         <Timeline />
         <FeaturedProjects />
