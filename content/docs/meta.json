@@ -13,12 +13,15 @@
     "tutorial/simple-game",
     "---Guide---",
     "guide/backup",
+    "guide/glossary",
+    "guide/biscuit-auth",
     "---Tech Explanation---",
     "tech-explanation/payment-channel",
     "tech-explanation/light-paper",
     "tech-explanation/high-level",
     "tech-explanation/invoice-protocol",
-    "tech-explanation/p2p-message"
+    "tech-explanation/p2p-message",
+    "tech-explanation/payment-lifecycle"
     
   ]
 } 
