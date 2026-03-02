@@ -14,6 +14,7 @@ import Timeline from '@/components/timeline';
 import FeaturedProjects from '@/components/featured-projects';
 import StackedCards from '@/components/stacked-cards';
 import Section from '@/components/section';
+import Divider from '@/components/divider';
 
 export default function HomePage() {
   const [isMobile, setIsMobile] = useState(false);
@@ -53,6 +54,7 @@ export default function HomePage() {
         </section>
 
         <StackedCards />
+        <Divider />
         <FAQ />
         <Timeline />
         <FeaturedProjects />

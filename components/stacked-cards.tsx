@@ -76,7 +76,7 @@ export default function StackedCards() {
 
       if (trackRef.current) {
         const trackHeight =
-          cards.length * CONFIG.SCROLL_PER_CARD + viewportHeight;
+          (cards.length - 1) * CONFIG.SCROLL_PER_CARD + viewportHeight;
         trackRef.current.style.height = `${trackHeight}px`;
       }
     };
@@ -112,7 +112,8 @@ export default function StackedCards() {
         let opacity = 1;
         const nextCardProgress = globalProgress - index;
 
-        if (nextCardProgress > 0) {
+        // 最后一张卡片保持完全可见
+        if (nextCardProgress > 0 && index < cards.length - 1) {
           const safeProgress = Math.min(nextCardProgress, 1);
           scale = 1 - safeProgress * CONFIG.SCALE_STEP;
           opacity = 1 - safeProgress * CONFIG.OPACITY_STEP;

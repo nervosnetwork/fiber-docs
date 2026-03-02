@@ -26,7 +26,7 @@ export default function Header() {
 
   return (
     <>
-      <div className="w-full px-10 py-6 backdrop-blur-[0px] inline-flex justify-between items-center flex-wrap content-center relative z-[1000]" ref={menuRef}>
+      <div className="w-full px-4 md:px-10 py-6 backdrop-blur-[0px] inline-flex justify-between items-center flex-wrap content-center relative z-[1000]" ref={menuRef}>
         <Link href="/" className="w-[188px] h-[29.5px] relative">
           <Image src="/logo.svg" alt="Logo" width={188} height={29.5} priority />
         </Link>

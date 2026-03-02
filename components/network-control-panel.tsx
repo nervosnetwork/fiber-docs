@@ -489,7 +489,7 @@ export default function NetworkControlPanel() {
     if (transaction) {
       animationFrameRef.current = requestAnimationFrame(drawNetwork);
     }
-  }, [nodes, edges, customChannels, selectedNodes, hoveredNodeId, transaction, isDesktop, SCALE, OFFSET_X, OFFSET_Y]);
+  }, [nodes, edges, customChannels, selectedNodes, hoveredNodeId, transaction, isDesktop, SCALE, OFFSET_X, OFFSET_Y, closedEdges, selectedEdge]);
 
   useEffect(() => {
     drawNetwork();
@@ -756,6 +756,7 @@ export default function NetworkControlPanel() {
                     )
                   );
                   setSelectedChannel(null);
+                  setSelectedMode(null);
 
                   // Show notification
                   setShowChannelClosedNotification(true);
@@ -767,6 +768,7 @@ export default function NetworkControlPanel() {
                   const edgeKey = `${selectedEdge.from}-${selectedEdge.to}`;
                   setClosedEdges(new Set(closedEdges).add(edgeKey));
                   setSelectedEdge(null);
+                  setSelectedMode(null);
 
                   // Show notification
                   setShowChannelClosedNotification(true);
