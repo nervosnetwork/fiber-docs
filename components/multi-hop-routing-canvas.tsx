@@ -30,6 +30,7 @@ const OFFSET_X_DESKTOP = 160;
 const OFFSET_Y_DESKTOP = 150;
 const OFFSET_X_TABLET = 260;
 const OFFSET_Y_TABLET = 80;
+const COLOR_BORDER_SUBTLE = '#525252';
 
 export default function MultiHopRoutingCanvas() {
   const [isTransacting, setIsTransacting] = useState(false);
@@ -43,7 +44,7 @@ export default function MultiHopRoutingCanvas() {
   // Detect screen size
   useEffect(() => {
     const checkScreenSize = () => {
-      setIsDesktop(window.innerWidth >= 1024);
+      setIsDesktop(window.innerWidth >= 1440);
     };
     checkScreenSize();
     window.addEventListener('resize', checkScreenSize);
@@ -240,7 +241,7 @@ export default function MultiHopRoutingCanvas() {
       ctx.beginPath();
       ctx.moveTo(fromNode.x, fromNode.y);
       ctx.lineTo(toNode.x, toNode.y);
-      ctx.strokeStyle = '#525252';
+      ctx.strokeStyle = COLOR_BORDER_SUBTLE;
       ctx.lineWidth = 1;
       ctx.stroke();
 
@@ -406,9 +407,9 @@ export default function MultiHopRoutingCanvas() {
   };
 
   return (
-    <div className="w-full bg-layer-01 border border-invisible flex" style={{ height: '700px' }}>
+    <div className="w-full bg-layer-01 border border-invisible flex flex-col min-[1440px]:flex-row min-[1440px]:h-[700px]">
       {/* Control Panel */}
-      <div className="hidden lg:flex w-[320px] border-r border-invisible flex-col">
+      <div className="hidden min-[1440px]:flex min-[1440px]:w-[280px] border-r border-invisible flex-col min-[1440px]:overflow-y-auto">
         {/* Header */}
         <div className="py-[32px] px-[16px]">
           <div className="text-label text-tertiary">CONTROL PANEL</div>
@@ -420,7 +421,7 @@ export default function MultiHopRoutingCanvas() {
           <button
             onClick={handleTriggerTransaction}
             disabled={isTransacting}
-            className={`w-full h-[44px] py-[13px] px-md border border-white flex items-center justify-center hover-border-bright transition-all bg-layer-02 ${
+            className={`w-full h-[44px] py-[13px] px-xs border border-white flex items-center justify-center hover-border-bright transition-all bg-layer-02 ${
               isTransacting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
             }`}
           >
@@ -429,7 +430,7 @@ export default function MultiHopRoutingCanvas() {
               alt="Transaction"
               width={24}
               height={24}
-              className="text-primary mr-4 flex-shrink-0"
+              className="text-primary mr-2 flex-shrink-0"
               style={{ objectFit: 'contain' }}
             />
             <span className="text-button text-left text-primary">
@@ -513,7 +514,7 @@ export default function MultiHopRoutingCanvas() {
       </div>
 
       {/* Right Side - Network Layers */}
-      <div className="flex flex-col lg:flex-1" style={{ minHeight: 0 }}>
+      <div className="flex flex-col w-full min-[1440px]:flex-1 min-w-0" style={{ minHeight: 0 }}>
         {/* FIBER NETWORK (LAYER 2) */}
         <div className="border-b border-invisible flex flex-col" style={{ flex: '1 1 auto', minHeight: 0 }}>
           {/* Layer 2 Header */}
@@ -522,97 +523,94 @@ export default function MultiHopRoutingCanvas() {
           </div>
 
           {/* Layer 2 Content */}
-          <div className="relative bg-layer-01" style={{ height: '524px' }}>
+          <div className="relative bg-layer-01 h-[300px] sm:h-[420px] min-[1440px]:h-[524px] flex items-center justify-center overflow-hidden">
             <canvas
               ref={canvasRef}
               width={1000}
               height={1050}
-              className="block w-full h-full"
+              className="block w-auto h-auto max-w-full max-h-full"
               style={{ imageRendering: 'auto' }}
             />
-
-            {/* Tablet Controls */}
-            <div className="lg:hidden px-lg pb-lg flex flex-col gap-sm bg-layer-01">
-              <button
-                onClick={handleTriggerTransaction}
-                disabled={isTransacting}
-                className={`w-full h-16 px-md py-sm border border-white flex items-center justify-center gap-md transition-all bg-layer-02 ${
-                  isTransacting
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'cursor-pointer hover-border-bright'
-                }`}
-              >
-                <Image
-                  src="/transction.svg"
-                  alt="Transaction"
-                  width={24}
-                  height={24}
-                  className="flex-shrink-0"
-                  style={{ objectFit: 'contain' }}
-                />
-                <span className="text-button text-primary font-bold">
-                  {isTransacting
-                    ? 'TRANSACTION IN PROGRESS...'
-                    : 'TRIGGER SAMPLE TRANSACTION'}
-                </span>
-              </button>
-
-              {transaction && (
-                <div className="w-full p-sm bg-layer-02 flex flex-col gap-md">
-                  <div className="text-body2 text-primary">
-                    Sample Off-Chain Transaction
-                  </div>
-                  <div className="flex flex-col gap-sm">
-                    <div className="flex gap-sm">
-                      <div className="w-14 text-body2 text-tertiary">From</div>
-                      <div className="flex-1 flex items-center gap-sm">
-                        <div className="w-3.5 h-3.5 bg-[#ADFFBE] rounded-full" />
-                        <div className="flex-1 text-body2 text-primary">
-                          Node {transaction.path[0]}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-sm">
-                      <div className="w-14 text-body2 text-tertiary">To</div>
-                      <div className="flex-1 flex items-center gap-sm">
-                        <div className="w-3.5 h-3.5 bg-[#A2D2FF] rounded-full" />
-                        <div className="flex-1 text-body2 text-primary">
-                          Node {transaction.path[transaction.path.length - 1]}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-sm">
-                      <div className="w-14 text-body2 text-tertiary">Path</div>
-                      <div className="flex-1 text-body2 text-primary">
-                        {transaction.path.map((nodeId, index) => (
-                          <span key={nodeId}>
-                            Node {nodeId}
-                            {index < transaction.path.length - 1 && ' → '}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="text-body3 text-tertiary text-center">
-                Advanced channel controls are available on desktop
-              </div>
-            </div>
           </div>
         </div>
 
         {/* NERVOS CKB (LAYER 1) */}
-        <div className="hidden lg:flex flex-col flex-shrink-0">
+        <div className="flex flex-col flex-shrink-0">
           <div className="h-[48px] px-lg flex items-center justify-center border-b border-invisible bg-layer-01">
             <div className="text-label text-primary">NERVOS CKB (LAYER 1)</div>
           </div>
           <div className="h-[80px] relative bg-layer-01 overflow-hidden flex-shrink-0" />
         </div>
 
+        {/* Mobile & Tablet Controls */}
+        <div className="min-[1440px]:hidden px-md pb-sm pt-sm flex flex-col gap-sm bg-layer-01 border-t border-invisible">
+          <div className="text-label text-tertiary">CONTROL PANEL</div>
+          <button
+            onClick={handleTriggerTransaction}
+            disabled={isTransacting}
+            className={`w-full h-16 px-md py-sm border border-white flex items-center justify-center gap-md transition-all bg-layer-02 ${
+              isTransacting
+                ? 'opacity-50 cursor-not-allowed'
+                : 'cursor-pointer hover-border-bright'
+            }`}
+          >
+            <Image
+              src="/transction.svg"
+              alt="Transaction"
+              width={24}
+              height={24}
+              className="flex-shrink-0"
+              style={{ objectFit: 'contain' }}
+            />
+            <span className="text-button text-primary font-bold">
+              {isTransacting
+                ? 'TRANSACTION IN PROGRESS...'
+                : 'TRIGGER SAMPLE TRANSACTION'}
+            </span>
+          </button>
+
+          {transaction && (
+            <div className="w-full p-sm bg-layer-02 flex flex-col gap-md">
+              <div className="text-body2 text-primary">
+                Sample Off-Chain Transaction
+              </div>
+              <div className="flex flex-col gap-sm">
+                <div className="flex gap-sm">
+                  <div className="w-14 text-body2 text-tertiary">From</div>
+                  <div className="flex-1 flex items-center gap-sm">
+                    <div className="w-3.5 h-3.5 bg-[#ADFFBE] rounded-full" />
+                    <div className="flex-1 text-body2 text-primary">
+                      Node {transaction.path[0]}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-sm">
+                  <div className="w-14 text-body2 text-tertiary">To</div>
+                  <div className="flex-1 flex items-center gap-sm">
+                    <div className="w-3.5 h-3.5 bg-[#A2D2FF] rounded-full" />
+                    <div className="flex-1 text-body2 text-primary">
+                      Node {transaction.path[transaction.path.length - 1]}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-sm">
+                  <div className="w-14 text-body2 text-tertiary">Path</div>
+                  <div className="flex-1 text-body2 text-primary">
+                    {transaction.path.map((nodeId, index) => (
+                      <span key={nodeId}>
+                        Node {nodeId}
+                        {index < transaction.path.length - 1 && ' → '}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Network Status - Tablet & Mobile */}
-        <div className="lg:hidden border-t border-invisible p-md flex flex-col gap-md">
+        <div className="min-[1440px]:hidden border-t border-invisible p-sm flex flex-col gap-sm">
           <div className="text-label text-tertiary">NETWORK STATUS</div>
           <div className="flex flex-col md:grid md:grid-cols-2 gap-sm md:gap-md">
             <div className="flex md:justify-between md:gap-sm">
