@@ -3,6 +3,7 @@
   "pages": [
     "---Introduction---",
     "index",
+    "how-it-works",
     "---Quick Start---",
     "quick-start/run-a-node",
     "quick-start/basic-transfer",

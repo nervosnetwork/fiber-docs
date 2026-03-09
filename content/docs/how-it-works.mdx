@@ -1,0 +1,58 @@
+---
+title: How Fiber Network Works?
+date: '2026-03-06'
+---
+
+import SimpleChannelCanvas from '@/components/simple-channel-canvas';
+import MultiHopRoutingCanvas from '@/components/multi-hop-routing-canvas';
+import InteractiveNetworkSimulation from '@/components/interactive-network-simulation';
+
+Fiber Network extends Nervos CKB by enabling participants to transfer assets through off-chain payment channels. Instead of submitting every balance update to Layer 1, peers exchange signed state updates directly with one another and interact with the CKB network only when opening or settling a channel. This approach reduces on-chain load and enables low-latency transfers, while maintaining security through on-chain enforceability.
+
+## Payment Channels
+
+Payment channels are the fundamental mechanism of Fiber Network. Two participants establish a channel by locking assets into a shared on-chain Script. This funding transaction defines the initial state of the channel.
+
+When the channel is open, both parties can conduct an unlimited number of off-chain transactions, updating the channel state with each transaction without immediate broadcasting to the chain.
+
+When the channel is closed cooperatively, the latest mutually signed state is submitted on-chain for settlement. (If the channel is closed uncooperatively, the Script enforces the dispute rules, allowing the counterparty to challenge outdated states and trigger a penalty transaction.)
+
+The simulator below illustrates the lifecycle of a payment channel.
+
+To establish a channel, select Node 1 and Node 2 and click on **"Open Channel."** This action represents a funding transaction recorded on Layer 1. Once the channel is open, balance updates occur off-chain and increase the Layer 2 transaction count without additional Layer 1 operations.
+
+To close the channel, select the channel and click on **"Close Channel."** This triggers a settlement transaction on Layer 1.
+
+Observe that Layer 1 operations change only during channel opening and closing, while Layer 2 transactions increase during off-chain updates.
+
+<SimpleChannelCanvas />
+## Multi-Hop Routing
+
+While a payment channel enables transfers between two participants, Fiber operates as a network of interconnected channels. A direct channel between sender and receiver is not required; if a path with sufficient liquidity exists, a payment can be forwarded through intermediate participants.
+
+In a multi-hop payment, each intermediary forwards a conditional transfer to the next hop along the route. These transfers are locked under cryptographic conditions and can only be claimed if a required secret is revealed within a defined time window. This ensures that all hops along the path either complete successfully or are safely reverted.
+
+Only the nodes involved in the selected path participate in the transaction, and no network-wide consensus is required. Payments therefore traverse the network off-chain while remaining cryptographically enforceable.
+
+---
+
+The simulator below demonstrates multi-hop routing. By clicking **"Trigger Sample Transaction,"** you can observe a transaction being forwarded across intermediate nodes without interacting with Layer 1.
+
+<MultiHopRoutingCanvas />
+
+## Interactive Network Simulation
+
+The simulator below provides a consolidated view of the mechanisms described in this document. You can open and close channels, trigger transactions, and observe how activity differs between off-chain execution and on-chain settlement.
+
+Experiment by:
+
+- Opening channels between unconnected nodes
+- Triggering transactions across connected paths
+- Closing channels and observing Layer 1 settlement
+
+Notice that:
+
+- Layer 2 transaction count increases during off-chain transfers.
+- Layer 1 operations change only when channels are opened or closed.
+
+<InteractiveNetworkSimulation />
