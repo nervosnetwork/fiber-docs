@@ -41,7 +41,7 @@ export default function HomePage() {
         <HeroTitle />
         <NetworkStats />
         <HowItWorks />
-        <LiveSimulation />
+        {/* <LiveSimulation /> */}
         <NetworkComparison />
         <RocketAnimationSection />
         {/* <HighlightedFeatures /> */}
