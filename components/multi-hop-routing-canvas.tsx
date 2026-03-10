@@ -21,16 +21,21 @@ interface Transaction {
   hopDuration: number;
 }
 
-// Scale constants - adjusted for 1000x1050 canvas (portrait)
-const SCALE_TABLET = 22.0;
-const SCALE_DESKTOP = 24.0;
-
-// Offset constants - adjusted for 1000x1050 canvas (portrait)
-const OFFSET_X_DESKTOP = 160;
-const OFFSET_Y_DESKTOP = 150;
-const OFFSET_X_TABLET = 260;
-const OFFSET_Y_TABLET = 80;
 const COLOR_BORDER_SUBTLE = '#525252';
+const CANVAS_WIDTH = 1200;
+const CANVAS_HEIGHT = 480;
+const ALL_EDGES: Edge[] = [
+  { from: 1, to: 2, distance: '4.3m' },
+  { from: 2, to: 3, distance: '' },
+  { from: 3, to: 4, distance: '5.4m' },
+  { from: 3, to: 5, distance: '5.3m' },
+  { from: 5, to: 6, distance: '1.2m' },
+  { from: 6, to: 7, distance: '5.0m' },
+  { from: 6, to: 8, distance: '4.2m' },
+  { from: 8, to: 9, distance: '6.0m' },
+  { from: 9, to: 10, distance: '4.9m' },
+  { from: 10, to: 11, distance: '4.9m' },
+];
 
 export default function MultiHopRoutingCanvas() {
   const [isTransacting, setIsTransacting] = useState(false);
@@ -51,60 +56,58 @@ export default function MultiHopRoutingCanvas() {
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
-  const SCALE = isDesktop ? SCALE_DESKTOP : SCALE_TABLET;
-  const OFFSET_X = isDesktop ? OFFSET_X_DESKTOP : OFFSET_X_TABLET;
-  const OFFSET_Y = isDesktop ? OFFSET_Y_DESKTOP : OFFSET_Y_TABLET;
-
-  // All 19 nodes
+  // Use the same node IDs and base coordinates as interactive-network-simulation
   const nodes: Node[] = useMemo(() => {
-    return [
-      { id: 1, x: 1.12 * SCALE + OFFSET_X - 160, y: 8.53 * SCALE + OFFSET_Y },
-      { id: 2, x: 3.96 * SCALE + OFFSET_X - 160, y: 3.91 * SCALE + OFFSET_Y },
-      { id: 3, x: 7.22 * SCALE + OFFSET_X - 160, y: 6.53 * SCALE + OFFSET_Y },
-      { id: 4, x: 9.65 * SCALE + OFFSET_X - 160, y: 0.59 * SCALE + OFFSET_Y },
-      { id: 5, x: 13.06 * SCALE + OFFSET_X, y: 8.63 * SCALE + OFFSET_Y },
-      { id: 6, x: 10.06 * SCALE + OFFSET_X, y: 15.64 * SCALE + OFFSET_Y },
-      { id: 7, x: 15.89 * SCALE + OFFSET_X, y: 16.69 * SCALE + OFFSET_Y },
-      { id: 8, x: 16.89 * SCALE + OFFSET_X, y: 26.13 * SCALE + OFFSET_Y },
-      { id: 9, x: 18.15 * SCALE + OFFSET_X, y: 0 * SCALE + OFFSET_Y },
-      { id: 10, x: 18.91 * SCALE + OFFSET_X, y: 3.05 * SCALE + OFFSET_Y },
-      { id: 11, x: 21.85 * SCALE + OFFSET_X, y: 3.05 * SCALE + OFFSET_Y },
-      { id: 12, x: 22.89 * SCALE + OFFSET_X, y: 34.52 * SCALE + OFFSET_Y },
-      { id: 13, x: 24.81 * SCALE + OFFSET_X, y: 9.11 * SCALE + OFFSET_Y },
-      { id: 14, x: 27.65 * SCALE + OFFSET_X, y: 16.12 * SCALE + OFFSET_Y },
-      { id: 15, x: 27.65 * SCALE + OFFSET_X, y: 20.94 * SCALE + OFFSET_Y },
-      { id: 16, x: 29.14 * SCALE + OFFSET_X, y: 28.0 * SCALE + OFFSET_Y },
-      { id: 17, x: 29.17 * SCALE + OFFSET_X, y: 6.87 * SCALE + OFFSET_Y },
-      { id: 18, x: 29.17 * SCALE + OFFSET_X, y: 13.11 * SCALE + OFFSET_Y },
-      { id: 19, x: 32.99 * SCALE + OFFSET_X, y: 15.93 * SCALE + OFFSET_Y },
+    const baseNodes: Node[] = [
+      { id: 1, x: 80, y: 180 },
+      { id: 2, x: 160, y: 90 },
+      { id: 3, x: 250, y: 140 },
+      { id: 4, x: 340, y: 40 },
+      { id: 5, x: 430, y: 180 },
+      { id: 6, x: 520, y: 300 },
+      { id: 7, x: 570, y: 430 },
+      { id: 8, x: 620, y: 100 },
+      { id: 9, x: 790, y: 180 },
+      { id: 10, x: 960, y: 140 },
+      { id: 11, x: 1080, y: 290 },
     ];
-  }, [SCALE, OFFSET_X, OFFSET_Y]);
 
-  // All edges
-  const edges: Edge[] = useMemo(() => [
-    { from: 1, to: 2, distance: '4.3m' },
-    { from: 2, to: 3, distance: '' },
-    { from: 3, to: 4, distance: '5.4m' },
-    { from: 5, to: 6, distance: '9.1m' },
-    { from: 5, to: 10, distance: '5.3m' },
-    { from: 5, to: 7, distance: '1.2m' },
-    { from: 7, to: 8, distance: '5.0m' },
-    { from: 8, to: 14, distance: '2.2m' },
-    { from: 7, to: 13, distance: '2.2m' },
-    { from: 8, to: 12, distance: '1.8m' },
-    { from: 12, to: 15, distance: '3.2m' },
-    { from: 15, to: 16, distance: '1.5m' },
-    { from: 15, to: 14, distance: '2.6m' },
-    { from: 9, to: 10, distance: '2.6m' },
-    { from: 10, to: 11, distance: '3.5m' },
-    { from: 9, to: 11, distance: '' },
-    { from: 10, to: 13, distance: '4.2m' },
-    { from: 13, to: 17, distance: '6.0m' },
-    { from: 13, to: 18, distance: '5.4m' },
-    { from: 17, to: 18, distance: '' },
-    { from: 17, to: 19, distance: '4.9m' },
-    { from: 18, to: 19, distance: '4.9m' },
-  ], []);
+    const minX = Math.min(...baseNodes.map((n) => n.x));
+    const maxX = Math.max(...baseNodes.map((n) => n.x));
+    const minY = Math.min(...baseNodes.map((n) => n.y));
+    const maxY = Math.max(...baseNodes.map((n) => n.y));
+
+    const spanX = maxX - minX;
+    const spanY = maxY - minY;
+
+    const paddingLeft = isDesktop ? 32 : 16;
+    const paddingRight = isDesktop ? 32 : 16;
+    const paddingTop = isDesktop ? 40 : 32;
+    const paddingBottom = isDesktop ? 24 : 12;
+
+    const usableWidth = CANVAS_WIDTH - paddingLeft - paddingRight;
+    const usableHeight = CANVAS_HEIGHT - paddingTop - paddingBottom;
+
+    const fitScale = Math.min(
+      usableWidth / spanX,
+      usableHeight / spanY
+    );
+
+    const renderedWidth = spanX * fitScale;
+    const offsetX = paddingLeft + (usableWidth - renderedWidth) / 2;
+    const offsetY = paddingTop;
+
+    return baseNodes.map((n) => ({
+      id: n.id,
+      x: (n.x - minX) * fitScale + offsetX,
+      y: (n.y - minY) * fitScale + offsetY,
+    }));
+  }, [isDesktop]);
+
+  const edges: Edge[] = useMemo(() => {
+    const activeIds = new Set(nodes.map((node) => node.id));
+    return ALL_EDGES.filter((edge) => activeIds.has(edge.from) && activeIds.has(edge.to));
+  }, [nodes]);
 
   // Build adjacency list
   useEffect(() => {
@@ -387,7 +390,7 @@ export default function MultiHopRoutingCanvas() {
 
       path = findShortestPath(sender, receiver);
 
-      if (path.length >= 3) {
+      if (path.length >= 3 && path.length < 5) {
         break;
       }
       attempts++;
@@ -407,114 +410,9 @@ export default function MultiHopRoutingCanvas() {
   };
 
   return (
-    <div className="w-full bg-layer-01 border border-invisible flex flex-col min-[1440px]:flex-row min-[1440px]:h-[700px]">
-      {/* Control Panel */}
-      <div className="hidden min-[1440px]:flex min-[1440px]:w-[280px] border-r border-invisible flex-col min-[1440px]:overflow-y-auto">
-        {/* Header */}
-        <div className="py-[32px] px-[16px]">
-          <div className="text-label text-tertiary">CONTROL PANEL</div>
-        </div>
-
-        {/* Content Area */}
-        <div className="flex-1 py-0 px-[16px] flex flex-col" style={{ gap: '20px' }}>
-          {/* Trigger Transaction Button */}
-          <button
-            onClick={handleTriggerTransaction}
-            disabled={isTransacting}
-            className={`w-full h-[44px] py-[13px] px-xs border border-white flex items-center justify-center hover-border-bright transition-all bg-layer-02 ${
-              isTransacting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-            }`}
-          >
-            <Image
-              src="/transction.svg"
-              alt="Transaction"
-              width={24}
-              height={24}
-              className="text-primary mr-2 flex-shrink-0"
-              style={{ objectFit: 'contain' }}
-            />
-            <span className="text-button text-left text-primary">
-              {isTransacting
-                ? 'TRANSACTION IN PROGRESS...'
-                : 'TRIGGER SAMPLE TRANSACTION'}
-            </span>
-          </button>
-
-          {/* Transaction Details */}
-          {transaction && (
-            <div className="w-full inline-flex flex-col justify-start items-start gap-sm">
-              <div className="self-stretch justify-center text-primary text-sm text-body3 font-normal leading-6">
-                Sample Off-Chain Transaction
-              </div>
-              <div className="self-stretch flex flex-col justify-start items-start gap-xs">
-                <div className="self-stretch inline-flex justify-start items-start gap-xs">
-                  <div className="w-14 justify-center text-tertiary text-sm font-normal leading-6">
-                    From
-                  </div>
-                  <div className="flex-1 flex justify-start items-center gap-xs">
-                    <div className="w-3.5 h-3.5 bg-[#ADFFBE] rounded-full" />
-                    <div className="flex-1 justify-center text-primary text-sm font-normal leading-6">
-                      Node {transaction.path[0]}
-                    </div>
-                  </div>
-                </div>
-                <div className="self-stretch inline-flex justify-start items-start gap-xs">
-                  <div className="w-14 justify-center text-tertiary text-sm font-normal leading-6">
-                    To
-                  </div>
-                  <div className="flex-1 flex justify-start items-center gap-xs">
-                    <div className="w-3.5 h-3.5 bg-[#A2D2FF] rounded-full" />
-                    <div className="flex-1 justify-center text-primary text-sm font-normal leading-6">
-                      Node {transaction.path[transaction.path.length - 1]}
-                    </div>
-                  </div>
-                </div>
-                <div className="self-stretch inline-flex justify-start items-start gap-xs">
-                  <div className="w-14 justify-center text-tertiary text-sm font-normal leading-6">
-                    Path
-                  </div>
-                  <div className="flex-1 justify-center text-primary text-sm font-normal leading-6">
-                    {transaction.path.map((nodeId, index) => (
-                      <span key={nodeId}>
-                        Node {nodeId}
-                        {index < transaction.path.length - 1 && ' → '}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Network Status Footer */}
-        <div className="border-t border-invisible p-sm flex flex-col gap-sm">
-          <div className="text-label text-tertiary mb-xs">NETWORK STATUS</div>
-
-          <div className="flex justify-between items-center">
-            <div className="text-body3 text-tertiary">Nodes</div>
-            <div className="text-body3 text-primary">19</div>
-          </div>
-
-          <div className="flex justify-between items-center">
-            <div className="text-body3 text-tertiary">Channels</div>
-            <div className="text-body3 text-primary">22</div>
-          </div>
-
-          <div className="flex justify-between items-center">
-            <div className="text-body3 text-tertiary">L2 Txns</div>
-            <div className="text-body3 text-primary">{l2Txns}</div>
-          </div>
-
-          <div className="flex justify-between items-center">
-            <div className="text-body3 text-tertiary">L1 Channel Ops</div>
-            <div className="text-body3 text-primary">0</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Side - Network Layers */}
-      <div className="flex flex-col w-full min-[1440px]:flex-1 min-w-0" style={{ minHeight: 0 }}>
+    <div className="w-full bg-layer-01 border border-invisible flex flex-col">
+      {/* Network Layers */}
+      <div className="flex flex-col w-full min-w-0" style={{ minHeight: 0 }}>
         {/* FIBER NETWORK (LAYER 2) */}
         <div className="border-b border-invisible flex flex-col" style={{ flex: '1 1 auto', minHeight: 0 }}>
           {/* Layer 2 Header */}
@@ -523,103 +421,90 @@ export default function MultiHopRoutingCanvas() {
           </div>
 
           {/* Layer 2 Content */}
-          <div className="relative bg-layer-01 h-[300px] sm:h-[420px] min-[1440px]:h-[524px] flex items-center justify-center overflow-hidden">
-            <canvas
-              ref={canvasRef}
-              width={1000}
-              height={1050}
-              className="block w-auto h-auto max-w-full max-h-full"
-              style={{ imageRendering: 'auto' }}
-            />
+          <div className="bg-layer-01 flex flex-col overflow-hidden">
+            <div className="relative h-[240px] sm:h-[280px] md:h-[320px] px-2 sm:px-3 md:px-4 pt-8 pb-3 flex items-center justify-center overflow-hidden">
+              {transaction && (
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-layer-02 border border-invisible text-body3 text-primary z-10 whitespace-nowrap max-w-[96%] overflow-x-auto flex items-center">
+                  <span className="mr-2">Path:</span>
+                  {transaction.path.map((nodeId, index) => {
+                    const isFirst = index === 0;
+                    const isLast = index === transaction.path.length - 1;
+
+                    return (
+                      <span key={nodeId} className="flex items-center">
+                        {isFirst && (
+                          <span
+                            className="w-2 h-2 rounded-full mr-1"
+                            style={{ backgroundColor: '#ADFFBE' }}
+                          />
+                        )}
+
+                        {isLast && !isFirst && (
+                          <span
+                            className="w-2 h-2 rounded-full mr-1"
+                            style={{ backgroundColor: '#A2D2FF' }}
+                          />
+                        )}
+
+                        Node {nodeId}
+                        {!isLast && <span className="mx-1">→</span>}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
+              <canvas
+                ref={canvasRef}
+                width={CANVAS_WIDTH}
+                height={CANVAS_HEIGHT}
+                className="block w-auto h-auto max-w-full max-h-full"
+                style={{ imageRendering: 'auto' }}
+              />
+            </div>
+
+            <div className="px-2 sm:px-3 md:px-4 py-2">
+              <button
+                onClick={handleTriggerTransaction}
+                disabled={isTransacting}
+                className={`w-full h-12 px-4 border border-white flex items-center justify-center gap-sm transition-all bg-layer-02 ${
+                  isTransacting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover-border-bright'
+                }`}
+              >
+                <Image
+                  src="/transaction.svg"
+                  alt="Transaction"
+                  width={20}
+                  height={20}
+                  className="flex-shrink-0"
+                  style={{ objectFit: 'contain' }}
+                />
+                <span className="text-button text-primary font-bold">
+                  {isTransacting ? 'TRANSACTION IN PROGRESS...' : 'SAMPLE TRANSACTION'}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
-
         {/* NERVOS CKB (LAYER 1) */}
         <div className="flex flex-col flex-shrink-0">
           <div className="h-[48px] px-lg flex items-center justify-center border-b border-invisible bg-layer-01">
             <div className="text-label text-primary">NERVOS CKB (LAYER 1)</div>
           </div>
-          <div className="h-[80px] relative bg-layer-01 overflow-hidden flex-shrink-0" />
-        </div>
-
-        {/* Mobile & Tablet Controls */}
-        <div className="min-[1440px]:hidden px-md pb-sm pt-sm flex flex-col gap-sm bg-layer-01 border-t border-invisible">
-          <div className="text-label text-tertiary">CONTROL PANEL</div>
-          <button
-            onClick={handleTriggerTransaction}
-            disabled={isTransacting}
-            className={`w-full h-16 px-md py-sm border border-white flex items-center justify-center gap-md transition-all bg-layer-02 ${
-              isTransacting
-                ? 'opacity-50 cursor-not-allowed'
-                : 'cursor-pointer hover-border-bright'
-            }`}
-          >
-            <Image
-              src="/transction.svg"
-              alt="Transaction"
-              width={24}
-              height={24}
-              className="flex-shrink-0"
-              style={{ objectFit: 'contain' }}
-            />
-            <span className="text-button text-primary font-bold">
-              {isTransacting
-                ? 'TRANSACTION IN PROGRESS...'
-                : 'TRIGGER SAMPLE TRANSACTION'}
-            </span>
-          </button>
-
-          {transaction && (
-            <div className="w-full p-sm bg-layer-02 flex flex-col gap-md">
-              <div className="text-body2 text-primary">
-                Sample Off-Chain Transaction
-              </div>
-              <div className="flex flex-col gap-sm">
-                <div className="flex gap-sm">
-                  <div className="w-14 text-body2 text-tertiary">From</div>
-                  <div className="flex-1 flex items-center gap-sm">
-                    <div className="w-3.5 h-3.5 bg-[#ADFFBE] rounded-full" />
-                    <div className="flex-1 text-body2 text-primary">
-                      Node {transaction.path[0]}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-sm">
-                  <div className="w-14 text-body2 text-tertiary">To</div>
-                  <div className="flex-1 flex items-center gap-sm">
-                    <div className="w-3.5 h-3.5 bg-[#A2D2FF] rounded-full" />
-                    <div className="flex-1 text-body2 text-primary">
-                      Node {transaction.path[transaction.path.length - 1]}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-sm">
-                  <div className="w-14 text-body2 text-tertiary">Path</div>
-                  <div className="flex-1 text-body2 text-primary">
-                    {transaction.path.map((nodeId, index) => (
-                      <span key={nodeId}>
-                        Node {nodeId}
-                        {index < transaction.path.length - 1 && ' → '}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          <div className="h-[64px] relative bg-layer-01 overflow-hidden flex-shrink-0" />
         </div>
 
         {/* Network Status - Tablet & Mobile */}
-        <div className="min-[1440px]:hidden border-t border-invisible p-sm flex flex-col gap-sm">
+        <div className="border-t border-invisible p-sm flex flex-col gap-sm">
           <div className="text-label text-tertiary">NETWORK STATUS</div>
           <div className="flex flex-col md:grid md:grid-cols-2 gap-sm md:gap-md">
             <div className="flex md:justify-between md:gap-sm">
               <div className="w-[90px] md:w-auto text-body3 text-tertiary">Nodes</div>
-              <div className="ml-[20px] md:ml-0 text-body3 text-primary">19</div>
+              <div className="ml-[20px] md:ml-0 text-body3 text-primary">{nodes.length}</div>
             </div>
             <div className="flex md:justify-between md:gap-sm">
               <div className="w-[90px] md:w-auto text-body3 text-tertiary">Channels</div>
-              <div className="ml-[20px] md:ml-0 text-body3 text-primary">22</div>
+              <div className="ml-[20px] md:ml-0 text-body3 text-primary">{edges.length}</div>
             </div>
             <div className="flex md:justify-between md:gap-sm">
               <div className="w-[90px] md:w-auto text-body3 text-tertiary">L2 Txns</div>

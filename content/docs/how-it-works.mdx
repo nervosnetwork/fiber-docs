@@ -17,6 +17,8 @@ When the channel is open, both parties can conduct an unlimited number of off-ch
 
 When the channel is closed cooperatively, the latest mutually signed state is submitted on-chain for settlement. (If the channel is closed uncooperatively, the Script enforces the dispute rules, allowing the counterparty to challenge outdated states and trigger a penalty transaction.)
 
+---
+
 The simulator below illustrates the lifecycle of a payment channel.
 
 To establish a channel, select Node 1 and Node 2 and click on **"Open Channel."** This action represents a funding transaction recorded on Layer 1. Once the channel is open, balance updates occur off-chain and increase the Layer 2 transaction count without additional Layer 1 operations.
