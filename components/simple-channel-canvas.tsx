@@ -16,9 +16,12 @@ interface CustomChannel {
 }
 
 export default function SimpleChannelCanvas() {
+  const COLOR_BORDER_SUBTLE = '#525252';
+  const COLOR_CHANNEL_OPEN = '#ADFFBE';
   const [selectedNodes, setSelectedNodes] = useState<number[]>([]);
   const [customChannel, setCustomChannel] = useState<CustomChannel | null>(null);
   const [isChannelOpen, setIsChannelOpen] = useState(false);
+  const [isChannelSelected, setIsChannelSelected] = useState(false);
   const [l1Ops, setL1Ops] = useState(0);
   const [l2Txns, setL2Txns] = useState(0);
   const [showChannelNotification, setShowChannelNotification] = useState(false);
@@ -26,6 +29,7 @@ export default function SimpleChannelCanvas() {
   const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>(0);
+  const openNotificationTimeoutRef = useRef<number | null>(null);
 
   // Fixed canvas dimensions
   const CANVAS_WIDTH = 800;
@@ -57,7 +61,7 @@ export default function SimpleChannelCanvas() {
         ctx.beginPath();
         ctx.moveTo(fromNode.x, fromNode.y);
         ctx.lineTo(toNode.x, toNode.y);
-        ctx.strokeStyle = customChannel.color;
+        ctx.strokeStyle = isChannelSelected ? '#FFA2A2' : customChannel.color;
         ctx.lineWidth = 2;
         ctx.stroke();
       }
@@ -96,7 +100,7 @@ export default function SimpleChannelCanvas() {
       ctx.textBaseline = 'top';
       ctx.fillText(`Node ${node.id}`, node.x, node.y + 16);
     });
-  }, [nodes, selectedNodes, hoveredNodeId, customChannel]);
+  }, [nodes, selectedNodes, hoveredNodeId, customChannel, isChannelSelected]);
 
   useEffect(() => {
     drawNetwork();
@@ -107,6 +111,14 @@ export default function SimpleChannelCanvas() {
       }
     };
   }, [drawNetwork]);
+
+  useEffect(() => {
+    return () => {
+      if (openNotificationTimeoutRef.current) {
+        window.clearTimeout(openNotificationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -161,6 +173,29 @@ export default function SimpleChannelCanvas() {
         return;
       }
     }
+
+    if (customChannel && isChannelOpen) {
+      const fromNode = nodes.find((n) => n.id === customChannel.from);
+      const toNode = nodes.find((n) => n.id === customChannel.to);
+      if (!fromNode || !toNode) return;
+
+      const dx = toNode.x - fromNode.x;
+      const dy = toNode.y - fromNode.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      const dot = ((x - fromNode.x) * dx + (y - fromNode.y) * dy) / (len * len);
+
+      if (dot >= 0 && dot <= 1) {
+        const projX = fromNode.x + dot * dx;
+        const projY = fromNode.y + dot * dy;
+        const dist = Math.sqrt((x - projX) ** 2 + (y - projY) ** 2);
+        if (dist <= 12) {
+          setIsChannelSelected((prev) => !prev);
+          return;
+        }
+      }
+    }
+
+    setIsChannelSelected(false);
   };
 
   const handleOpenChannel = () => {
@@ -168,26 +203,36 @@ export default function SimpleChannelCanvas() {
       const newChannel: CustomChannel = {
         from: selectedNodes[0],
         to: selectedNodes[1],
-        color: '#ADFFBE',
+        color: COLOR_CHANNEL_OPEN,
       };
       setCustomChannel(newChannel);
       setIsChannelOpen(true);
+      setIsChannelSelected(false);
       setL1Ops((prev) => prev + 1);
       setL2Txns((prev) => prev + 1);
       setSelectedNodes([]);
 
       // Show notification
+      if (openNotificationTimeoutRef.current) {
+        window.clearTimeout(openNotificationTimeoutRef.current);
+      }
       setShowChannelNotification(true);
-      setTimeout(() => {
+      openNotificationTimeoutRef.current = window.setTimeout(() => {
         setShowChannelNotification(false);
+        setCustomChannel((prev) =>
+          prev && prev.color === COLOR_CHANNEL_OPEN
+            ? { ...prev, color: COLOR_BORDER_SUBTLE }
+            : prev
+        );
       }, 3000);
     }
   };
 
   const handleCloseChannel = () => {
-    if (isChannelOpen) {
+    if (isChannelOpen && isChannelSelected) {
       setCustomChannel(null);
       setIsChannelOpen(false);
+      setIsChannelSelected(false);
       setL1Ops((prev) => prev + 1);
       setSelectedNodes([]);
 
@@ -211,99 +256,9 @@ export default function SimpleChannelCanvas() {
   }, [isChannelOpen]);
 
   return (
-    <div className="w-full bg-layer-01 border border-invisible flex flex-col lg:flex-row">
-      {/* Control Panel */}
-      <div className="w-full lg:w-[280px] border-b lg:border-b-0 lg:border-r border-invisible flex flex-col">
-        {/* Header */}
-        <div className="py-[24px] px-[16px]">
-          <div className="text-label text-tertiary">CONTROL PANEL</div>
-        </div>
-
-        {/* Content Area */}
-        <div className="flex-1 py-0 px-[16px] flex flex-col" style={{ gap: '20px' }}>
-          {/* Open Channel Section */}
-          <div className="flex flex-col gap-sm">
-            <div className="text-body2 text-secondary">
-              Select two nodes in the network
-            </div>
-            <button
-              onClick={handleOpenChannel}
-              disabled={selectedNodes.length !== 2 || isChannelOpen}
-              className={`w-full h-[44px] py-[13px] px-md border flex items-center justify-center gap-sm transition-all bg-layer-02 ${
-                selectedNodes.length !== 2 || isChannelOpen
-                  ? 'border-white/30 opacity-50 cursor-not-allowed'
-                  : 'border-invisible cursor-pointer hover:bg-layer-03'
-              }`}
-            >
-              <Image
-                src="/plus2.svg"
-                alt="Plus"
-                width={24}
-                height={24}
-                className="text-primary mr-2 flex-shrink-0"
-                style={{ objectFit: 'contain' }}
-              />
-              <span className="text-button text-primary font-bold">
-                OPEN CHANNEL
-              </span>
-            </button>
-          </div>
-
-          {/* Close Channel Section */}
-          <div className="flex flex-col gap-sm">
-            <div className="text-body2 text-secondary">Select a line to close</div>
-            <button
-              onClick={handleCloseChannel}
-              disabled={!isChannelOpen}
-              className={`w-full h-[44px] py-[13px] px-md border flex items-center justify-center gap-sm transition-all bg-layer-02 ${
-                !isChannelOpen
-                  ? 'border-white/30 opacity-50 cursor-not-allowed'
-                  : 'border-invisible cursor-pointer hover:bg-layer-03'
-              }`}
-            >
-              <Image
-                src="/minus2.svg"
-                alt="Minus"
-                width={24}
-                height={24}
-                className="text-primary mr-2 flex-shrink-0"
-                style={{ objectFit: 'contain' }}
-              />
-              <span className="text-button text-primary font-bold">
-                CLOSE CHANNEL
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* Network Status Footer */}
-        <div className="border-t border-invisible p-sm flex flex-col gap-sm mt-4">
-          <div className="text-label text-tertiary mb-xs">NETWORK STATUS</div>
-
-          <div className="flex justify-between items-center">
-            <div className="text-body3 text-tertiary">Nodes</div>
-            <div className="text-body3 text-primary">2</div>
-          </div>
-
-          <div className="flex justify-between items-center">
-            <div className="text-body3 text-tertiary">Channels</div>
-            <div className="text-body3 text-primary">{isChannelOpen ? 1 : 0}</div>
-          </div>
-
-          <div className="flex justify-between items-center">
-            <div className="text-body3 text-tertiary">L2 Txns</div>
-            <div className="text-body3 text-primary">{l2Txns}</div>
-          </div>
-
-          <div className="flex justify-between items-center">
-            <div className="text-body3 text-tertiary">L1 Channel Ops</div>
-            <div className="text-body3 text-primary">{l1Ops}</div>
-          </div>
-        </div>
-      </div>
-
+    <div className="w-full bg-layer-01 border border-invisible flex flex-col">
       {/* Right Side - Network Layers */}
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col w-full min-w-0">
         {/* FIBER NETWORK (LAYER 2) */}
         <div className="border-b border-invisible flex flex-col flex-1">
           {/* Layer 2 Header */}
@@ -312,16 +267,45 @@ export default function SimpleChannelCanvas() {
           </div>
 
           {/* Layer 2 Content - Network Visualization Area */}
-          <div className="relative bg-layer-01 flex flex-col overflow-hidden flex-1 min-h-[300px]">
+          <div className="relative bg-layer-01 flex items-center justify-center overflow-hidden w-full h-[280px] sm:h-[340px] pt-4 pb-[72px] px-2">
             <canvas
               ref={canvasRef}
               width={CANVAS_WIDTH}
               height={CANVAS_HEIGHT}
-              className="w-full h-full block"
+              className="block w-auto h-auto max-w-full max-h-full"
               style={{ imageRendering: 'auto', cursor: 'pointer' }}
               onMouseMove={handleMouseMove}
               onClick={handleClick}
             />
+
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-[min(96%,900px)] flex items-center gap-2">
+              <button
+                onClick={handleOpenChannel}
+                disabled={selectedNodes.length !== 2 || isChannelOpen}
+                title={selectedNodes.length !== 2 || isChannelOpen ? 'Select two nodes in the network' : undefined}
+                className={`flex-1 h-12 px-sm border flex items-center justify-center gap-sm transition-all bg-layer-02 ${
+                  selectedNodes.length !== 2 || isChannelOpen
+                    ? 'border-white/30 opacity-50 cursor-not-allowed'
+                    : 'border-invisible cursor-pointer hover:bg-layer-03'
+                }`}
+              >
+                <Image src="/plus2.svg" alt="Plus" width={20} height={20} className="flex-shrink-0" style={{ objectFit: 'contain' }} />
+                <span className="text-button text-primary font-bold">OPEN CHANNEL</span>
+              </button>
+              <button
+                onClick={handleCloseChannel}
+                disabled={!isChannelSelected}
+                title={!isChannelSelected ? 'Select a line to close' : undefined}
+                className={`flex-1 h-12 px-sm border flex items-center justify-center gap-sm transition-all bg-layer-02 ${
+                  !isChannelSelected
+                    ? 'border-white/30 opacity-50 cursor-not-allowed'
+                    : 'border-invisible cursor-pointer hover:bg-layer-03'
+                }`}
+              >
+                <Image src="/minus2.svg" alt="Minus" width={20} height={20} className="flex-shrink-0" style={{ objectFit: 'contain' }} />
+                <span className="text-button text-primary font-bold">CLOSE CHANNEL</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -333,7 +317,7 @@ export default function SimpleChannelCanvas() {
           </div>
 
           {/* Layer 1 Content */}
-          <div className="h-[80px] relative bg-layer-01 overflow-hidden">
+          <div className="h-[64px] relative bg-layer-01 overflow-hidden">
             {/* Channel Opened Notification */}
             {showChannelNotification && (
               <div className="absolute right-0 top-[20px] h-[40px] px-3 bg-[#ADFFBE] inline-flex justify-center items-center gap-2 animate-slide-left">
@@ -351,6 +335,29 @@ export default function SimpleChannelCanvas() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Network Status - Mobile & Tablet */}
+       <div className="border-t border-invisible p-sm flex flex-col gap-sm">
+          <div className="text-label text-tertiary">NETWORK STATUS</div>
+          <div className="flex flex-col md:grid md:grid-cols-2 gap-sm md:gap-md">
+            <div className="flex md:justify-between md:gap-sm">
+              <div className="w-[90px] md:w-auto text-body3 text-tertiary">Nodes</div>
+              <div className="ml-[20px] md:ml-0 text-body3 text-primary">{nodes.length}</div>
+            </div>
+            <div className="flex md:justify-between md:gap-sm">
+              <div className="w-[90px] md:w-auto text-body3 text-tertiary">Channels</div>
+              <div className="ml-[20px] md:ml-0 text-body3 text-primary">{customChannel ? 1 : 0}</div>
+            </div>
+            <div className="flex md:justify-between md:gap-sm">
+              <div className="w-[90px] md:w-auto text-body3 text-tertiary">L2 Txns</div>
+              <div className="ml-[20px] md:ml-0 text-body3 text-primary">{l2Txns}</div>
+            </div>
+            <div className="flex md:justify-between md:gap-sm">
+              <div className="w-[90px] md:w-auto text-body3 text-tertiary">L1 Channel Ops</div>
+              <div className="ml-[20px] md:ml-0 text-body3 text-primary">0</div>
+            </div>
           </div>
         </div>
       </div>

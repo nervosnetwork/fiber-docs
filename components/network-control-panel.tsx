@@ -862,7 +862,7 @@ export default function NetworkControlPanel() {
             }`}
           >
             <Image
-              src="/transction.svg"
+              src="/transaction.svg"
               alt="Transaction"
               width={24}
               height={24}
@@ -1045,7 +1045,7 @@ export default function NetworkControlPanel() {
                 }`}
               >
                 <Image
-                  src="/transction.svg"
+                  src="/transaction.svg"
                   alt="Transaction"
                   width={24}
                   height={24}
