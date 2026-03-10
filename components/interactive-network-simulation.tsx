@@ -30,8 +30,8 @@ interface Transaction {
 
 const COLOR_BORDER_SUBTLE = '#525252';
 const COLOR_CHANNEL_OPEN = '#ADFFBE';
-const CANVAS_WIDTH = 1200;
-const CANVAS_HEIGHT = 480;
+const CANVAS_WIDTH = 1107;
+const CANVAS_HEIGHT = 444;
 const ALL_EDGES: Edge[] = [
   { from: 1, to: 2, distance: '4.3m' },
   { from: 2, to: 3, distance: '' },
@@ -88,10 +88,10 @@ const nodes: Node[] = useMemo(() => {
     { id: 1, x: 80, y: 180 },
     { id: 2, x: 160, y: 90 },
     { id: 3, x: 250, y: 140 },
-    { id: 4, x: 340, y: 40 },
+    { id: 4, x: 340, y: 60 },
     { id: 5, x: 430, y: 180 },
     { id: 6, x: 520, y: 300 },
-    { id: 7, x: 570, y: 430 },
+    { id: 7, x: 570, y: 380 },
     { id: 8, x: 620, y: 100 },
     { id: 9, x: 790, y: 180 },
     { id: 10, x: 960, y: 140 },
@@ -109,7 +109,7 @@ const nodes: Node[] = useMemo(() => {
   const paddingLeft = isDesktop ? 32 : 16;
   const paddingRight = isDesktop ? 32 : 16;
   const paddingTop = isDesktop ? 40 : 32;
-  const paddingBottom = isDesktop ? 24 : 12;
+  const paddingBottom = isDesktop ? 24 : 24;
 
   const usableWidth = CANVAS_WIDTH - paddingLeft - paddingRight;
   const usableHeight = CANVAS_HEIGHT - paddingTop - paddingBottom;
@@ -658,6 +658,7 @@ const nodes: Node[] = useMemo(() => {
     setCustomChannels(customChannels.map((ch) => ({ ...ch, color: COLOR_BORDER_SUBTLE })));
     setSelectedChannel(null);
     setSelectedEdge(null);
+    setSelectedNodes([]);
 
     let attempts = 0;
     const maxAttempts = 100;
@@ -709,7 +710,7 @@ const nodes: Node[] = useMemo(() => {
 
           {/* Layer 2 Content */}
           <div className="bg-layer-01 flex flex-col overflow-hidden">
-            <div className="relative h-[240px] sm:h-[280px] md:h-[320px] px-2 sm:px-3 md:px-4 pt-8 pb-3 flex items-center justify-center overflow-hidden">
+            <div className="relative px-2 pt-10 pb-3 overflow-visible flex items-start justify-center">
               {transaction && (
                 <div className="absolute top-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-layer-02 border border-invisible text-body3 text-primary z-10 whitespace-nowrap max-w-[96%] overflow-x-auto flex items-center">
                   <span className="mr-2">Path:</span>
@@ -747,7 +748,7 @@ const nodes: Node[] = useMemo(() => {
               ref={canvasRef}
               width={CANVAS_WIDTH}
               height={CANVAS_HEIGHT}
-              className="block w-auto h-auto max-w-full max-h-full"
+              className="block w-full h-auto cursor-pointer"
               style={{ imageRendering: 'auto' }}
               onMouseMove={handleMouseMove}
               onClick={handleClick}
@@ -836,7 +837,10 @@ const nodes: Node[] = useMemo(() => {
           <div className="h-[64px] relative bg-layer-01 overflow-hidden flex-shrink-0">
             {/* Channel Opened Notification */}
             {showChannelNotification && (
-              <div className="absolute right-0 top-[20px] h-[40px] px-3 bg-[#ADFFBE] inline-flex justify-center items-center gap-2 animate-slide-left">
+              <div 
+                className="absolute right-0 top-[20px] h-[32px] px-3 bg-[#ADFFBE] inline-flex justify-center items-center gap-2 animate-slide-left"
+                style={{ animationDuration: '4s', animationTimingFunction: 'ease-in' }}
+              >
                 <div className="text-center text-[#000000] text-sm font-normal leading-6">
                   Channel opened
                 </div>
@@ -845,7 +849,10 @@ const nodes: Node[] = useMemo(() => {
 
             {/* Channel Closed Notification */}
             {showChannelClosedNotification && (
-              <div className="absolute right-0 top-[20px] h-[40px] px-3 bg-[#FFA2A2] inline-flex justify-center items-center gap-2 animate-slide-left">
+              <div 
+                className="absolute right-0 top-[20px] h-[32px] px-3 bg-[#FFA2A2] inline-flex justify-center items-center gap-2 animate-slide-left"
+                style={{ animationDuration: '4s', animationTimingFunction: 'ease-in' }}
+              >
                 <div className="text-center text-[#000000] text-sm font-normal leading-6">
                   Channel closed
                 </div>

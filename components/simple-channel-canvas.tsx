@@ -32,13 +32,13 @@ export default function SimpleChannelCanvas() {
   const openNotificationTimeoutRef = useRef<number | null>(null);
 
   // Fixed canvas dimensions
-  const CANVAS_WIDTH = 800;
-  const CANVAS_HEIGHT = 400;
+  const CANVAS_WIDTH = 400;
+  const CANVAS_HEIGHT = 200;
 
   // Two fixed nodes positioned on left and right
   const nodes: Node[] = [
-    { id: 1, x: 200, y: 200 },
-    { id: 2, x: 600, y: 200 },
+    { id: 1, x: 100, y: 100 },
+    { id: 2, x: 300, y: 100 },
   ];
 
   // Draw the network
@@ -320,7 +320,10 @@ export default function SimpleChannelCanvas() {
           <div className="h-[64px] relative bg-layer-01 overflow-hidden">
             {/* Channel Opened Notification */}
             {showChannelNotification && (
-              <div className="absolute right-0 top-[20px] h-[40px] px-3 bg-[#ADFFBE] inline-flex justify-center items-center gap-2 animate-slide-left">
+              <div 
+                className="absolute right-0 top-1/2 -translate-y-1/2 h-[32px] px-3 bg-[#ADFFBE] inline-flex justify-center items-center gap-2 animate-slide-left"
+                style={{ animationDuration: '4s', animationTimingFunction: 'ease-in' }}
+              >
                 <div className="text-center text-[#000000] text-sm font-normal leading-6">
                   Channel opened
                 </div>
@@ -329,7 +332,10 @@ export default function SimpleChannelCanvas() {
 
             {/* Channel Closed Notification */}
             {showChannelClosedNotification && (
-              <div className="absolute right-0 top-[20px] h-[40px] px-3 bg-[#FFA2A2] inline-flex justify-center items-center gap-2 animate-slide-left">
+              <div 
+                className="absolute right-0 top-1/2 -translate-y-1/2 h-[32px] px-3 bg-[#FFA2A2] inline-flex justify-center items-center gap-2 animate-slide-left"
+                style={{ animationDuration: '4s', animationTimingFunction: 'ease-in' }}
+              >
                 <div className="text-center text-[#000000] text-sm font-normal leading-6">
                   Channel closed
                 </div>
@@ -338,7 +344,7 @@ export default function SimpleChannelCanvas() {
           </div>
         </div>
 
-        {/* Network Status - Mobile & Tablet */}
+        {/* Network Status */}
        <div className="border-t border-invisible p-sm flex flex-col gap-sm">
           <div className="text-label text-tertiary">NETWORK STATUS</div>
           <div className="flex flex-col md:grid md:grid-cols-2 gap-sm md:gap-md">

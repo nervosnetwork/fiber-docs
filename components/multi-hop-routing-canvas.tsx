@@ -22,8 +22,8 @@ interface Transaction {
 }
 
 const COLOR_BORDER_SUBTLE = '#525252';
-const CANVAS_WIDTH = 1200;
-const CANVAS_HEIGHT = 480;
+const CANVAS_WIDTH = 1107;
+const CANVAS_HEIGHT = 444;
 const ALL_EDGES: Edge[] = [
   { from: 1, to: 2, distance: '4.3m' },
   { from: 2, to: 3, distance: '' },
@@ -62,10 +62,10 @@ export default function MultiHopRoutingCanvas() {
       { id: 1, x: 80, y: 180 },
       { id: 2, x: 160, y: 90 },
       { id: 3, x: 250, y: 140 },
-      { id: 4, x: 340, y: 40 },
+      { id: 4, x: 340, y: 60 },
       { id: 5, x: 430, y: 180 },
       { id: 6, x: 520, y: 300 },
-      { id: 7, x: 570, y: 430 },
+      { id: 7, x: 570, y: 380 },
       { id: 8, x: 620, y: 100 },
       { id: 9, x: 790, y: 180 },
       { id: 10, x: 960, y: 140 },
@@ -83,7 +83,7 @@ export default function MultiHopRoutingCanvas() {
     const paddingLeft = isDesktop ? 32 : 16;
     const paddingRight = isDesktop ? 32 : 16;
     const paddingTop = isDesktop ? 40 : 32;
-    const paddingBottom = isDesktop ? 24 : 12;
+    const paddingBottom = isDesktop ? 24 : 24;
 
     const usableWidth = CANVAS_WIDTH - paddingLeft - paddingRight;
     const usableHeight = CANVAS_HEIGHT - paddingTop - paddingBottom;
@@ -422,7 +422,7 @@ export default function MultiHopRoutingCanvas() {
 
           {/* Layer 2 Content */}
           <div className="bg-layer-01 flex flex-col overflow-hidden">
-            <div className="relative h-[240px] sm:h-[280px] md:h-[320px] px-2 sm:px-3 md:px-4 pt-8 pb-3 flex items-center justify-center overflow-hidden">
+            <div className="relative px-2 pt-10 pb-3 overflow-visible flex items-start justify-center">
               {transaction && (
                 <div className="absolute top-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-layer-02 border border-invisible text-body3 text-primary z-10 whitespace-nowrap max-w-[96%] overflow-x-auto flex items-center">
                   <span className="mr-2">Path:</span>
@@ -458,7 +458,7 @@ export default function MultiHopRoutingCanvas() {
                 ref={canvasRef}
                 width={CANVAS_WIDTH}
                 height={CANVAS_HEIGHT}
-                className="block w-auto h-auto max-w-full max-h-full"
+                className="block w-full h-auto"
                 style={{ imageRendering: 'auto' }}
               />
             </div>
@@ -494,7 +494,7 @@ export default function MultiHopRoutingCanvas() {
           <div className="h-[64px] relative bg-layer-01 overflow-hidden flex-shrink-0" />
         </div>
 
-        {/* Network Status - Tablet & Mobile */}
+        {/* Network Status */}
         <div className="border-t border-invisible p-sm flex flex-col gap-sm">
           <div className="text-label text-tertiary">NETWORK STATUS</div>
           <div className="flex flex-col md:grid md:grid-cols-2 gap-sm md:gap-md">
