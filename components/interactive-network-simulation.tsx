@@ -30,8 +30,8 @@ interface Transaction {
 
 const COLOR_BORDER_SUBTLE = '#525252';
 const COLOR_CHANNEL_OPEN = '#ADFFBE';
-const CANVAS_WIDTH = 1200;
-const CANVAS_HEIGHT = 480;
+const CANVAS_WIDTH = 1107;
+const CANVAS_HEIGHT = 444;
 const ALL_EDGES: Edge[] = [
   { from: 1, to: 2, distance: '4.3m' },
   { from: 2, to: 3, distance: '' },
@@ -88,10 +88,10 @@ const nodes: Node[] = useMemo(() => {
     { id: 1, x: 80, y: 180 },
     { id: 2, x: 160, y: 90 },
     { id: 3, x: 250, y: 140 },
-    { id: 4, x: 340, y: 40 },
+    { id: 4, x: 340, y: 60 },
     { id: 5, x: 430, y: 180 },
     { id: 6, x: 520, y: 300 },
-    { id: 7, x: 570, y: 430 },
+    { id: 7, x: 570, y: 380 },
     { id: 8, x: 620, y: 100 },
     { id: 9, x: 790, y: 180 },
     { id: 10, x: 960, y: 140 },
@@ -109,7 +109,7 @@ const nodes: Node[] = useMemo(() => {
   const paddingLeft = isDesktop ? 32 : 16;
   const paddingRight = isDesktop ? 32 : 16;
   const paddingTop = isDesktop ? 40 : 32;
-  const paddingBottom = isDesktop ? 24 : 12;
+  const paddingBottom = isDesktop ? 24 : 24;
 
   const usableWidth = CANVAS_WIDTH - paddingLeft - paddingRight;
   const usableHeight = CANVAS_HEIGHT - paddingTop - paddingBottom;
@@ -445,6 +445,25 @@ const nodes: Node[] = useMemo(() => {
     };
   }, [drawNetwork]);
 
+  const selectedPairAlreadyConnected =
+  selectedNodes.length === 2 &&
+  (
+    edges.some(
+      (edge) =>
+        !closedEdges.has(`${edge.from}-${edge.to}`) &&
+        !closedEdges.has(`${edge.to}-${edge.from}`) &&
+        (
+          (edge.from === selectedNodes[0] && edge.to === selectedNodes[1]) ||
+          (edge.from === selectedNodes[1] && edge.to === selectedNodes[0])
+        )
+    ) ||
+    customChannels.some(
+      (ch) =>
+        (ch.from === selectedNodes[0] && ch.to === selectedNodes[1]) ||
+        (ch.from === selectedNodes[1] && ch.to === selectedNodes[0])
+    )
+  );
+
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -483,13 +502,21 @@ const nodes: Node[] = useMemo(() => {
     for (const node of nodes) {
       const dx = x - node.x;
       const dy = y - node.y;
+
       if (Math.sqrt(dx * dx + dy * dy) <= 10) {
+
+        // clear any selected channel/edge
+        setSelectedChannel(null);
+        setSelectedEdge(null);
+
         setCustomChannels(
           customChannels.map((ch) =>
-            ch.color === COLOR_CHANNEL_OPEN ? { ...ch, color: COLOR_BORDER_SUBTLE } : ch
+            ch.color === COLOR_CHANNEL_OPEN
+              ? { ...ch, color: COLOR_BORDER_SUBTLE }
+              : ch
           )
         );
-        
+
         if (selectedNodes.includes(node.id)) {
           setSelectedNodes(selectedNodes.filter((id) => id !== node.id));
         } else {
@@ -499,6 +526,7 @@ const nodes: Node[] = useMemo(() => {
             setSelectedNodes([selectedNodes[1], node.id]);
           }
         }
+
         return;
       }
     }
@@ -526,17 +554,24 @@ const nodes: Node[] = useMemo(() => {
         const dist = Math.sqrt((x - projX) ** 2 + (y - projY) ** 2);
 
         if (dist <= 10) {
+
+          // clear node selection
+          setSelectedNodes([]);
+
           if (selectedEdge?.from === edge.from && selectedEdge?.to === edge.to) {
             setSelectedEdge(null);
           } else {
             setSelectedEdge(edge);
             setSelectedChannel(null);
+
             setCustomChannels(
-              customChannels.map((ch) => {
-                return { ...ch, color: COLOR_BORDER_SUBTLE };
-              })
+              customChannels.map((ch) => ({
+                ...ch,
+                color: COLOR_BORDER_SUBTLE,
+              }))
             );
           }
+
           return;
         }
       }
@@ -560,63 +595,76 @@ const nodes: Node[] = useMemo(() => {
         const dist = Math.sqrt((x - projX) ** 2 + (y - projY) ** 2);
 
         if (dist <= 10) {
-          if (selectedChannel?.from === channel.from && selectedChannel?.to === channel.to) {
+
+          // clear node selection
+          setSelectedNodes([]);
+
+          if (
+            selectedChannel?.from === channel.from &&
+            selectedChannel?.to === channel.to
+          ) {
             setSelectedChannel(null);
+
             setCustomChannels(
-              customChannels.map((ch) => {
-                if (ch.from === channel.from && ch.to === channel.to) {
-                  return { ...ch, color: COLOR_BORDER_SUBTLE };
-                }
-                return ch;
-              })
+              customChannels.map((ch) =>
+                ch.from === channel.from && ch.to === channel.to
+                  ? { ...ch, color: COLOR_BORDER_SUBTLE }
+                  : ch
+              )
             );
+
           } else {
             setSelectedChannel(channel);
             setSelectedEdge(null);
+
             setCustomChannels(
-              customChannels.map((ch) => {
-                if (ch.from === channel.from && ch.to === channel.to) {
-                  return { ...ch, color: '#FFA2A2' };
-                } else {
-                  return { ...ch, color: COLOR_BORDER_SUBTLE };
-                }
-              })
+              customChannels.map((ch) =>
+                ch.from === channel.from && ch.to === channel.to
+                  ? { ...ch, color: '#FFA2A2' }
+                  : { ...ch, color: COLOR_BORDER_SUBTLE }
+              )
             );
           }
+
           return;
         }
       }
     }
+
+    // Clicked empty space → clear everything
+    setSelectedNodes([]);
+    setSelectedEdge(null);
+    setSelectedChannel(null);
   };
 
   const handleOpenChannel = () => {
-    if (selectedNodes.length === 2) {
-      const newChannel: CustomChannel = {
-        from: selectedNodes[0],
-        to: selectedNodes[1],
-        color: COLOR_CHANNEL_OPEN,
-      };
-      const updatedChannels = customChannels.map((ch) => ({
-        ...ch,
-        color: COLOR_BORDER_SUBTLE,
-      }));
-      setCustomChannels([...updatedChannels, newChannel]);
-      setSelectedNodes([]);
-      setL1Ops((prev) => prev + 1);
+    if (selectedNodes.length !== 2 || selectedPairAlreadyConnected) return;
 
-      if (openNotificationTimeoutRef.current) {
-        window.clearTimeout(openNotificationTimeoutRef.current);
-      }
-      setShowChannelNotification(true);
-      openNotificationTimeoutRef.current = window.setTimeout(() => {
-        setShowChannelNotification(false);
-        setCustomChannels((prev) =>
-          prev.map((ch) =>
-            ch.color === COLOR_CHANNEL_OPEN ? { ...ch, color: COLOR_BORDER_SUBTLE } : ch
-          )
-        );
-      }, 3000);
+    const newChannel: CustomChannel = {
+      from: selectedNodes[0],
+      to: selectedNodes[1],
+      color: COLOR_CHANNEL_OPEN,
+    };
+    const updatedChannels = customChannels.map((ch) => ({
+      ...ch,
+      color: COLOR_BORDER_SUBTLE,
+    }));
+    setCustomChannels([...updatedChannels, newChannel]);
+    setSelectedNodes([]);
+    setL1Ops((prev) => prev + 1);
+
+    if (openNotificationTimeoutRef.current) {
+      window.clearTimeout(openNotificationTimeoutRef.current);
     }
+    setShowChannelNotification(true);
+    openNotificationTimeoutRef.current = window.setTimeout(() => {
+      setShowChannelNotification(false);
+      setCustomChannels((prev) =>
+        prev.map((ch) =>
+          ch.color === COLOR_CHANNEL_OPEN ? { ...ch, color: COLOR_BORDER_SUBTLE } : ch
+        )
+      );
+    }, 3000);
   };
 
   const handleCloseChannel = () => {
@@ -658,6 +706,7 @@ const nodes: Node[] = useMemo(() => {
     setCustomChannels(customChannels.map((ch) => ({ ...ch, color: COLOR_BORDER_SUBTLE })));
     setSelectedChannel(null);
     setSelectedEdge(null);
+    setSelectedNodes([]);
 
     let attempts = 0;
     const maxAttempts = 100;
@@ -693,7 +742,7 @@ const nodes: Node[] = useMemo(() => {
     });
   };
 
-  const openDisabled = selectedNodes.length !== 2;
+  const openDisabled = selectedNodes.length !== 2 || selectedPairAlreadyConnected;
   const closeDisabled = !selectedChannel && !selectedEdge;
 
   return (
@@ -709,7 +758,7 @@ const nodes: Node[] = useMemo(() => {
 
           {/* Layer 2 Content */}
           <div className="bg-layer-01 flex flex-col overflow-hidden">
-            <div className="relative h-[240px] sm:h-[280px] md:h-[320px] px-2 sm:px-3 md:px-4 pt-8 pb-3 flex items-center justify-center overflow-hidden">
+            <div className="relative px-2 pt-10 pb-3 overflow-visible flex items-start justify-center">
               {transaction && (
                 <div className="absolute top-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-layer-02 border border-invisible text-body3 text-primary z-10 whitespace-nowrap max-w-[96%] overflow-x-auto flex items-center">
                   <span className="mr-2">Path:</span>
@@ -747,7 +796,7 @@ const nodes: Node[] = useMemo(() => {
               ref={canvasRef}
               width={CANVAS_WIDTH}
               height={CANVAS_HEIGHT}
-              className="block w-auto h-auto max-w-full max-h-full"
+              className="block w-full h-auto cursor-pointer"
               style={{ imageRendering: 'auto' }}
               onMouseMove={handleMouseMove}
               onClick={handleClick}
@@ -756,52 +805,90 @@ const nodes: Node[] = useMemo(() => {
 
             <div className="px-2 sm:px-3 md:px-4 pb-3 pt-2">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-                <button
-                  onClick={handleOpenChannel}
-                  disabled={openDisabled}
-                  title={openDisabled ? 'Select two nodes in the network' : undefined}
-                  className={`min-w-0 h-12 px-3 border flex items-center justify-center gap-2 transition-all bg-layer-02 ${
-                    openDisabled
-                      ? 'border-white/30 opacity-50 cursor-not-allowed'
-                      : 'border-invisible cursor-pointer hover:bg-layer-03'
-                  }`}
-                >
-                  <Image
-                    src="/plus2.svg"
-                    alt="Plus"
-                    width={20}
-                    height={20}
-                    className="flex-shrink-0"
-                    style={{ objectFit: 'contain' }}
-                  />
-                  <span className="text-button text-primary font-bold whitespace-nowrap">
-                    OPEN CHANNEL
-                  </span>
-                </button>
 
-                <button
-                  onClick={handleCloseChannel}
-                  disabled={closeDisabled}
-                  title={closeDisabled ? 'Select a line to close' : undefined}
-                  className={`min-w-0 h-12 px-3 border flex items-center justify-center gap-2 transition-all bg-layer-02 ${
-                    closeDisabled
-                      ? 'border-white/30 opacity-50 cursor-not-allowed'
-                      : 'border-invisible cursor-pointer hover:bg-layer-03'
-                  }`}
-                >
-                  <Image
-                    src="/minus2.svg"
-                    alt="Minus"
-                    width={20}
-                    height={20}
-                    className="flex-shrink-0"
-                    style={{ objectFit: 'contain' }}
-                  />
-                  <span className="text-button text-primary font-bold whitespace-nowrap">
-                    CLOSE CHANNEL
-                  </span>
-                </button>
+                {/* OPEN CHANNEL */}
+                <div className="relative group">
+                  <button
+                    onClick={handleOpenChannel}
+                    disabled={openDisabled}
+                    className={`min-w-0 w-full h-12 px-3 border flex items-center justify-center gap-2 transition-all bg-layer-02 ${
+                      openDisabled
+                        ? 'border-white/30 opacity-50 cursor-not-allowed'
+                        : 'border-invisible cursor-pointer hover:bg-layer-03'
+                    }`}
+                  >
+                    <Image
+                      src="/plus2.svg"
+                      alt="Plus"
+                      width={20}
+                      height={20}
+                      className="flex-shrink-0"
+                      style={{ objectFit: 'contain' }}
+                    />
+                    <span className="text-button text-primary font-bold whitespace-nowrap">
+                      OPEN CHANNEL
+                    </span>
+                  </button>
 
+                  {openDisabled && (
+                    <div
+                      className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2
+                      w-[240px] px-3 py-2
+                      text-xs text-white text-center
+                      bg-black/90 rounded
+                      opacity-0 group-hover:opacity-100
+                      transition-opacity duration-200
+                      delay-0 group-hover:delay-1000
+                      pointer-events-none
+                      z-20"
+                    >
+                      Select two unconnected nodes
+                    </div>
+                  )}
+                </div>
+
+                {/* CLOSE CHANNEL */}
+                <div className="relative group">
+                  <button
+                    onClick={handleCloseChannel}
+                    disabled={closeDisabled}
+                    className={`min-w-0 w-full h-12 px-3 border flex items-center justify-center gap-2 transition-all bg-layer-02 ${
+                      closeDisabled
+                        ? 'border-white/30 opacity-50 cursor-not-allowed'
+                        : 'border-invisible cursor-pointer hover:bg-layer-03'
+                    }`}
+                  >
+                    <Image
+                      src="/minus2.svg"
+                      alt="Minus"
+                      width={20}
+                      height={20}
+                      className="flex-shrink-0"
+                      style={{ objectFit: 'contain' }}
+                    />
+                    <span className="text-button text-primary font-bold whitespace-nowrap">
+                      CLOSE CHANNEL
+                    </span>
+                  </button>
+
+                  {closeDisabled && (
+                    <div
+                      className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2
+                      w-[200px] px-3 py-2
+                      text-xs text-white text-center
+                      bg-black/90 rounded
+                      opacity-0 group-hover:opacity-100
+                      transition-opacity duration-200
+                      delay-0 group-hover:delay-1000
+                      pointer-events-none
+                      z-20"
+                    >
+                      Select a line to close
+                    </div>
+                  )}
+                </div>
+
+                {/* SAMPLE TRANSACTION */}
                 <button
                   onClick={handleTriggerTransaction}
                   disabled={isTransacting}
@@ -823,7 +910,9 @@ const nodes: Node[] = useMemo(() => {
                     {isTransacting ? 'TRANSACTION IN PROGRESS...' : 'SAMPLE TRANSACTION'}
                   </span>
                 </button>
+
               </div>
+
             </div>
           </div>
         </div>
@@ -836,7 +925,10 @@ const nodes: Node[] = useMemo(() => {
           <div className="h-[64px] relative bg-layer-01 overflow-hidden flex-shrink-0">
             {/* Channel Opened Notification */}
             {showChannelNotification && (
-              <div className="absolute right-0 top-[20px] h-[40px] px-3 bg-[#ADFFBE] inline-flex justify-center items-center gap-2 animate-slide-left">
+              <div 
+                className="absolute right-0 top-[20px] h-[32px] px-3 bg-[#ADFFBE] inline-flex justify-center items-center gap-2 animate-slide-left"
+                style={{ animationDuration: '4s', animationTimingFunction: 'ease-in' }}
+              >
                 <div className="text-center text-[#000000] text-sm font-normal leading-6">
                   Channel opened
                 </div>
@@ -845,7 +937,10 @@ const nodes: Node[] = useMemo(() => {
 
             {/* Channel Closed Notification */}
             {showChannelClosedNotification && (
-              <div className="absolute right-0 top-[20px] h-[40px] px-3 bg-[#FFA2A2] inline-flex justify-center items-center gap-2 animate-slide-left">
+              <div 
+                className="absolute right-0 top-[20px] h-[32px] px-3 bg-[#FFA2A2] inline-flex justify-center items-center gap-2 animate-slide-left"
+                style={{ animationDuration: '4s', animationTimingFunction: 'ease-in' }}
+              >
                 <div className="text-center text-[#000000] text-sm font-normal leading-6">
                   Channel closed
                 </div>

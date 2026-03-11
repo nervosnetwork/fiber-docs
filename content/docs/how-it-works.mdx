@@ -21,13 +21,16 @@ When the channel is closed cooperatively, the latest mutually signed state is su
 
 The simulator below illustrates the lifecycle of a payment channel.
 
+***For visual clarity, this demo allows up to 7 channels between Node 1 and Node 2. In practice, multiple channels can exist between the same pair of nodes.***
+
 To establish a channel, select Node 1 and Node 2 and click on **"Open Channel."** This action represents a funding transaction recorded on Layer 1. Once the channel is open, balance updates occur off-chain and increase the Layer 2 transaction count without additional Layer 1 operations.
 
-To close the channel, select the channel and click on **"Close Channel."** This triggers a settlement transaction on Layer 1.
+To close the channel, select one of the channels and click on **"Close Channel."** This triggers a settlement transaction on Layer 1.
 
 Observe that Layer 1 operations change only during channel opening and closing, while Layer 2 transactions increase during off-chain updates.
 
 <SimpleChannelCanvas />
+
 ## Multi-Hop Routing
 
 While a payment channel enables transfers between two participants, Fiber operates as a network of interconnected channels. A direct channel between sender and receiver is not required; if a path with sufficient liquidity exists, a payment can be forwarded through intermediate participants.
@@ -46,9 +49,11 @@ The simulator below demonstrates multi-hop routing. By clicking **"Trigger Sampl
 
 The simulator below provides a consolidated view of the mechanisms described in this document. You can open and close channels, trigger transactions, and observe how activity differs between off-chain execution and on-chain settlement.
 
+***For visual clarity, this demo displays only one channel between two nodes. In practice, multiple channels can exist between the same pair of nodes.***
+
 Experiment by:
 
-- Opening channels between unconnected nodes
+- Opening channels between **unconnected nodes**
 - Triggering transactions across connected paths
 - Closing channels and observing Layer 1 settlement
 
