@@ -14,33 +14,36 @@ interface CustomChannel {
   color: string;
 }
 
+interface Layer1Notification {
+  id: number;
+  type: 'funding' | 'shutdown';
+}
+
 export default function SimpleChannelCanvas() {
   const COLOR_BORDER_SUBTLE = '#525252';
   const COLOR_CHANNEL_OPEN = '#ADFFBE';
   const MAX_CHANNELS = 7;
+  const NODE_COUNT = 2;
+  const NODE_CLICK_RADIUS = 15;
 
   const [selectedNodes, setSelectedNodes] = useState<number[]>([]);
   const [customChannels, setCustomChannels] = useState<CustomChannel[]>([]);
   const [selectedChannelIndex, setSelectedChannelIndex] = useState<number | null>(null);
   const [l1Ops, setL1Ops] = useState(0);
   const [l2Txns, setL2Txns] = useState(0);
-  const [showChannelNotification, setShowChannelNotification] = useState(false);
-  const [showChannelClosedNotification, setShowChannelClosedNotification] = useState(false);
+  const [l1Notifications, setL1Notifications] = useState<Layer1Notification[]>([]);
   const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>(0);
   const openNotificationTimeoutRef = useRef<number | null>(null);
+  const l1NotificationTimeoutsRef = useRef<number[]>([]);
+  const nextNotificationIdRef = useRef(1);
 
-  const CANVAS_WIDTH = 800;
-  const CANVAS_HEIGHT = 400;
+  const CANVAS_WIDTH = 900;
+  const CANVAS_HEIGHT = 420;
 
-  const nodes: Node[] = [
-    { id: 1, x: 100, y: 200 },
-    { id: 2, x: 700, y: 200 },
-  ];
-
-  const AVAILABLE_CURVE_OFFSETS = [0, -28, 28, -56, 56, -84, 84];
+  const AVAILABLE_CURVE_OFFSETS = [0, -36, 36, -72, 72, -108, 108];
 
   const openChannelTooltip =
   selectedNodes.length !== 2
@@ -71,27 +74,74 @@ export default function SimpleChannelCanvas() {
     };
   };
 
+  const getChannelHitLineWidth = (scaleX: number, scaleY: number) => {
+    const minScale = Math.max(Math.min(scaleX, scaleY), 0.01);
+    const width = 20 / minScale;
+    return Math.min(34, Math.max(14, width));
+  };
+
+  const getOffsetScale = (width: number, height: number) => {
+    return Math.max(0.7, Math.min(1.2, Math.min(width / 900, height / 420)));
+  };
+
+  const getLayoutNodes = (width: number, height: number): Node[] => {
+    const horizontalPadding = Math.min(140, Math.max(72, width * 0.16));
+    const centerY = height * 0.5;
+    return [
+      { id: 1, x: horizontalPadding, y: centerY },
+      { id: 2, x: width - horizontalPadding, y: centerY },
+    ];
+  };
+
+  const getScaledChannelPath = (
+    channel: CustomChannel,
+    fromNode: Node,
+    toNode: Node,
+    offsetScale: number
+  ) => {
+    const { controlX, controlY } = getCurveControlPoint(
+      channel.curveOffset * offsetScale,
+      fromNode,
+      toNode
+    );
+    const path = new Path2D();
+    path.moveTo(fromNode.x, fromNode.y);
+    path.quadraticCurveTo(controlX, controlY, toNode.x, toNode.y);
+    return path;
+  };
+
   const drawNetwork = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    const rect = canvas.getBoundingClientRect();
+    const drawWidth = Math.max(rect.width, 1);
+    const drawHeight = Math.max(rect.height, 1);
+    const dpr = window.devicePixelRatio || 1;
+    const targetWidth = Math.round(drawWidth * dpr);
+    const targetHeight = Math.round(drawHeight * dpr);
+
+    if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+    }
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, drawWidth, drawHeight);
 
+    const nodes = getLayoutNodes(drawWidth, drawHeight);
     const fromNode = nodes[0];
     const toNode = nodes[1];
+    const offsetScale = getOffsetScale(drawWidth, drawHeight);
 
     customChannels.forEach((channel, index) => {
-      const { controlX, controlY } = getCurveControlPoint(channel.curveOffset, fromNode, toNode);
-
-      ctx.beginPath();
-      ctx.moveTo(fromNode.x, fromNode.y);
-      ctx.quadraticCurveTo(controlX, controlY, toNode.x, toNode.y);
+      const path = getScaledChannelPath(channel, fromNode, toNode, offsetScale);
       ctx.strokeStyle = selectedChannelIndex === index ? '#FFA2A2' : channel.color;
       ctx.lineWidth = 2;
-      ctx.stroke();
+      ctx.stroke(path);
     });
 
     nodes.forEach((node) => {
@@ -122,7 +172,7 @@ export default function SimpleChannelCanvas() {
       ctx.textBaseline = 'top';
       ctx.fillText(`Node ${node.id}`, node.x, node.y + 16);
     });
-  }, [nodes, selectedNodes, hoveredNodeId, customChannels, selectedChannelIndex]);
+  }, [selectedNodes, hoveredNodeId, customChannels, selectedChannelIndex]);
 
   useEffect(() => {
     drawNetwork();
@@ -135,29 +185,56 @@ export default function SimpleChannelCanvas() {
   }, [drawNetwork]);
 
   useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(() => {
+      drawNetwork();
+    });
+
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, [drawNetwork]);
+
+  useEffect(() => {
     return () => {
       if (openNotificationTimeoutRef.current) {
         window.clearTimeout(openNotificationTimeoutRef.current);
       }
+      l1NotificationTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      l1NotificationTimeoutsRef.current = [];
     };
   }, []);
+
+  const pushLayer1Notification = (type: Layer1Notification['type']) => {
+    const id = nextNotificationIdRef.current++;
+    setL1Notifications((prev) => [...prev, { id, type }]);
+
+    const timeoutId = window.setTimeout(() => {
+      setL1Notifications((prev) => prev.filter((notification) => notification.id !== id));
+      l1NotificationTimeoutsRef.current = l1NotificationTimeoutsRef.current.filter(
+        (existingTimeoutId) => existingTimeoutId !== timeoutId
+      );
+    }, 4000);
+
+    l1NotificationTimeoutsRef.current.push(timeoutId);
+  };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const nodes = getLayoutNodes(rect.width, rect.height);
 
     let foundNode: number | null = null;
     for (const node of nodes) {
       const dx = x - node.x;
       const dy = y - node.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      if (distance <= 15) {
+      if (distance <= NODE_CLICK_RADIUS) {
         foundNode = node.id;
         break;
       }
@@ -171,15 +248,17 @@ export default function SimpleChannelCanvas() {
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const nodes = getLayoutNodes(rect.width, rect.height);
+    const offsetScale = getOffsetScale(rect.width, rect.height);
+    const scaleX = rect.width / CANVAS_WIDTH || 1;
+    const scaleY = rect.height / CANVAS_HEIGHT || 1;
 
     for (const node of nodes) {
       const dx = x - node.x;
       const dy = y - node.y;
-      if (Math.sqrt(dx * dx + dy * dy) <= 15) {
+      if (Math.sqrt(dx * dx + dy * dy) <= NODE_CLICK_RADIUS) {
         if (selectedNodes.includes(node.id)) {
           setSelectedNodes(selectedNodes.filter((id) => id !== node.id));
         } else {
@@ -194,39 +273,24 @@ export default function SimpleChannelCanvas() {
     }
 
     if (customChannels.length > 0) {
+      const ctx = canvas.getContext('2d');
       const fromNode = nodes[0];
       const toNode = nodes[1];
 
-      let hitIndex: number | null = null;
-      let bestDistance = Infinity;
+      if (ctx) {
+        const previousLineWidth = ctx.lineWidth;
+        ctx.lineWidth = getChannelHitLineWidth(scaleX, scaleY);
 
-      for (let i = 0; i < customChannels.length; i++) {
-        const channel = customChannels[i];
-        const { controlX, controlY } = getCurveControlPoint(channel.curveOffset, fromNode, toNode);
-
-        for (let t = 0; t <= 1; t += 0.05) {
-          const px =
-            (1 - t) * (1 - t) * fromNode.x +
-            2 * (1 - t) * t * controlX +
-            t * t * toNode.x;
-
-          const py =
-            (1 - t) * (1 - t) * fromNode.y +
-            2 * (1 - t) * t * controlY +
-            t * t * toNode.y;
-
-          const dist = Math.sqrt((x - px) ** 2 + (y - py) ** 2);
-
-          if (dist < 10 && dist < bestDistance) {
-            bestDistance = dist;
-            hitIndex = i;
+        for (let i = customChannels.length - 1; i >= 0; i--) {
+          const path = getScaledChannelPath(customChannels[i], fromNode, toNode, offsetScale);
+          if (ctx.isPointInStroke(path, x, y)) {
+            setSelectedChannelIndex((prev) => (prev === i ? null : i));
+            ctx.lineWidth = previousLineWidth;
+            return;
           }
         }
-      }
 
-      if (hitIndex !== null) {
-        setSelectedChannelIndex((prev) => (prev === hitIndex ? null : hitIndex));
-        return;
+        ctx.lineWidth = previousLineWidth;
       }
     }
 
@@ -259,9 +323,8 @@ export default function SimpleChannelCanvas() {
       if (openNotificationTimeoutRef.current) {
         window.clearTimeout(openNotificationTimeoutRef.current);
       }
-      setShowChannelNotification(true);
+      pushLayer1Notification('funding');
       openNotificationTimeoutRef.current = window.setTimeout(() => {
-        setShowChannelNotification(false);
         setCustomChannels((prev) =>
           prev.map((ch) =>
             ch.color === COLOR_CHANNEL_OPEN ? { ...ch, color: COLOR_BORDER_SUBTLE } : ch
@@ -280,10 +343,7 @@ export default function SimpleChannelCanvas() {
       setL1Ops((prev) => prev + 1);
       setSelectedNodes([]);
 
-      setShowChannelClosedNotification(true);
-      setTimeout(() => {
-        setShowChannelClosedNotification(false);
-      }, 3000);
+      pushLayer1Notification('shutdown');
     }
   };
 
@@ -311,8 +371,8 @@ export default function SimpleChannelCanvas() {
                 ref={canvasRef}
                 width={CANVAS_WIDTH}
                 height={CANVAS_HEIGHT}
-                className="block w-full h-auto cursor-pointer"
-                style={{ imageRendering: 'auto'}}
+                className="block w-full h-auto min-h-[260px] sm:min-h-[300px] md:min-h-[340px] cursor-pointer"
+                style={{ imageRendering: 'auto', aspectRatio: `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}` }}
                 onMouseMove={handleMouseMove}
                 onClick={handleClick}
               />
@@ -409,27 +469,23 @@ export default function SimpleChannelCanvas() {
           </div>
 
           <div className="h-[64px] relative bg-layer-01 overflow-hidden">
-            {showChannelNotification && (
-              <div
-                className="absolute right-0 top-1/2 -translate-y-1/2 h-[32px] px-3 bg-[#ADFFBE] inline-flex justify-center items-center gap-2 animate-slide-left"
-                style={{ animationDuration: '4s', animationTimingFunction: 'ease-in' }}
-              >
-                <div className="text-center text-[#000000] text-sm font-normal leading-6">
-                  Channel opened
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-end gap-2 pointer-events-none">
+              {l1Notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`h-[32px] px-3 inline-flex justify-center items-center gap-2 animate-slide-left ${
+                    notification.type === 'funding' ? 'bg-[#ADFFBE]' : 'bg-[#FFA2A2]'
+                  }`}
+                  style={{ animationDuration: '4s', animationTimingFunction: 'ease-in' }}
+                >
+                  <div className="text-center text-[#000000] text-sm font-normal leading-6">
+                    {notification.type === 'funding'
+                      ? 'Funding transaction'
+                      : 'Shutdown transaction'}
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {showChannelClosedNotification && (
-              <div
-                className="absolute right-0 top-1/2 -translate-y-1/2 h-[32px] px-3 bg-[#FFA2A2] inline-flex justify-center items-center gap-2 animate-slide-left"
-                style={{ animationDuration: '4s', animationTimingFunction: 'ease-in' }}
-              >
-                <div className="text-center text-[#000000] text-sm font-normal leading-6">
-                  Channel closed
-                </div>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
         </div>
 
@@ -438,7 +494,7 @@ export default function SimpleChannelCanvas() {
           <div className="flex flex-col md:grid md:grid-cols-2 gap-sm md:gap-md">
             <div className="flex md:justify-between md:gap-sm">
               <div className="w-[90px] md:w-auto text-body3 text-tertiary">Nodes</div>
-              <div className="ml-[20px] md:ml-0 text-body3 text-primary">{nodes.length}</div>
+              <div className="ml-[20px] md:ml-0 text-body3 text-primary">{NODE_COUNT}</div>
             </div>
             <div className="flex md:justify-between md:gap-sm">
               <div className="w-[90px] md:w-auto text-body3 text-tertiary">Channels</div>

@@ -28,10 +28,16 @@ interface Transaction {
   isDirectPath: boolean;
 }
 
+interface Layer1Notification {
+  id: number;
+  type: 'funding' | 'shutdown';
+}
+
 const COLOR_BORDER_SUBTLE = '#525252';
 const COLOR_CHANNEL_OPEN = '#ADFFBE';
 const CANVAS_WIDTH = 1107;
 const CANVAS_HEIGHT = 444;
+const NODE_CLICK_RADIUS = 10;
 const ALL_EDGES: Edge[] = [
   { from: 1, to: 2, distance: '4.3m' },
   { from: 2, to: 3, distance: '' },
@@ -55,14 +61,15 @@ export default function InteractiveNetworkSimulation() {
   const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null);
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [isTransacting, setIsTransacting] = useState(false);
-  const [showChannelNotification, setShowChannelNotification] = useState(false);
-  const [showChannelClosedNotification, setShowChannelClosedNotification] = useState(false);
+  const [l1Notifications, setL1Notifications] = useState<Layer1Notification[]>([]);
   const [l1Ops, setL1Ops] = useState(ALL_EDGES.length);
   const [l2Txns, setL2Txns] = useState(1283);
   const [isDesktop, setIsDesktop] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>(0);
   const openNotificationTimeoutRef = useRef<number | null>(null);
+  const l1NotificationTimeoutsRef = useRef<number[]>([]);
+  const nextNotificationIdRef = useRef(1);
   const adjRef = useRef<Map<number, number[]>>(new Map());
 
   // Detect screen size
@@ -80,8 +87,24 @@ export default function InteractiveNetworkSimulation() {
       if (openNotificationTimeoutRef.current) {
         window.clearTimeout(openNotificationTimeoutRef.current);
       }
+      l1NotificationTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      l1NotificationTimeoutsRef.current = [];
     };
   }, []);
+
+  const pushLayer1Notification = (type: Layer1Notification['type']) => {
+    const id = nextNotificationIdRef.current++;
+    setL1Notifications((prev) => [...prev, { id, type }]);
+
+    const timeoutId = window.setTimeout(() => {
+      setL1Notifications((prev) => prev.filter((notification) => notification.id !== id));
+      l1NotificationTimeoutsRef.current = l1NotificationTimeoutsRef.current.filter(
+        (existingTimeoutId) => existingTimeoutId !== timeoutId
+      );
+    }, 4000);
+
+    l1NotificationTimeoutsRef.current.push(timeoutId);
+  };
 
 const nodes: Node[] = useMemo(() => {
   const baseNodes: Node[] = [
@@ -268,10 +291,23 @@ const nodes: Node[] = useMemo(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    const rect = canvas.getBoundingClientRect();
+    const cssWidth = Math.max(rect.width, 1);
+    const cssHeight = Math.max(rect.height, 1);
+    const dpr = window.devicePixelRatio || 1;
+    const targetWidth = Math.round(cssWidth * dpr);
+    const targetHeight = Math.round(cssHeight * dpr);
+
+    if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+    }
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform((cssWidth / CANVAS_WIDTH) * dpr, 0, 0, (cssHeight / CANVAS_HEIGHT) * dpr, 0, 0);
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     // Draw static edges
     edges.forEach((edge) => {
@@ -445,6 +481,18 @@ const nodes: Node[] = useMemo(() => {
     };
   }, [drawNetwork]);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(() => {
+      drawNetwork();
+    });
+
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, [drawNetwork]);
+
   const selectedPairAlreadyConnected =
   selectedNodes.length === 2 &&
   (
@@ -464,13 +512,34 @@ const nodes: Node[] = useMemo(() => {
     )
   );
 
+  const distanceToSegment = (
+    px: number,
+    py: number,
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number
+  ) => {
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) {
+      return Math.sqrt((px - ax) ** 2 + (py - ay) ** 2);
+    }
+
+    const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+    const projX = ax + t * dx;
+    const projY = ay + t * dy;
+    return Math.sqrt((px - projX) ** 2 + (py - projY) ** 2);
+  };
+
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    const scaleX = CANVAS_WIDTH / rect.width;
+    const scaleY = CANVAS_HEIGHT / rect.height;
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
@@ -479,7 +548,7 @@ const nodes: Node[] = useMemo(() => {
       const dx = x - node.x;
       const dy = y - node.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      if (distance <= 10) {
+      if (distance <= NODE_CLICK_RADIUS) {
         foundNode = node.id;
         break;
       }
@@ -493,17 +562,21 @@ const nodes: Node[] = useMemo(() => {
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    const scaleX = CANVAS_WIDTH / rect.width;
+    const scaleY = CANVAS_HEIGHT / rect.height;
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
+    const viewScaleX = rect.width / CANVAS_WIDTH || 1;
+    const viewScaleY = rect.height / CANVAS_HEIGHT || 1;
+    const minScale = Math.max(Math.min(viewScaleX, viewScaleY), 0.01);
+    const hitLineWidth = Math.min(34, Math.max(14, 20 / minScale));
 
     // Check if clicking on a node
     for (const node of nodes) {
       const dx = x - node.x;
       const dy = y - node.y;
 
-      if (Math.sqrt(dx * dx + dy * dy) <= 10) {
+      if (Math.sqrt(dx * dx + dy * dy) <= NODE_CLICK_RADIUS) {
 
         // clear any selected channel/edge
         setSelectedChannel(null);
@@ -531,7 +604,10 @@ const nodes: Node[] = useMemo(() => {
       }
     }
 
-    // Check if clicking on a static edge
+    const hitRadius = Math.max(8, hitLineWidth / 2);
+    let bestEdgeHit: { edge: Edge; distance: number } | null = null;
+    let bestChannelHit: { channel: CustomChannel; distance: number } | null = null;
+
     for (const edge of edges) {
       const edgeKey = `${edge.from}-${edge.to}`;
       if (closedEdges.has(edgeKey) || closedEdges.has(`${edge.to}-${edge.from}`)) {
@@ -540,101 +616,81 @@ const nodes: Node[] = useMemo(() => {
 
       const fromNode = nodes.find((n) => n.id === edge.from);
       const toNode = nodes.find((n) => n.id === edge.to);
-
       if (!fromNode || !toNode) continue;
 
-      const dx = toNode.x - fromNode.x;
-      const dy = toNode.y - fromNode.y;
-      const len = Math.sqrt(dx * dx + dy * dy);
-      const dot = ((x - fromNode.x) * dx + (y - fromNode.y) * dy) / (len * len);
-
-      if (dot >= 0 && dot <= 1) {
-        const projX = fromNode.x + dot * dx;
-        const projY = fromNode.y + dot * dy;
-        const dist = Math.sqrt((x - projX) ** 2 + (y - projY) ** 2);
-
-        if (dist <= 10) {
-
-          // clear node selection
-          setSelectedNodes([]);
-
-          if (selectedEdge?.from === edge.from && selectedEdge?.to === edge.to) {
-            setSelectedEdge(null);
-          } else {
-            setSelectedEdge(edge);
-            setSelectedChannel(null);
-
-            setCustomChannels(
-              customChannels.map((ch) => ({
-                ...ch,
-                color: COLOR_BORDER_SUBTLE,
-              }))
-            );
-          }
-
-          return;
-        }
+      const distance = distanceToSegment(x, y, fromNode.x, fromNode.y, toNode.x, toNode.y);
+      if (distance <= hitRadius && (!bestEdgeHit || distance < bestEdgeHit.distance)) {
+        bestEdgeHit = { edge, distance };
       }
     }
 
-    // Check if clicking on a custom channel
     for (const channel of customChannels) {
       const fromNode = nodes.find((n) => n.id === channel.from);
       const toNode = nodes.find((n) => n.id === channel.to);
-
       if (!fromNode || !toNode) continue;
 
-      const dx = toNode.x - fromNode.x;
-      const dy = toNode.y - fromNode.y;
-      const len = Math.sqrt(dx * dx + dy * dy);
-      const dot = ((x - fromNode.x) * dx + (y - fromNode.y) * dy) / (len * len);
+      const distance = distanceToSegment(x, y, fromNode.x, fromNode.y, toNode.x, toNode.y);
+      if (distance <= hitRadius && (!bestChannelHit || distance < bestChannelHit.distance)) {
+        bestChannelHit = { channel, distance };
+      }
+    }
 
-      if (dot >= 0 && dot <= 1) {
-        const projX = fromNode.x + dot * dx;
-        const projY = fromNode.y + dot * dy;
-        const dist = Math.sqrt((x - projX) ** 2 + (y - projY) ** 2);
+    if (bestEdgeHit || bestChannelHit) {
+      const pickChannel =
+        !!bestChannelHit &&
+        (!bestEdgeHit || bestChannelHit.distance < bestEdgeHit.distance);
 
-        if (dist <= 10) {
+      setSelectedNodes([]);
 
-          // clear node selection
-          setSelectedNodes([]);
-
-          if (
-            selectedChannel?.from === channel.from &&
-            selectedChannel?.to === channel.to
-          ) {
-            setSelectedChannel(null);
-
-            setCustomChannels(
-              customChannels.map((ch) =>
-                ch.from === channel.from && ch.to === channel.to
-                  ? { ...ch, color: COLOR_BORDER_SUBTLE }
-                  : ch
-              )
-            );
-
-          } else {
-            setSelectedChannel(channel);
-            setSelectedEdge(null);
-
-            setCustomChannels(
-              customChannels.map((ch) =>
-                ch.from === channel.from && ch.to === channel.to
-                  ? { ...ch, color: '#FFA2A2' }
-                  : { ...ch, color: COLOR_BORDER_SUBTLE }
-              )
-            );
-          }
-
-          return;
+      if (pickChannel && bestChannelHit) {
+        const channel = bestChannelHit.channel;
+        if (
+          selectedChannel?.from === channel.from &&
+          selectedChannel?.to === channel.to
+        ) {
+          setSelectedChannel(null);
+          setCustomChannels(
+            customChannels.map((ch) =>
+              ch.from === channel.from && ch.to === channel.to
+                ? { ...ch, color: COLOR_BORDER_SUBTLE }
+                : ch
+            )
+          );
+        } else {
+          setSelectedChannel(channel);
+          setSelectedEdge(null);
+          setCustomChannels(
+            customChannels.map((ch) =>
+              ch.from === channel.from && ch.to === channel.to
+                ? { ...ch, color: '#FFA2A2' }
+                : { ...ch, color: COLOR_BORDER_SUBTLE }
+            )
+          );
+        }
+      } else if (bestEdgeHit) {
+        const edge = bestEdgeHit.edge;
+        if (selectedEdge?.from === edge.from && selectedEdge?.to === edge.to) {
+          setSelectedEdge(null);
+        } else {
+          setSelectedEdge(edge);
+          setSelectedChannel(null);
+          setCustomChannels(
+            customChannels.map((ch) => ({
+              ...ch,
+              color: COLOR_BORDER_SUBTLE,
+            }))
+          );
         }
       }
+
+      return;
     }
 
     // Clicked empty space → clear everything
     setSelectedNodes([]);
     setSelectedEdge(null);
     setSelectedChannel(null);
+    setCustomChannels(customChannels.map((ch) => ({ ...ch, color: COLOR_BORDER_SUBTLE })));
   };
 
   const handleOpenChannel = () => {
@@ -656,9 +712,8 @@ const nodes: Node[] = useMemo(() => {
     if (openNotificationTimeoutRef.current) {
       window.clearTimeout(openNotificationTimeoutRef.current);
     }
-    setShowChannelNotification(true);
+    pushLayer1Notification('funding');
     openNotificationTimeoutRef.current = window.setTimeout(() => {
-      setShowChannelNotification(false);
       setCustomChannels((prev) =>
         prev.map((ch) =>
           ch.color === COLOR_CHANNEL_OPEN ? { ...ch, color: COLOR_BORDER_SUBTLE } : ch
@@ -682,10 +737,7 @@ const nodes: Node[] = useMemo(() => {
       setSelectedMode(null);
       setL1Ops((prev) => prev + 1);
 
-      setShowChannelClosedNotification(true);
-      setTimeout(() => {
-        setShowChannelClosedNotification(false);
-      }, 3000);
+      pushLayer1Notification('shutdown');
     } else if (selectedEdge) {
       const edgeKey = `${selectedEdge.from}-${selectedEdge.to}`;
       setClosedEdges(new Set(closedEdges).add(edgeKey));
@@ -693,10 +745,7 @@ const nodes: Node[] = useMemo(() => {
       setSelectedMode(null);
       setL1Ops((prev) => prev + 1);
 
-      setShowChannelClosedNotification(true);
-      setTimeout(() => {
-        setShowChannelClosedNotification(false);
-      }, 3000);
+      pushLayer1Notification('shutdown');
     }
   };
 
@@ -923,29 +972,23 @@ const nodes: Node[] = useMemo(() => {
             <div className="text-label text-primary">NERVOS CKB (LAYER 1)</div>
           </div>
           <div className="h-[64px] relative bg-layer-01 overflow-hidden flex-shrink-0">
-            {/* Channel Opened Notification */}
-            {showChannelNotification && (
-              <div 
-                className="absolute right-0 top-[20px] h-[32px] px-3 bg-[#ADFFBE] inline-flex justify-center items-center gap-2 animate-slide-left"
-                style={{ animationDuration: '4s', animationTimingFunction: 'ease-in' }}
-              >
-                <div className="text-center text-[#000000] text-sm font-normal leading-6">
-                  Channel opened
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-end gap-2 pointer-events-none">
+              {l1Notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`h-[32px] px-3 inline-flex justify-center items-center gap-2 animate-slide-left ${
+                    notification.type === 'funding' ? 'bg-[#ADFFBE]' : 'bg-[#FFA2A2]'
+                  }`}
+                  style={{ animationDuration: '4s', animationTimingFunction: 'ease-in' }}
+                >
+                  <div className="text-center text-[#000000] text-sm font-normal leading-6">
+                    {notification.type === 'funding'
+                      ? 'Funding transaction'
+                      : 'Shutdown transaction'}
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {/* Channel Closed Notification */}
-            {showChannelClosedNotification && (
-              <div 
-                className="absolute right-0 top-[20px] h-[32px] px-3 bg-[#FFA2A2] inline-flex justify-center items-center gap-2 animate-slide-left"
-                style={{ animationDuration: '4s', animationTimingFunction: 'ease-in' }}
-              >
-                <div className="text-center text-[#000000] text-sm font-normal leading-6">
-                  Channel closed
-                </div>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
         </div>
 
