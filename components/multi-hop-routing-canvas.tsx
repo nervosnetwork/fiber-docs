@@ -229,10 +229,23 @@ export default function MultiHopRoutingCanvas() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    const rect = canvas.getBoundingClientRect();
+    const cssWidth = Math.max(rect.width, 1);
+    const cssHeight = Math.max(rect.height, 1);
+    const dpr = window.devicePixelRatio || 1;
+    const targetWidth = Math.round(cssWidth * dpr);
+    const targetHeight = Math.round(cssHeight * dpr);
+
+    if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+    }
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform((cssWidth / CANVAS_WIDTH) * dpr, 0, 0, (cssHeight / CANVAS_HEIGHT) * dpr, 0, 0);
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     // Draw static edges
     edges.forEach((edge) => {
@@ -370,6 +383,18 @@ export default function MultiHopRoutingCanvas() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
+  }, [drawNetwork]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(() => {
+      drawNetwork();
+    });
+
+    observer.observe(canvas);
+    return () => observer.disconnect();
   }, [drawNetwork]);
 
   const handleTriggerTransaction = () => {
