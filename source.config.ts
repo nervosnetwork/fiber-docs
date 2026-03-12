@@ -43,6 +43,19 @@ export const blogPosts = defineCollections({
   }),
 });
 
+// Define pulse collection for updates in the content/pulse directory
+export const pulsePosts = defineCollections({
+  type: "doc",
+  dir: "content/pulse",
+  schema: frontmatterSchema.extend({
+    author: z.string().optional().default("Fiber Team"),
+    authorUrl: z.string().url().optional(),
+    date: z.string().date().or(z.date()).optional(),
+    readTime: z.string().optional(),
+    tags: z.array(z.string()).optional().default([]),
+  }),
+});
+
 export default defineConfig({
   mdxOptions: {
     // MDX options

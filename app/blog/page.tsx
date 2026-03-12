@@ -1,4 +1,4 @@
-import { blog } from "@/lib/source";
+import { blog, pulse } from "@/lib/source";
 import { calculateReadingTime } from "./util";
 import { BlogPost } from "./type";
 import BlogWithDevlogs from "./BlogWithDevlogs";
@@ -16,7 +16,7 @@ export default function BlogPage() {
         typeof data.date === "string"
           ? data.date
           : data.date?.toISOString().split("T")[0] ||
-            new Date().toISOString().split("T")[0],
+          new Date().toISOString().split("T")[0],
       readTime:
         data.readTime || calculateReadingTime(data.content?.toString() || ""),
       tags: data.tags || [],
@@ -24,6 +24,29 @@ export default function BlogPage() {
       type: "blog" as const,
     };
   });
+
+  const pulsePosts: BlogPost[] = pulse.getPages().map((page) => {
+    const data = page.data;
+    return {
+      id: page.slugs[0],
+      title: data.title,
+      excerpt:
+        data.description ||
+        `${data.title} - A pulse update by ${data.author || "Fiber Team"}`,
+      date:
+        typeof data.date === "string"
+          ? data.date
+          : data.date?.toISOString().split("T")[0] ||
+          new Date().toISOString().split("T")[0],
+      readTime:
+        data.readTime || calculateReadingTime(data.content?.toString() || ""),
+      tags: data.tags || [],
+      author: data.author || "Fiber Team",
+      type: "pulse" as const,
+    };
+  });
+
+  const allDocumentPosts = [...documentPosts, ...pulsePosts];
 
   return (
     <main className="flex flex-1 flex-col px-4 py-8">
@@ -36,7 +59,7 @@ export default function BlogPage() {
           </p>
         </div>
 
-        <BlogWithDevlogs documentPosts={documentPosts} />
+        <BlogWithDevlogs documentPosts={allDocumentPosts} />
       </div>
     </main>
   );
