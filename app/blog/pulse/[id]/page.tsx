@@ -5,7 +5,7 @@ import defaultMdxComponents from 'fumadocs-ui/mdx';
 import { calculateReadingTime } from '../../util';
 
 interface PulsePostProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 function parseDateStringAsLocal(value: string): Date {
@@ -19,8 +19,8 @@ function parseDateStringAsLocal(value: string): Date {
   return new Date(value);
 }
 
-export default async function PulsePostPage({ params }: BlogPostProps) {
-  const { id } = params;
+export default async function PulsePostPage({ params }: PulsePostProps) {
+  const { id } = await params;
   const page = pulse.getPage([id]);
 
   if (!page) notFound();
@@ -31,7 +31,7 @@ export default async function PulsePostPage({ params }: BlogPostProps) {
   const readTime = page.data.readTime || calculateReadingTime(page.data.content?.toString() || '');
 
   // Use today's date (full ISO string) if no date is provided to avoid ambiguous date-only formats
-  const postDate: Date = page.data.date || new Date().toISOString();
+  const postDate = new Date(page.data.date ?? new Date());
 
   return (
     <main className="flex flex-1 flex-col px-4 py-8">
@@ -63,7 +63,7 @@ export default async function PulsePostPage({ params }: BlogPostProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 8h6m-8-4v8a2 2 0 002 2h12a2 2 0 002-2v-8M9 12h6" />
               </svg>
               <time className="font-mono">
-                {postDate.toLocaleDateString('en-US', {
+                {(postDate as Date).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
@@ -146,7 +146,7 @@ export async function generateStaticParams() {
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }: PulsePostProps) {
-  const { id } = params;
+  const { id } = await params;
   const page = pulse.getPage([id]);
 
   if (!page) {
