@@ -4,12 +4,23 @@ import { pulse } from '@/lib/source';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 import { calculateReadingTime } from '../../util';
 
-interface BlogPostProps {
-  params: Promise<{ slug: string }>;
+interface PulsePostProps {
+  params: { id: string };
 }
 
-export default async function BlogPostPage({ params }: BlogPostProps) {
-  const { id } = await params;
+function parseDateStringAsLocal(value: string): Date {
+  // if this is a bare date string, parse it as a local date
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  // Fallback to the built-in parse for other date string formats
+  return new Date(value);
+}
+
+export default async function PulsePostPage({ params }: BlogPostProps) {
+  const { id } = params;
   const page = pulse.getPage([id]);
 
   if (!page) notFound();
@@ -19,8 +30,8 @@ export default async function BlogPostPage({ params }: BlogPostProps) {
   // Calculate reading time from the page content if not provided
   const readTime = page.data.readTime || calculateReadingTime(page.data.content?.toString() || '');
 
-  // Use today's date if no date is provided
-  const postDate = page.data.date || new Date().toISOString().split('T')[0];
+  // Use today's date (full ISO string) if no date is provided to avoid ambiguous date-only formats
+  const postDate: Date = page.data.date || new Date().toISOString();
 
   return (
     <main className="flex flex-1 flex-col px-4 py-8">
@@ -52,7 +63,7 @@ export default async function BlogPostPage({ params }: BlogPostProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 8h6m-8-4v8a2 2 0 002 2h12a2 2 0 002-2v-8M9 12h6" />
               </svg>
               <time className="font-mono">
-                {new Date(postDate).toLocaleDateString('en-US', {
+                {postDate.toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
@@ -125,7 +136,7 @@ export default async function BlogPostPage({ params }: BlogPostProps) {
   );
 }
 
-// Generate static params for all blog posts
+// Generate static params for Pulse posts
 export async function generateStaticParams() {
   const pages = pulse.getPages();
   return pages.map((page) => ({
@@ -134,8 +145,8 @@ export async function generateStaticParams() {
 }
 
 // Generate metadata for SEO
-export async function generateMetadata({ params }: BlogPostProps) {
-  const { id } = await params;
+export async function generateMetadata({ params }: PulsePostProps) {
+  const { id } = params;
   const page = pulse.getPage([id]);
 
   if (!page) {

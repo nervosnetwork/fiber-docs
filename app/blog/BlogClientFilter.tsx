@@ -41,13 +41,13 @@ export default function BlogClientFilter({ allPosts }: BlogClientFilterProps) {
       );
     } else if (type === "pulse") {
       return (
-        <Link href={`/blog/pulse/${post.id}`} className="block">
+        <Link href={`/blog/pulse/${encodeURIComponent(post.id)}`} className="block">
           {children}
         </Link>
       );
     } else {
       return (
-        <Link href={`/blog/p/${post.id}`} className="block">
+        <Link href={`/blog/p/${encodeURIComponent(post.id)}`} className="block">
           {children}
         </Link>
       );
