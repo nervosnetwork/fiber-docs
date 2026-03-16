@@ -67,7 +67,7 @@ The project is seeking community feedback on the first-time setup experience and
 - **Check it out:** [GitHub Repo](https://github.com/tecmeup123/fiber-node-installer)
 - **Discussion:** [Nervos Talk Thread](https://talk.nervos.org/t/fiber-node-installer-easier-fiber-node-setup-for-windows-and-linux-local-or-remote/10071)
 
-### Fibe-Checkout: Stripe Experience on CKB
+### Fiber-Checkout: Stripe Experience on CKB
 
 Integrating payments shouldn't be a bottleneck. **Fiber-checkout** is a proposed React component library and hooks package designed to simplify the integration of Fiber Network payments into web applications. Developed by SalmanDev, the project aims to replace manual JSON-RPC calls and hex encoding with a "Stripe-style" developer experience. 
 
