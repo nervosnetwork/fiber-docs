@@ -400,6 +400,19 @@ export default function MultiHopRoutingCanvas() {
   const handleTriggerTransaction = () => {
     if (isTransacting) return;
 
+    const getPathBounds = () => {
+      const viewportWidth = window.innerWidth;
+      if (viewportWidth >= 1440) {
+        return { min: 4, maxExclusive: 7 };
+      }
+      if (viewportWidth >= 768) {
+        return { min: 3, maxExclusive: 6 };
+      }
+      return { min: 3, maxExclusive: 5 };
+    };
+
+    const { min, maxExclusive } = getPathBounds();
+
     // Find a path with at least 3 nodes (2 hops)
     let attempts = 0;
     const maxAttempts = 100;
@@ -415,13 +428,13 @@ export default function MultiHopRoutingCanvas() {
 
       path = findShortestPath(sender, receiver);
 
-      if (path.length >= 3 && path.length < 5) {
+      if (path.length >= min && path.length < maxExclusive) {
         break;
       }
       attempts++;
     }
 
-    if (path.length < 3) {
+    if (path.length < min || path.length >= maxExclusive) {
       return;
     }
 

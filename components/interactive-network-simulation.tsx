@@ -757,6 +757,19 @@ const nodes: Node[] = useMemo(() => {
     setSelectedEdge(null);
     setSelectedNodes([]);
 
+    const getPathBounds = () => {
+      const viewportWidth = window.innerWidth;
+      if (viewportWidth >= 1440) {
+        return { min: 4, maxExclusive: 7 };
+      }
+      if (viewportWidth >= 768) {
+        return { min: 3, maxExclusive: 6 };
+      }
+      return { min: 3, maxExclusive: 5 };
+    };
+
+    const { min, maxExclusive } = getPathBounds();
+
     let attempts = 0;
     const maxAttempts = 100;
     let path: number[] = [];
@@ -771,13 +784,13 @@ const nodes: Node[] = useMemo(() => {
 
       path = findShortestPath(sender, receiver);
 
-      if (path.length >= 3 && path.length < 5) {
+      if (path.length >= min && path.length < maxExclusive) {
         break;
       }
       attempts++;
     }
 
-    if (path.length < 3) {
+    if (path.length < min || path.length >= maxExclusive) {
       return;
     }
 
