@@ -1,3 +1,9 @@
+---
+title: Biscuit Authentication in Fiber
+description: Overview of Biscuit authentication and how it's integrated into Fiber's RPC system
+date: 2025-03-17
+---
+
 # Biscuit Authentication in Fiber
 
 This document provides an overview of Biscuit authentication, how it's integrated into Fiber's RPC system, and how to use it.
@@ -187,7 +193,7 @@ First, create a file (e.g., `permissions.bc`) to define the permissions for the 
 
 For example, to grant read access to peers, write access to payments, and add an expiration date:
 
-```datalog
+```text
 // Grant permissions for specific modules
 read("peers");
 write("payments");
