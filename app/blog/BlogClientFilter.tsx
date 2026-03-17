@@ -5,7 +5,7 @@ import { useState } from "react";
 import { BlogPost } from "./type";
 import { formatDate } from "./util";
 
-const categories = ["All", "Article", "Devlog"];
+const categories = ["All", "Article", "Devlog", "Pulse"];
 
 interface BlogClientFilterProps {
   allPosts: BlogPost[];
@@ -19,8 +19,10 @@ export default function BlogClientFilter({ allPosts }: BlogClientFilterProps) {
     selectedCategory === "All"
       ? allPosts
       : selectedCategory === "Article"
-      ? allPosts.filter((post) => post.type.toLowerCase() === "blog")
-      : allPosts.filter((post) => post.type.toLowerCase() === "devlog");
+        ? allPosts.filter((post) => post.type.toLowerCase() === "blog")
+        : selectedCategory === "Pulse"
+          ? allPosts.filter((post) => post.type.toLowerCase() === "pulse")
+          : allPosts.filter((post) => post.type.toLowerCase() === "devlog");
 
   const PostLink = ({
     post,
@@ -29,15 +31,23 @@ export default function BlogClientFilter({ allPosts }: BlogClientFilterProps) {
     post: BlogPost;
     children: React.ReactNode;
   }) => {
+    const type = post.type.toLowerCase();
+
     if (post.type === "devlog") {
       return (
         <Link href={`/blog/d/${encodeURIComponent(post.id)}`} className="block">
           {children}
         </Link>
       );
+    } else if (type === "pulse") {
+      return (
+        <Link href={`/blog/pulse/${encodeURIComponent(post.id)}`} className="block">
+          {children}
+        </Link>
+      );
     } else {
       return (
-        <Link href={`/blog/p/${post.id}`} className="block">
+        <Link href={`/blog/p/${encodeURIComponent(post.id)}`} className="block">
           {children}
         </Link>
       );
@@ -52,11 +62,10 @@ export default function BlogClientFilter({ allPosts }: BlogClientFilterProps) {
           <button
             key={category}
             onClick={() => setSelectedCategory(category)}
-            className={`px-4 py-2 text-sm font-medium rounded-full border transition-all duration-200 ${
-              selectedCategory === category
-                ? "border-fd-primary bg-fd-primary text-fd-primary-foreground"
-                : "border-fd-border hover:border-fd-primary/50 hover:bg-fd-primary/10"
-            }`}
+            className={`px-4 py-2 text-sm font-medium rounded-full border transition-all duration-200 ${selectedCategory === category
+              ? "border-fd-primary bg-fd-primary text-fd-primary-foreground"
+              : "border-fd-border hover:border-fd-primary/50 hover:bg-fd-primary/10"
+              }`}
           >
             {category}
           </button>
@@ -99,11 +108,10 @@ export default function BlogClientFilter({ allPosts }: BlogClientFilterProps) {
                   {post.tags.map((tag) => (
                     <span
                       key={tag}
-                      className={`px-2 py-1 text-xs font-medium rounded-full transition-colors ${
-                        post.type === "devlog"
-                          ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                          : "bg-fd-muted text-fd-muted-foreground hover:bg-fd-primary/10 hover:text-fd-primary"
-                      }`}
+                      className={`px-2 py-1 text-xs font-medium rounded-full transition-colors ${post.type === "devlog"
+                        ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                        : "bg-fd-muted text-fd-muted-foreground hover:bg-fd-primary/10 hover:text-fd-primary"
+                        }`}
                     >
                       #{tag.toLowerCase().replace(/\s+/g, "")}
                     </span>
