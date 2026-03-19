@@ -6,7 +6,8 @@
     "build": "next build",
     "dev": "next dev --turbo",
     "start": "next start",
-    "postinstall": "fumadocs-mdx"
+    "postinstall": "fumadocs-mdx && pnpm exec esbuild source.config.ts --bundle --outfile=.source/source.config.mjs --format=esm --platform=node --target=node18 --packages=external || true",
+    "prepare": "fumadocs-mdx || true"
   },
   "dependencies": {
     "fumadocs-core": "15.5.1",
@@ -24,6 +25,7 @@
     "@types/node": "22.15.28",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
+    "esbuild": "^0.25.12",
     "postcss": "^8.5.4",
     "tailwindcss": "^4.1.8",
     "typescript": "^5.8.3"
