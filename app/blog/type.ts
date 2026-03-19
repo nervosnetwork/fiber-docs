@@ -7,7 +7,7 @@ export interface BlogPost {
   tags: string[];
   author: string;
   authorUrl?: string;
-  type: "devlog" | "blog";
+  type: "devlog" | "blog" | "pulse";
   url?: string;
   rawMarkdown?: string; // Full raw markdown content for devlogs
 }

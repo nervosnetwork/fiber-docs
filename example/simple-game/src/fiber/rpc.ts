@@ -118,12 +118,13 @@ export class FiberRPC {
         description?: string;
         currency: Currency;
         payment_preimage?: Hash256;
+        payment_hash?: Hash256;
         expiry?: string;
         fallback_address?: string;
         final_expiry_delta?: string;
         udt_type_script?: Script;
         hash_algorithm?: HashAlgorithm;
-        final_cltv?: string;
+        allow_mpp?: boolean;
     }): Promise<{
         invoice_address: string;
         invoice: any;
@@ -212,6 +213,7 @@ export class FiberRPC {
         keysend?: boolean;
         udt_type_script?: Script;
         allow_self_payment?: boolean;
+        custom_records?: any;
         hop_hints?: HopHint[];
         dry_run?: boolean;
     }): Promise<{
@@ -221,7 +223,8 @@ export class FiberRPC {
         last_updated_at: string;
         failed_error?: string;
         fee: string;
-        router: SessionRoute;
+        custom_records?: any;
+        routers: SessionRoute[];
     }> {
         return this.rpc.request("send_payment", [params]) as Promise<{
             payment_hash: Hash256;
@@ -230,7 +233,8 @@ export class FiberRPC {
             last_updated_at: string;
             failed_error?: string;
             fee: string;
-            router: SessionRoute;
+            custom_records?: any;
+            routers: SessionRoute[];
         }>;
     }
 
@@ -244,7 +248,8 @@ export class FiberRPC {
         last_updated_at: string;
         failed_error?: string;
         fee: string;
-        router: SessionRoute;
+        custom_records?: any;
+        routers: SessionRoute[];
     }> {
         return this.rpc.request("get_payment", [{ payment_hash }]) as Promise<{
             payment_hash: Hash256;
@@ -253,20 +258,30 @@ export class FiberRPC {
             last_updated_at: string;
             failed_error?: string;
             fee: string;
-            router: SessionRoute;
+            custom_records?: any;
+            routers: SessionRoute[];
         }>;
     }
 
     async nodeInfo() {
         return this.rpc.request("node_info", []) as Promise<{
+            version: string;
+            commit_hash: string;
             node_id: string;
+            features: string[];
             node_name?: string;
             addresses: string[];
-            channel_count: number;
-            peers_count: number;
-            version: string;
-            open_channel_auto_accept_min_ckb_funding_amount: Hex;
             chain_hash: Hex;
+            open_channel_auto_accept_min_ckb_funding_amount: string;
+            auto_accept_channel_ckb_funding_amount: string;
+            default_funding_lock_script: Script;
+            tlc_expiry_delta: string;
+            tlc_min_value: string;
+            tlc_fee_proportional_millionths: string;
+            channel_count: number;
+            pending_channel_count: number;
+            peers_count: number;
+            udt_cfg_infos: any;
         }>;
     }
 }
