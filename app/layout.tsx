@@ -26,8 +26,8 @@ export const metadata: Metadata = {
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${atkinsonHyperlegible.variable} dark`} suppressHydrationWarning>
-      <body className="flex flex-col min-h-screen">
+    <html lang="en" className={`${inter.variable} ${atkinsonHyperlegible.variable} dark bg-[#0a0a0a]`} suppressHydrationWarning>
+      <body className="flex flex-col min-h-screen bg-[#0a0a0a]">
         <RootProvider
           theme={{
             defaultTheme: 'dark',
