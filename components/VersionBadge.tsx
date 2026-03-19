@@ -18,6 +18,10 @@ export function VersionBadge({
   dependencies = [],
   className = "",
 }: VersionBadgeProps) {
+  if (dependencies.length === 0) {
+    return null;
+  }
+
   const renderDependency = (dep: Dependency, index: number) => {
     const content = (
       <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow-sm hover:shadow-md transition-all duration-200">

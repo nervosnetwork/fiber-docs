@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiber Network - Highlighted Features</title>
+    <style>
+        :root {
+            /* Colors */
+            --bg-color: #050505;
+            --card-bg: #0A0A0A;     /* Updated to #0A0A0A */
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --accent-border: #272727; /* Updated to #272727 */
+            --highlight-white: #ffffff;
+            
+            /* Layout Constants (Default, updated by JS) */
+            --card-height: calc(100vh - 128px); 
+        }
+
+        /* Reset & Base */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+            width: 100vw;
+        }
+
+        /* 1. Page Frame Constraints */
+        .page-frame {
+            width: 100%;
+            max-width: 1440px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Spacer for scrolling demo */
+        header {
+            height: 40vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid #222;
+        }
+        header h1 {
+            color: #333;
+            font-weight: 400;
+        }
+
+        /* 2. Main Section */
+        .highlighted-features {
+            width: 1360px; /* Specific width requirement */
+            margin: 0 auto; /* Centered */
+            padding-top: 100px; /* Top spacing */
+            padding-bottom: 100px;
+            position: relative;
+            /* On screens smaller than 1440px, we adapt fluidly */
+            max-width: 100%;
+            padding-left: 40px;
+            padding-right: 40px;
+        }
+
+        /* Title Area (Not sticky) */
+        .section-header {
+            padding-bottom: 64px; /* Critical spacing */
+            text-align: left;
+        }
+
+        .section-title {
+            font-size: 56px;
+            line-height: 110%;
+            letter-spacing: -0.035em;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* 3. Scroll Architecture */
+        .scroll-track {
+            position: relative;
+            width: 100%;
+        }
+
+        .sticky-container {
+            position: sticky;
+            top: 64px; /* Updated to 64px as requested (top padding) */
+            width: 100%;
+            height: var(--card-height);
+            perspective: 1000px;
+            overflow: visible; 
+        }
+
+        .card-stack {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 4. Cards */
+        .card {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            
+            background-color: var(--card-bg);
+            border: 1px solid var(--accent-border);
+            border-radius: 0px; /* Updated to 0px */
+            
+            /* Visual Depth */
+            box-shadow: 0 4px 40px rgba(0,0,0,0.5);
+            
+            /* Layout: Vertical column to separate Label area from Body area */
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden;
+            
+            /* Minimum safety height */
+            min-height: 480px;
+
+            /* Performance */
+            will-change: transform, opacity;
+            transform-origin: center center; 
+        }
+
+        /* Card Label Area - Updated to be a static block with divider */
+        .card-label {
+            width: 100%;
+            padding: 24px 32px; /* Position text same as before */
+            border-bottom: 1px solid var(--accent-border); /* Full width divider */
+            
+            font-size: 16px;
+            line-height: 140%;
+            font-weight: 500;
+            color: var(--text-secondary); 
+            z-index: 10;
+            background-color: var(--card-bg); /* Ensure opacity behind border */
+        }
+
+        /* Card Body Wrapper */
+        .card-body {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            flex: 1; /* Fill remaining height */
+            /* Removed padding-top since label is now static block */
+        }
+
+        /* Card Content Left (Text) */
+        .card-content-left {
+            /* Strictly 50% width */
+            flex: 0 0 50%; 
+            width: 50%;
+            
+            /* Padding constraints: 120px L/R */
+            padding: 0 120px;
+
+            /* Vertical Centering */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            
+            /* Gap between title and desc */
+            gap: 40px; 
+        }
+
+        /* Card Content Right (Image) */
+        .card-content-right {
+            /* Strictly 50% width */
+            flex: 0 0 50%;
+            width: 50%;
+            
+            /* Centering the image */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            /* Visual styling */
+            border-left: 1px solid var(--accent-border); /* Match global border color */
+            background: radial-gradient(circle at center, #151515 0%, #0e0e0e 70%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Typography */
+        .card h3 {
+            font-size: 32px; /* Requested size */
+            line-height: 1.2;
+            margin: 0;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .card p {
+            font-size: 16px; /* Requested size */
+            line-height: 1.6;
+            margin: 0;
+            color: var(--text-secondary);
+        }
+
+        /* Visual Specifics */
+        svg.visual-icon {
+            width: 320px;
+            height: 320px;
+        }
+        
+        /* Visual Styles */
+        .orb-core { fill: #fff; filter: drop-shadow(0 0 10px rgba(255,255,255,0.8)); }
+        .orb-ring { fill: none; stroke: #444; stroke-width: 1; }
+        .hand-stroke { fill: none; stroke: #666; stroke-width: 2; stroke-linecap: round; }
+        .coin-drop { fill: #fff; }
+        .net-node { fill: #666; }
+        .net-node.active { fill: #fff; filter: drop-shadow(0 0 8px white); }
+        .net-line { stroke: #333; stroke-width: 1; }
+        .asset-icon { fill: none; stroke: #444; stroke-width: 2; }
+        .asset-center { fill: #fff; }
+
+        /* Responsive Adjustments */
+        @media (max-width: 1024px) {
+            .section-title {
+                font-size: 42px;
+            }
+            .card-body {
+                flex-direction: column; /* Stack vertically on tablet */
+            }
+            .card-content-left {
+                width: 100%;
+                flex: 0 0 auto;
+                padding: 40px; /* Reduced padding for smaller screens */
+                gap: 24px;
+            }
+            .card-content-right {
+                width: 100%;
+                flex: 1;
+                border-left: none;
+                border-top: 1px solid var(--accent-border);
+                padding: 40px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .highlighted-features {
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+            .card-content-left {
+                padding: 24px;
+            }
+            .card-label {
+                padding: 20px 24px;
+            }
+            svg.visual-icon {
+                width: 240px;
+                height: 240px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Scroll Down</h1>
+    </header>
+
+    <div class="page-frame">
+        <section class="highlighted-features">
+            
+            <div class="section-header">
+                <h2 class="section-title">Highlighted Features</h2>
+            </div>
+
+            <div class="scroll-track">
+                <div class="sticky-container">
+                    <div class="card-stack" id="cardStack">
+                        
+                        <!-- Card 01 -->
+                        <article class="card">
+                            <div class="card-label">1/5</div>
+                            <div class="card-body">
+                                <div class="card-content-left">
+                                    <h3>Scalability</h3>
+                                    <p>Through off-chain payment channels and multi-hop routing, Fiber Network can achieve high-throughput transaction processing, meeting the needs of large-scale users.</p>
+                                </div>
+                                <div class="card-content-right">
+                                    <svg class="visual-icon" viewBox="0 0 200 200">
+                                        <circle cx="100" cy="100" r="80" class="orb-ring" stroke-dasharray="4 4" opacity="0.3"></circle>
+                                        <circle cx="100" cy="100" r="60" class="orb-ring" opacity="0.5"></circle>
+                                        <circle cx="100" cy="100" r="5" class="orb-core"></circle>
+                                        <circle cx="140" cy="100" r="2" fill="#444"></circle>
+                                        <circle cx="60" cy="100" r="2" fill="#444"></circle>
+                                    </svg>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Card 02 -->
+                        <article class="card">
+                            <div class="card-label">2/5</div>
+                            <div class="card-body">
+                                <div class="card-content-left">
+                                    <h3>Low Cost</h3>
+                                    <p>By reducing the frequency of on-chain transactions, Fiber Network lowers transaction fees, making micropayments feasible and efficient.</p>
+                                </div>
+                                <div class="card-content-right">
+                                    <svg class="visual-icon" viewBox="0 0 200 200">
+                                        <path d="M60,60 Q80,90 120,80 L140,80" class="hand-stroke" transform="translate(0,-10)"></path>
+                                        <circle cx="130" cy="90" r="4" class="coin-drop">
+                                            <animate attributeName="cy" values="90;110;90" dur="3s" repeatCount="indefinite" />
+                                            <animate attributeName="opacity" values="1;0;1" dur="3s" repeatCount="indefinite" />
+                                        </circle>
+                                        <path d="M140,140 Q120,110 80,120 L60,120" class="hand-stroke" transform="translate(0,10)"></path>
+                                        <path d="M150,80 L150,110 L145,105 M150,110 L155,105" stroke="#444" fill="none" transform="translate(-10,0)"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Card 03 -->
+                        <article class="card">
+                            <div class="card-label">3/5</div>
+                            <div class="card-body">
+                                <div class="card-content-left">
+                                    <h3>Fast</h3>
+                                    <p>The instant confirmation of off-chain transactions provides a split second payment confirmation experience suitable for various instant payment scenarios.</p>
+                                </div>
+                                <div class="card-content-right">
+                                    <svg class="visual-icon" viewBox="0 0 200 200">
+                                        <line x1="100" y1="160" x2="80" y2="120" class="net-line" />
+                                        <line x1="80" y1="120" x2="120" y2="100" class="net-line" />
+                                        <line x1="120" y1="100" x2="80" y2="80" class="net-line" />
+                                        <line x1="80" y1="80" x2="120" y2="40" class="net-line" />
+                                        <line x1="120" y1="40" x2="160" y2="40" class="net-line" />
+                                        <circle cx="100" cy="160" r="6" class="net-node active"></circle>
+                                        <circle cx="80" cy="120" r="4" class="net-node"></circle>
+                                        <circle cx="120" cy="100" r="4" class="net-node"></circle>
+                                        <circle cx="80" cy="80" r="4" class="net-node"></circle>
+                                        <circle cx="120" cy="40" r="4" class="net-node"></circle>
+                                        <circle cx="160" cy="40" r="4" class="net-node"></circle>
+                                    </svg>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Card 04 -->
+                        <article class="card">
+                            <div class="card-label">4/5</div>
+                            <div class="card-body">
+                                <div class="card-content-left">
+                                    <h3>Multi-Asset Support</h3>
+                                    <p>Fiber Network supports payments in a variety of digital assets, offering users a broader range of payment options.</p>
+                                </div>
+                                <div class="card-content-right">
+                                    <svg class="visual-icon" viewBox="0 0 200 200">
+                                        <line x1="100" y1="100" x2="50" y2="50" stroke="#333" />
+                                        <line x1="100" y1="100" x2="150" y2="50" stroke="#333" />
+                                        <line x1="100" y1="100" x2="50" y2="150" stroke="#333" />
+                                        <line x1="100" y1="100" x2="150" y2="150" stroke="#333" />
+                                        <circle cx="100" cy="100" r="25" fill="#111" stroke="#fff" stroke-width="2"></circle>
+                                        <path d="M95,95 L105,95 L100,105 Z" fill="#fff" transform="translate(0,2)"></path>
+                                        <circle cx="50" cy="50" r="15" fill="#1a1a1a" stroke="#444"></circle>
+                                        <text x="50" y="54" font-size="10" fill="#666" text-anchor="middle">N</text>
+                                        <circle cx="150" cy="50" r="15" fill="#1a1a1a" stroke="#444"></circle>
+                                        <text x="150" y="54" font-size="10" fill="#666" text-anchor="middle">B</text>
+                                        <circle cx="50" cy="150" r="15" fill="#1a1a1a" stroke="#444"></circle>
+                                        <text x="50" y="154" font-size="8" fill="#666" text-anchor="middle">CKB</text>
+                                        <circle cx="150" cy="150" r="15" fill="#1a1a1a" stroke="#444"></circle>
+                                        <polygon points="150,145 155,155 145,155" fill="#666" opacity="0.5"></polygon>
+                                    </svg>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Card 05 -->
+                        <article class="card">
+                            <div class="card-label">5/5</div>
+                            <div class="card-body">
+                                <div class="card-content-left">
+                                    <h3>Interoperability</h3>
+                                    <p>Fiber Network supports interoperability with the Bitcoin Lightning Network, providing support for cross-chain payments and asset transfers.</p>
+                                </div>
+                                <div class="card-content-right">
+                                    <svg class="visual-icon" viewBox="0 0 200 200">
+                                        <line x1="60" y1="100" x2="140" y2="100" stroke="#333" stroke-width="1"></line>
+                                        <circle cx="60" cy="100" r="20" fill="#1a1a1a" stroke="#444"></circle>
+                                        <text x="60" y="105" fill="#666" font-size="12" text-anchor="middle">N</text>
+                                        <circle cx="140" cy="100" r="20" fill="#1a1a1a" stroke="#444"></circle>
+                                        <text x="140" y="105" fill="#666" font-size="12" text-anchor="middle">B</text>
+                                        <circle cx="100" cy="100" r="25" fill="#000" stroke="#fff" stroke-width="1"></circle>
+                                        <line x1="100" y1="75" x2="100" y2="125" stroke="#444" stroke-width="1"></line>
+                                        <path d="M92,100 L98,100 M102,100 L108,100" stroke="#fff" stroke-width="2"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </article>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <footer style="height: 50vh; display:flex; align-items:center; justify-content:center; color:#333;">
+        End of Section
+    </footer>
+
+    <script>
+        const CONFIG = {
+            REVEAL_OFFSET: 0,      // No offset - cards stack directly on top
+            SCROLL_PER_CARD: 600,  // px of scroll distance per card transition
+            SCALE_STEP: 0.05,      // Subtle scale down for previous card
+            OPACITY_STEP: 1,       // Fully fade out previous card
+            CARD_MIN_HEIGHT: 480,  // px
+            TOP_OFFSET_BUFFER: 64  // px (Updated to 64px to match top padding)
+        };
+
+        const state = {
+            cardCount: 0,
+            trackHeight: 0
+        };
+
+        const els = {
+            track: document.querySelector('.scroll-track'),
+            sticky: document.querySelector('.sticky-container'),
+            cards: document.querySelectorAll('.card'),
+            header: document.querySelector('.section-header'),
+            section: document.querySelector('.highlighted-features')
+        };
+
+        state.cardCount = els.cards.length;
+
+        function updateCardDimensions() {
+            const viewportHeight = window.innerHeight;
+            
+            // Fixed formula as requested: 100vh - 64px (top) - 64px (bottom) = 100vh - 128px
+            let cardHeight = viewportHeight - 128;
+            
+            // Maintain minimum safety check
+            if (cardHeight < CONFIG.CARD_MIN_HEIGHT) {
+                cardHeight = CONFIG.CARD_MIN_HEIGHT;
+            }
+
+            document.documentElement.style.setProperty('--card-height', `${cardHeight}px`);
+            
+            // Update Track Height
+            state.trackHeight = (state.cardCount * CONFIG.SCROLL_PER_CARD) + viewportHeight;
+            els.track.style.height = `${state.trackHeight}px`;
+        }
+
+        function onScroll() {
+            const trackRect = els.track.getBoundingClientRect();
+            const scrollTop = -trackRect.top + CONFIG.TOP_OFFSET_BUFFER; 
+            let globalProgress = scrollTop / CONFIG.SCROLL_PER_CARD;
+            
+            els.cards.forEach((card, index) => {
+                // Determine timeline for this card
+                let cardProgress = globalProgress - (index - 1);
+
+                // --- 1. Position/Entrance (Sliding up or Fading in) ---
+                let yPos = 0;
+                
+                if (index === 0) {
+                    yPos = 0;
+                } else {
+                    if (cardProgress < 0) {
+                        // Waiting below screen
+                        yPos = window.innerHeight; 
+                    } else if (cardProgress < 1) {
+                        // Animating in from bottom
+                        const startY = window.innerHeight; 
+                        const ease = 1 - Math.pow(1 - cardProgress, 3); 
+                        yPos = startY - (startY * ease);
+                    } else {
+                        // Settled
+                        yPos = 0;
+                    }
+                }
+
+                // --- 2. Exit/Previous Card Effects (Fade + Scale) ---
+                // If the NEXT card is entering, this card needs to fade out and scale down.
+                let scale = 1;
+                let opacity = 1;
+                
+                // Determine how much the NEXT card has entered
+                const nextCardProgress = globalProgress - index;
+                
+                if (nextCardProgress > 0) {
+                    const safeProgress = Math.min(nextCardProgress, 1);
+                    
+                    // Scale down slightly as it leaves
+                    scale = 1 - (safeProgress * CONFIG.SCALE_STEP);
+                    
+                    // Fade out completely as the next card covers it/replaces it
+                    opacity = 1 - (safeProgress * CONFIG.OPACITY_STEP);
+                }
+
+                // Apply Styles
+                card.style.transform = `translate3d(0, ${yPos}px, 0) scale(${scale})`;
+                card.style.opacity = opacity;
+                card.style.zIndex = index + 1; // Higher index on top
+                
+                // Visibility Optimization
+                if (yPos > window.innerHeight || opacity <= 0) {
+                    card.style.visibility = 'hidden';
+                } else {
+                    card.style.visibility = 'visible';
+                }
+            });
+        }
+
+        function init() {
+            updateCardDimensions();
+            onScroll(); 
+            
+            window.addEventListener('resize', () => {
+                updateCardDimensions();
+                onScroll();
+            });
+            
+            window.addEventListener('scroll', () => {
+                requestAnimationFrame(onScroll);
+            }, { passive: true });
+        }
+
+        init();
+
+    </script>
+</body>
+</html>
