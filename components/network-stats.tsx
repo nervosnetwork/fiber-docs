@@ -90,7 +90,7 @@ export default function NetworkStats() {
           <div className="w-1/2 md:w-32 p-sm border border-invisible inline-flex flex-col justify-center items-center gap-sm hover-invert cursor-pointer"
             data-hovered="false"
             data-orientation="Vertical"
-            onClick={() => window.open('https://fiber-dashboard-3aew.vercel.app/', '_blank')}
+            onClick={() => window.open('https://dashboard.fiber.channel/', '_blank')}
           >
             <Image
               src="/external.svg"
