@@ -1,0 +1,35 @@
+---
+title: Fiber Website & Docs Update
+author: Developer Relations
+date: 2026-03-27
+---
+
+🚀 We’ve rolled out an update to the [Fiber landing page](https://www.fiber.world/) and the [Documentation site](https://www.fiber.world/docs) 
+## Landing page
+
+The earlier version was put together quickly and intentionally borrowed a pop-art visual style similar to [ckb.world](http://ckb.world) so we could move fast and get something live. That helped us establish an initial presence, but over time it became clear that the look and feel did not really match what Fiber is.
+
+Fiber is neither a playful consumer app or a campaign-style product. It is network infrastructure: technical, reliable, and system-oriented. Because of that, we revisited the overall visual direction and moved toward a more minimal style that better fits Fiber’s identity. The updated design aims to feel **calm, precise, and credible**, with a stronger emphasis on **structure, hierarchy, and clarity**.
+
+We also wanted the motion and overall feel of the page to connect more closely to the Fiber network itself. So instead of relying on bold colors and visual novelty, the new landing page uses a more restrained and more meaningful interactions that reflect how the network actually works: 
+
+- **Interactive Hero**: Users can click a node to trace a transaction path across the graph, giving a lightweight visual introduction to Fiber’s multi-hop routing capability.
+- **Integrated Live Stats**: We have integrated real-time protocol data from the Fiber dashboard into hero section, surfacing the network’s real data up front.
+
+![image](content/blog/img/fiber-hero-section.png)
+
+
+## Docs Page
+
+On the docs side, we added a new “[How Fiber Network Works](https://fiber.world/docs/how-it-works)” page to explain some of Fiber’s core mechanisms more clearly, especially:
+
+- **Payment Channels**: This section focuses on the most fundamental part of how Fiber works: two participants first open a channel and lock funds on-chain, and after that, transactions can happen off-chain between them until the channel is closed.
+![image](content/blog/img/payment-channel.png)
+- **Multi-hop Routing**: This section visualizes how a payment can move across intermediate nodes to reach the receiver, even without a direct channel between the two parties. 
+![image](content/blog/img/multi-hop-routing.png)
+- **Interactive Network Simulation**: It is essentially a redesign of Yukang’s earlier [simulation demo](https://fiber-world.vercel.app/simulate.html), now integrated directly into the documentation experience. Through this simulation, users can get a more intuitive understanding of how Fiber works: how channel opening and closing are reflected on Layer 1, and how transactions are routed across the Layer 2 network before eventually reaching the recipient.
+![image](content/blog/img/interactive-network.png)
+
+---
+
+Feel free to explore the updates, and let’s scale Fiber together! 💙
