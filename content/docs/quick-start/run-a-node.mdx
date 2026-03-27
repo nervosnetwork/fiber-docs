@@ -1,11 +1,11 @@
 ---
 title: "Run a Fiber Node"
 description: "Learn how to run a Testnet node on your local machine"
-date: 2025-06-25
+date: 2026-03-27
 dependencies:
   - name: Fiber Node
-    minVersion: "0.6.1"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.6.1"
+    minVersion: "0.7.1"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.7.1"
 ---
 
 ## Overview
@@ -31,7 +31,7 @@ cd fiber
 cargo build --release
 ```
 
-This document used the [v0.6.1 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.6.1) throughout the guide.
+This document used the [v0.7.1 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.7.1) throughout the guide.
 
 ### 2. Create Node Directory
 
@@ -123,7 +123,7 @@ cp -r /folder-to/my-fnn/fiber/store /folder-to/my-fnn/fiber/store.backup
 ```sh
 fnn-migrate -p /folder-to/my-fnn/fiber/store
 ```
-( If compiling from source code locally, need `cd` to the [`./migrate`](https://github.com/nervosnetwork/fiber/tree/v0.6.1/migrate). )
+( If compiling from source code locally, need `cd` to the [`./migrate`](https://github.com/nervosnetwork/fiber/tree/v0.7.1/migrate). )
 
 4. Update and restart:
    - Replace the FNN binary
