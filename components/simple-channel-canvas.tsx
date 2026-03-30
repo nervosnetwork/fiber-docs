@@ -110,6 +110,55 @@ export default function SimpleChannelCanvas() {
     return path;
   };
 
+  const getQuadraticPoint = (
+    t: number,
+    fromNode: Node,
+    toNode: Node,
+    controlX: number,
+    controlY: number
+  ) => {
+    const oneMinusT = 1 - t;
+    return {
+      x:
+        oneMinusT * oneMinusT * fromNode.x +
+        2 * oneMinusT * t * controlX +
+        t * t * toNode.x,
+      y:
+        oneMinusT * oneMinusT * fromNode.y +
+        2 * oneMinusT * t * controlY +
+        t * t * toNode.y,
+    };
+  };
+
+  const getChannelHitDistance = (
+    x: number,
+    y: number,
+    channel: CustomChannel,
+    fromNode: Node,
+    toNode: Node,
+    offsetScale: number
+  ) => {
+    const { controlX, controlY } = getCurveControlPoint(
+      channel.curveOffset * offsetScale,
+      fromNode,
+      toNode
+    );
+
+    let bestDistance = Infinity;
+    const steps = 80;
+
+    for (let step = 0; step <= steps; step++) {
+      const t = step / steps;
+      const point = getQuadraticPoint(t, fromNode, toNode, controlX, controlY);
+      const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+      }
+    }
+
+    return bestDistance;
+  };
+
   const drawNetwork = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -273,24 +322,34 @@ export default function SimpleChannelCanvas() {
     }
 
     if (customChannels.length > 0) {
-      const ctx = canvas.getContext('2d');
       const fromNode = nodes[0];
       const toNode = nodes[1];
+      const hitRadius = getChannelHitLineWidth(scaleX, scaleY) / 2;
+      let bestHitIndex: number | null = null;
+      let bestHitDistance = Infinity;
 
-      if (ctx) {
-        const previousLineWidth = ctx.lineWidth;
-        ctx.lineWidth = getChannelHitLineWidth(scaleX, scaleY);
+      for (let i = 0; i < customChannels.length; i++) {
+        const distance = getChannelHitDistance(
+          x,
+          y,
+          customChannels[i],
+          fromNode,
+          toNode,
+          offsetScale
+        );
 
-        for (let i = customChannels.length - 1; i >= 0; i--) {
-          const path = getScaledChannelPath(customChannels[i], fromNode, toNode, offsetScale);
-          if (ctx.isPointInStroke(path, x, y)) {
-            setSelectedChannelIndex((prev) => (prev === i ? null : i));
-            ctx.lineWidth = previousLineWidth;
-            return;
-          }
+        if (
+          distance <= hitRadius &&
+          (distance < bestHitDistance || (distance === bestHitDistance && i > (bestHitIndex ?? -1)))
+        ) {
+          bestHitDistance = distance;
+          bestHitIndex = i;
         }
+      }
 
-        ctx.lineWidth = previousLineWidth;
+      if (bestHitIndex !== null) {
+        setSelectedChannelIndex((prev) => (prev === bestHitIndex ? null : bestHitIndex));
+        return;
       }
     }
 
