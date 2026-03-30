@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   openGraph: {
     images: [
       {
-        url: '/imgs/open-graph.png',
+        url: '/imgs/fiber-og.png',
         width: 1200,
         height: 630,
       },
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    images: ['/imgs/open-graph.png'],
+    images: ['/imgs/fiber-og.png'],
   },
 };
 
