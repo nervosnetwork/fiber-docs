@@ -1,11 +1,11 @@
 ---
 title: "Run a Fiber Node"
 description: "Learn how to run a Testnet node on your local machine"
-date: 2026-03-27
+date: 2026-04-09
 dependencies:
   - name: Fiber Node
-    minVersion: "0.7.1"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.7.1"
+    minVersion: "0.8.0"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.8.0"
 ---
 
 ## Overview
@@ -31,7 +31,14 @@ cd fiber
 cargo build --release
 ```
 
-This document used the [v0.7.1 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.7.1) throughout the guide.
+This document used the [v0.8.0 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.8.0) throughout the guide.
+
+<Callout type="info" title="macOS Security">
+If you're using macOS, the downloaded binary may be blocked by Gatekeeper. To resolve this, remove the quarantine attribute:
+```sh
+xattr -d com.apple.quarantine fnn fnn-migrate fnn-cli
+```
+</Callout>
 
 ### 2. Create Node Directory
 
@@ -41,6 +48,9 @@ Create a dedicated directory for your node and copy the necessary files:
 mkdir /folder-to/my-fnn
 # If using released binary, replace target/release/fnn with the path to your downloaded binary
 cp target/release/fnn /folder-to/my-fnn
+# Copy additional tools (v0.8.0+)
+cp target/release/fnn-migrate /folder-to/my-fnn
+cp target/release/fnn-cli /folder-to/my-fnn
 cp config/testnet/config.yml /folder-to/my-fnn
 cd /folder-to/my-fnn
 ```
@@ -87,15 +97,77 @@ FIBER_SECRET_KEY_PASSWORD='123' RUST_LOG=info ./fnn -c config.yml -d .
 
 The node will start syncing with the Testnet and output logs to the console. You can redirect the output to a file if needed.
 
+## Interacting with Your Node
+
+Once your node is running, you can interact with it using the RPC interface or the CLI tool.
+
+### Using the CLI Tool (v0.8.0+)
+
+v0.8.0 introduces `fnn-cli`, a command-line interface that provides a convenient way to manage your node without writing raw JSON-RPC requests:
+
+```sh
+# View node information
+./fnn-cli info
+
+# List connected peers
+./fnn-cli peer list_peers
+
+# List open channels
+./fnn-cli channel list_channels
+
+# List available commands
+./fnn-cli --help
+```
+
+The CLI connects to the node's RPC endpoint (default: `http://127.0.0.1:8227`).
+
+<Callout type="info" title="HTTP Proxy Issues">
+If you encounter a `503 Service Unavailable` error, check if your system has an HTTP proxy configured. The CLI may attempt to route requests through the proxy, which can fail for local addresses.
+
+**Solution:** Set `NO_PROXY` to exclude local addresses:
+```sh
+export NO_PROXY=127.0.0.1,localhost
+./fnn-cli info
+```
+</Callout>
+
+### Using JSON-RPC Directly
+
+You can also interact with the node using any HTTP client:
+
+```sh
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"node_info"}' \
+  http://127.0.0.1:8227/
+```
+
 ## Version Compatibility and Upgrades
 
 FNN is under active development, and protocol/storage format changes may occur between versions. Here's how to handle upgrades:
 
+<Callout type="warn" title="v0.8.0 Breaking Changes">
+v0.8.0 introduces several RPC changes that may affect existing integrations:
+
+| Change | v0.7.1 | v0.8.0 |
+|--------|--------|--------|
+| Node identifier | `peer_id` (base58) | `pubkey` (hex-encoded secp256k1) |
+| `node_info` response field | `node_id` | `pubkey` |
+| JSON enum format | PascalCase | snake_case (e.g., `CkbHash` → `ckb_hash`) |
+| `ChannelState` format | Regular | SCREAMING_SNAKE_CASE with pipe separator |
+
+Affected RPC methods: `open_channel`, `list_channels`, `disconnect_peer`, `connect_peer`, `node_info`.
+
+New RPC methods in v0.8.0:
+- `open_channel_with_external_funding` - For hardware wallet/external signing
+- `submit_signed_funding_tx` - Submit externally signed transactions
+- `list_payments` - Query payment sessions
+</Callout>
+
 ### Safe Upgrade Process
 
 1. Close all active channels before upgrading:
-   - Use RPC to [list all channels](./src/rpc/README.md#channel-list_channels)
-   - [Close them](./src/rpc/README.md#channel-shutdown_channel) properly
+   - Use RPC to [list all channels](https://github.com/nervosnetwork/fiber/blob/develop/crates/fiber-lib/src/rpc/README.md#channel-list_channels)
+   - [Close them](https://github.com/nervosnetwork/fiber/blob/develop/crates/fiber-lib/src/rpc/README.md#channel-shutdown_channel) properly
 
 2. Stop the node and clean the storage:
 
@@ -121,9 +193,12 @@ cp -r /folder-to/my-fnn/fiber/store /folder-to/my-fnn/fiber/store.backup
 3. Run the migration tool:
 
 ```sh
-fnn-migrate -p /folder-to/my-fnn/fiber/store
+./fnn-migrate -d /folder-to/my-fnn
 ```
-( If compiling from source code locally, need `cd` to the [`./migrate`](https://github.com/nervosnetwork/fiber/tree/v0.7.1/migrate). )
+
+<Callout type="info">
+The `-d` flag specifies the Fiber data directory (the store is located at `<dir>/store`). The migration tool will automatically detect and migrate the database to the latest version.
+</Callout>
 
 4. Update and restart:
    - Replace the FNN binary
@@ -133,9 +208,7 @@ fnn-migrate -p /folder-to/my-fnn/fiber/store
 
 Once your node is running, you can:
 
-- Connect to other peers
-- Open payment channels
-- Send and receive payments
+- [Connect to other peers](/docs/quick-start/connect-peers)
+- [Open payment channels](/docs/quick-start/open-channel)
+- [Send and receive payments](/docs/quick-start/basic-transfer)
 - Explore more [RPC methods](https://github.com/nervosnetwork/fiber/blob/main/src/rpc/README.md)
-
-Check out the [Basic Transfer Example](/docs/quick-start/basic-transfer) guide for a practical example of using your node.

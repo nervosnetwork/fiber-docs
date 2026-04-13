@@ -1,3 +1,3 @@
 export const LatestVersions = {
-  "Fiber Node": "0.7.1",
+  "Fiber Node": "0.8.0",
 };
