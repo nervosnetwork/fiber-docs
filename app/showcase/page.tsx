@@ -52,7 +52,7 @@ export default function ShowcasePage() {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 text-sm font-medium rounded-full border transition-all duration-200 ${
+              className={`px-4 py-2 text-sm font-medium rounded-full border transition-all duration-200 cursor-pointer ${
                 selectedCategory === category
                   ? "border-fd-primary bg-fd-primary text-fd-primary-foreground"
                   : "border-fd-border hover:border-fd-primary/50 hover:bg-fd-primary/10"
@@ -97,13 +97,17 @@ export default function ShowcasePage() {
 
                 {/* Footer */}
                 <div className="flex items-center justify-between mt-auto">
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full font-medium ${getLanguageColor(
-                      project.language
-                    )}`}
-                  >
-                    {project.language}
-                  </span>
+                  {project.language ? (
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full font-medium ${getLanguageColor(
+                        project.language
+                      )}`}
+                    >
+                      {project.language}
+                    </span>
+                  ) : (
+                    <span />
+                  )}
 
                   <div className="flex" onClick={(e) => e.stopPropagation()}>
                     <Link
