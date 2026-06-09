@@ -1,0 +1,8 @@
+{
+  "title": "Payments",
+  "pages": [
+    "payment-lifecycle",
+    "invoice-guide",
+    "hold-invoice"
+  ]
+}

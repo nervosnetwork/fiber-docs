@@ -1,0 +1,89 @@
+---
+title: Trampoline Routing
+description: How Fiber enables lightweight clients to delegate route finding to trampoline nodes
+date: 2026-05-25
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+<Callout type="info">
+  This page is a work in progress. Detailed operational guides and examples will be added soon.
+</Callout>
+
+Trampoline routing allows a sender with limited routing information to delegate pathfinding to intermediate **trampoline nodes**. Instead of computing the full route to the destination, the sender only needs a route to the first trampoline node — the rest of the path is handled by the trampoline nodes themselves.
+
+## Why Trampoline Routing?
+
+In a standard multi-hop payment, the sender must know the entire network topology to compute a route. This is problematic for:
+
+- **Lightweight clients** (e.g., mobile wallets) that don't store the full network graph
+- **Privacy-conscious users** who don't want to reveal the full route
+- **Nodes behind NAT** that have limited visibility of the network
+
+## How It Works
+
+```
+Sender → [Outer Onion] → First Trampoline → [Inner Onion] → Next Trampoline → ... → Final Recipient
+```
+
+1. The sender builds a normal outer onion to the first trampoline node
+2. The remaining route is encoded in an **inner trampoline onion**
+3. Each trampoline node peels one layer of the inner onion and forwards the payment
+4. The final recipient sees only the final payload and settles the payment
+
+## Using Trampoline Routing
+
+Set `trampoline_hops` in the `send_payment` RPC to specify trampoline nodes:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "send_payment",
+  "params": [
+    {
+      "invoice": "fibt1...",
+      "trampoline_hops": [
+        { "pubkey": "<trampoline_node_1_pubkey>" },
+        { "pubkey": "<trampoline_node_2_pubkey>" }
+      ],
+      "max_fee_amount": "0x5F5E100"
+    }
+  ],
+  "id": 1
+}
+```
+
+<Callout type="warning">
+  When using `trampoline_hops`, `max_fee_amount` must be provided. This sets the maximum fee budget for the trampoline route.
+</Callout>
+
+## Fee Behavior
+
+- The sender routes to the first trampoline with `final_amount + max_fee_amount`
+- Any fee spent on the outer route reduces what the first trampoline receives
+- The remaining fee budget is split evenly across trampoline hops as `build_max_fee_amount`
+- The forwarding fee follows the standard TLC fee formula:
+
+  ```
+  fee = ⌈(amount_to_forward × fee_rate) / 1,000,000⌉
+  ```
+
+## Constraints
+
+| Constraint | Value |
+|------------|-------|
+| Max trampoline hops | 5 (`MAX_TRAMPOLINE_HOPS_LIMIT`) |
+| `max_fee_amount` | Required when `trampoline_hops` is set |
+| Expiry delta | Each hop adds a default delta; total must not exceed `tlc_expiry_limit` |
+
+## Privacy Benefits
+
+Trampoline routing improves payment privacy because:
+- The sender only knows the route to the first trampoline
+- Trampoline nodes only know the previous and next hop
+- The final recipient cannot see the full route
+
+## Related Topics
+
+- [Payment Lifecycle](/docs/guide/payments/payment-lifecycle) — how payments are processed
+- [P2P Message Protocol](/docs/res/p2p-message) — message-level details

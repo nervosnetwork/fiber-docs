@@ -8,33 +8,30 @@ dependencies:
     link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.8.0"
 ---
 
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+## TL;DR
+
+Set up two local nodes, open a channel between them, and send a CKB payment from one to the other. The whole process takes about 10 minutes.
+
 ## Overview
 
-This guide walks you through setting up and executing a basic token ([CKB](https://explorer.nervos.org/)) transfer between two nodes on the Fiber Testnet. This is a fundamental example that demonstrates the core functionality of the Fiber Channel Network.
+This guide walks you through setting up and executing a basic token ([CKB](https://explorer.nervos.org/)) transfer between two nodes on the Fiber Testnet.
 
 ## Prerequisites
 
 - [Git](https://git-scm.com/) (if building from source)
 - [Rust](https://www.rust-lang.org/) and [Cargo](https://doc.rust-lang.org/cargo/) (if building from source)
 - Basic understanding of command line operations
-- [curl](https://curl.se/) or similar HTTP client for making RPC calls
+- [curl](https://curl.se/) for making RPC calls
 - [ckb-cli](https://github.com/nervosnetwork/ckb-cli) for generating keys
 
 ## Setting Up Your Nodes
 
-<Callout type="info" title="Using fnn-cli vs RPC">
-This guide provides both **fnn-cli** (command-line interface) and **RPC** (HTTP API) examples for each step. The fnn-cli commands are generally easier to use and recommended for beginners.
-
-**Important notes for fnn-cli:**
-- Default RPC endpoint is `http://127.0.0.1:8227` (Node 1). For Node 2, always add `--url http://127.0.0.1:8237`
-- Amounts are in shannons (1 CKB = 100,000,000 shannons)
-</Callout>
-
 ### 1. Prepare Fiber Binary
 
-Download the latest release binary from the [Fiber GitHub Releases](https://github.com/nervosnetwork/fiber/releases) page.
-
-If you prefer to build the binary by yourself, you will need to install [Rust](https://www.rust-lang.org/) and [Cargo](https://doc.rust-lang.org/cargo/):
+Download the latest release binary from the [Fiber GitHub Releases](https://github.com/nervosnetwork/fiber/releases) page, or build from source:
 
 ```sh
 git clone https://github.com/nervosnetwork/fiber.git
@@ -42,26 +39,21 @@ cd fiber
 cargo build --release
 ```
 
-This document used the [v0.8.0 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.8.0) throughout the guide.
-
 <Callout type="info" title="macOS Security">
-If you're using macOS, the downloaded binary may be blocked by Gatekeeper. Remove the quarantine attribute:
+If you're using macOS, remove the quarantine attribute:
 ```sh
 xattr -d com.apple.quarantine fnn fnn-cli
 ```
 </Callout>
 
 <Callout type="info" title="HTTP Proxy Issues">
-If you encounter 503 errors when using fnn-cli, it may be due to HTTP proxy settings. Try running:
+If you encounter 503 errors when using fnn-cli, run:
 ```sh
 export NO_PROXY=127.0.0.1,localhost
 ```
-before using fnn-cli commands.
 </Callout>
 
 ### 2. Create Data Directories
-
-Set up separate directories for each node:
 
 ```sh
 # For Node 1
@@ -79,72 +71,50 @@ cp config/testnet/config.yml node2/
 
 ### 3. Configure Node Keys
 
-Each node needs its **own private key** for signing transactions. You need to create **two separate CKB accounts** - one for each node:
+Each node needs its own private key. Create two separate CKB accounts:
 
 ```sh
-# Create account for Node 1
-ckb-cli account new
-# Note the lock-arg and address for Node 1
-
-# Create account for Node 2
-ckb-cli account new
-# Note the lock-arg and address for Node 2
+ckb-cli account new  # for Node 1
+ckb-cli account new  # for Node 2
 ```
 
-Then export the keys for each node:
+Export the keys:
 
 ```sh
 # In node1 directory
 mkdir ckb
 ckb-cli account export --lock-arg <node1_lock_arg> --extended-privkey-path ./ckb/exported-key
-# Extract the first line (private key) from exported file and save to key file
 head -n 1 ./ckb/exported-key > ./ckb/key
 
 # In node2 directory
 mkdir ckb
 ckb-cli account export --lock-arg <node2_lock_arg> --extended-privkey-path ./ckb/exported-key
-# Extract the first line (private key) from exported file and save to key file
 head -n 1 ./ckb/exported-key > ./ckb/key
 ```
 
-<Callout type="warning" title="Important: Key File Format">
-The `ckb/key` file must contain only the 64-character hex private key string (first line of exported-key file), without any `0x` prefix or extra content. The file should look like:
-```
-f1cbbd82588469fbc3db87c001bcf65031e1397a64cc17d7fbb3a3fe3ecc18a0
-```
-
-Do not copy the entire `exported-key` file directly - it contains additional metadata that will cause errors.
+<Callout type="warning" title="Key File Format">
+The `ckb/key` file must contain only the 64-character hex private key (first line), without `0x` prefix.
 </Callout>
 
-You can get Testnet funds from faucets (Both nodes need): [https://faucet.nervos.org](https://faucet.nervos.org/).
+Get Testnet funds from [https://faucet.nervos.org](https://faucet.nervos.org/) for both nodes.
 
 ### 4. Configure Ports
 
-Edit the `config.yml` files to use different ports for each node:
-
-- Node 1: RPC Port 8227, P2P Port 8228
-- Node 2: RPC Port 8237, P2P Port 8238
-
-Below is an example of the `config.yml` file, take a note on the `listening_addr` and `rpc -> listening_addr` fields:
+Edit `config.yml` for each node:
+- Node 1: RPC Port `8227`, P2P Port `8228`
+- Node 2: RPC Port `8237`, P2P Port `8238`
 
 <details>
-<summary>View complete config.yml</summary>
+<summary>View complete config.yml example</summary>
 
-```sh
-# This configuration file only contains the necessary configurations for the testnet deployment.
-# All options' descriptions can be found via `fnn --help` and be overridden by command line arguments or environment variables.
+```yaml
 fiber:
   listening_addr: "/ip4/127.0.0.1/tcp/8228"
   bootnode_addrs:
     - "/ip4/54.179.226.154/tcp/8228/p2p/Qmes1EBD4yNo9Ywkfe6eRw9tG1nVNGLDmMud1xJMsoYFKy"
     - "/ip4/54.179.226.154/tcp/18228/p2p/QmdyQWjPtbK4NWWsvy8s69NGJaQULwgeQDT5ZpNDrTNaeV"
   announce_listening_addr: true
-  announced_addrs:
-    # If you want to announce your fiber node public address to the network, you need to add the address here, please change the ip to your public ip accordingly.
-    # - "/ip4/YOUR-FIBER-NODE-PUBLIC-IP/tcp/8228"
   chain: testnet
-  # lock script configurations related to fiber network
-  # https://github.com/nervosnetwork/fiber-scripts/blob/main/deployment/testnet/migrations/2025-02-28-111246.json
   scripts:
     - name: FundingLock
       script:
@@ -158,7 +128,7 @@ fiber:
             args: 0x3cb7c0304fe53f75bb5727e2484d0beae4bd99d979813c6fc97c3cca569f10f6
         - cell_dep:
             out_point:
-              tx_hash: 0x12c569a258dd9c5bd99f632bb8314b1263b90921ba31496467580d6b79dd14a7 # ckb_auth
+              tx_hash: 0x12c569a258dd9c5bd99f632bb8314b1263b90921ba31496467580d6b79dd14a7
               index: 0x0
             dep_type: code
     - name: CommitmentLock
@@ -173,16 +143,11 @@ fiber:
             args: 0xf7e458887495cf70dd30d1543cad47dc1dfe9d874177bf19291e4db478d5751b
         - cell_dep:
             out_point:
-              tx_hash: 0x12c569a258dd9c5bd99f632bb8314b1263b90921ba31496467580d6b79dd14a7 #ckb_auth
+              tx_hash: 0x12c569a258dd9c5bd99f632bb8314b1263b90921ba31496467580d6b79dd14a7
               index: 0x0
             dep_type: code
-
 rpc:
-  # By default RPC only binds to localhost, thus it only allows accessing from the same machine.
-  # Allowing arbitrary machines to access the JSON-RPC port is dangerous and strongly discouraged.
-  # Please strictly limit the access to only trusted machines.
   listening_addr: "127.0.0.1:8227"
-
 ckb:
   rpc_url: "https://testnet.ckbapp.dev/"
   udt_whitelist:
@@ -197,13 +162,11 @@ ckb:
             hash_type: type
             args: 0x97d30b723c0b2c66e9cb8d4d0df4ab5d7222cbb00d4a9a2055ce2e5d7f0d8b0f
       auto_accept_amount: 1000000000
-
 services:
   - fiber
   - rpc
   - ckb
 ```
-
 </details>
 
 ## Step-by-Step Transfer Process
@@ -211,242 +174,221 @@ services:
 ### 1. Start Both Nodes
 
 ```sh
-# Start Node 1
+# Terminal 1 — Node 1
 cd node1
 FIBER_SECRET_KEY_PASSWORD='password1' RUST_LOG=info ./fnn -c config.yml -d .
 
-# Start Node 2 (in a different terminal)
+# Terminal 2 — Node 2
 cd node2
 FIBER_SECRET_KEY_PASSWORD='password2' RUST_LOG=info ./fnn -c config.yml -d .
 ```
 
 ### 2. Connect the Nodes
 
-Establish a connection from Node 1 to Node 2:
+First get Node 2's pubkey, then connect from Node 1:
 
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
 ```sh
-# Using CLI
-cd node1 && ./fnn-cli peer connect_peer --pubkey <node2_pubkey> --address "/ip4/127.0.0.1/tcp/8238"
-
-# Or using RPC
-curl -s -X POST \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "42",
-    "jsonrpc": "2.0",
-    "method": "connect_peer",
-    "params": [
-      {
-        "pubkey": "022e7aacc5b1f7f910952a0c659698a292f0d7ad64ffa7c023dc1022dced788717",
-        "address": "/ip4/127.0.0.1/tcp/8238"
-      }
-    ]
-  }' http://localhost:8227
-```
-
-Noticed that you need to replace the `pubkey` with the your actual pubkey of Node 2. You can get the pubkey by running:
-
-```sh
-# Using CLI (Node 2 is on port 8237)
+# Get Node 2's pubkey
 cd node2 && ./fnn-cli --url http://127.0.0.1:8237 info | grep pubkey
 
-# Or using RPC
+# Connect from Node 1
+cd node1 && ./fnn-cli peer connect_peer --pubkey <node2_pubkey> --address "/ip4/127.0.0.1/tcp/8238"
+```
+  </Tab>
+  <Tab value="RPC">
+```sh
+# Get Node 2's pubkey
 curl -s -X POST -H "Content-Type: application/json" \
   -d '{"id":"42","jsonrpc":"2.0","method":"node_info"}' \
   http://localhost:8237 | grep pubkey
-```
 
-<Callout type="info" title="fnn-cli Default Port">
-By default, fnn-cli connects to `http://127.0.0.1:8227` (Node 1). When interacting with Node 2, you must specify `--url http://127.0.0.1:8237`.
-</Callout>
+# Connect from Node 1
+curl -s -X POST -H "Content-Type: application/json" \
+  -d '{
+    "id": "42", "jsonrpc": "2.0", "method": "connect_peer",
+    "params": [{"pubkey": "<node2_pubkey>", "address": "/ip4/127.0.0.1/tcp/8238"}]
+  }' http://localhost:8227
+```
+  </Tab>
+  <Tab value="CCC">
+    <Callout type="info">CCC support coming soon.</Callout>
+  </Tab>
+</Tabs>
 
 ### 3. Open a Payment Channel
 
-Create a payment channel from Node 1 to Node 2:
-
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
 ```sh
-# Using CLI
-cd node1 && ./fnn-cli channel open_channel --pubkey <node2_pubkey> --funding-amount 50000000000 --public true
-
-# Or using RPC
-curl -s -X POST \
-  -H "Content-Type: application/json" \
+# funding-amount is in shannons (50000000000 = 500 CKB)
+cd node1 && ./fnn-cli channel open_channel \
+  --pubkey <node2_pubkey> \
+  --funding-amount 50000000000 \
+  --public true
+```
+  </Tab>
+  <Tab value="RPC">
+```sh
+# funding_amount in hex (0xba43b7400 = 500 CKB)
+curl -s -X POST -H "Content-Type: application/json" \
   -d '{
-    "id": "42",
-    "jsonrpc": "2.0",
-    "method": "open_channel",
-    "params": [{
-      "pubkey": "02daec2e308afd3a1460ca77596c282a8966e620fb036c638f9bf5d87cde2368cc",
-      "funding_amount": "0xba43b7400",
-      "public": true
-    }]
+    "id": "42", "jsonrpc": "2.0", "method": "open_channel",
+    "params": [{"pubkey": "<node2_pubkey>", "funding_amount": "0xba43b7400", "public": true}]
   }' http://localhost:8227
 ```
+  </Tab>
+  <Tab value="CCC">
+    <Callout type="info">CCC support coming soon.</Callout>
+  </Tab>
+</Tabs>
 
-Noticed that in the `funding_amount` we pass `50000000000` shannons (CLI) or `0xba43b7400` (RPC) which is `500` CKB. This is the amount of CKB that will be locked in the channel, which also means the maximum amount of CKB that can be transferred from Node 1 to Node 2(single direction) through the channel.
+Check channel status — wait until `state_name` becomes `CHANNEL_READY`:
 
-By default, Fiber Node will auto accept the channel. But it still needs some time for the channel to be opened. You can check the channel status by the following command:
-
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
 ```sh
-# Using CLI
 ./fnn-cli channel list_channels
-
-# Or using RPC
-curl -s -X POST \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "42",
-    "jsonrpc": "2.0",
-    "method": "list_channels",
-    "params": [{}]
-  }' http://localhost:8227
 ```
-
-You will get the channel id and a `state_name` field in the response. The channel state will transition from `AwaitingTxSignatures` (waiting for transaction signatures) to `ChannelReady` (channel is active). This typically takes a few minutes as the funding transaction needs to be confirmed on-chain.
+  </Tab>
+  <Tab value="RPC">
+```sh
+curl -s -X POST -H "Content-Type: application/json" \
+  -d '{"id":"42","jsonrpc":"2.0","method":"list_channels","params":[{}]}' \
+  http://localhost:8227
+```
+  </Tab>
+  <Tab value="CCC">
+    <Callout type="info">CCC support coming soon.</Callout>
+  </Tab>
+</Tabs>
 
 ### 4. Generate an Invoice
 
-Next, let's create a payment invoice on Node 2 for 100 CKB. An invoice is a payment request that can be paid by the payer. You can think of it as a paycheck/bill.
+Create a payment invoice on Node 2 for 100 CKB:
 
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
 ```sh
-# Using CLI (Note: Node 2 uses port 8237)
-cd node2 && ./fnn-cli --url http://127.0.0.1:8237 invoice new_invoice --amount 10000000000 --currency Fibt --description "test invoice"
-
-# Or using RPC
-curl -s -X POST \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "42",
-    "jsonrpc": "2.0",
-    "method": "new_invoice",
-    "params": [{
-      "amount": "0x2540be400",
-      "currency": "Fibt",
-      "description": "test invoice generated by node2",
-      "expiry": "0xe10",
-      "payment_preimage": "0x26b069707aec100fd7153f26abe2bea9e32ed0a6ec1b7e3dcd47aa0e684a1412",
-      "hash_algorithm": "sha256"
-    }]
-  }' http://localhost:8237
+# amount in shannons (10000000000 = 100 CKB)
+cd node2 && ./fnn-cli --url http://127.0.0.1:8237 invoice new_invoice \
+  --amount 10000000000 \
+  --currency Fibt \
+  --description "test invoice"
 ```
-
-Some explanations on the parameters:
-
-- `amount` is the amount of CKB to be paid. In CLI it's in shannons (10000000000 = 100 CKB), in RPC `0x2540be400` is `100` CKB.
-- `expiry` is the expiry time of the invoice in seconds (RPC only).
-- `payment_preimage` is a 32-byte random number represented in hexadecimal. Each invoice has a unique payment preimage. You can generate it using the following command:
-
+  </Tab>
+  <Tab value="RPC">
 ```sh
+# Generate a random payment_preimage first
 payment_preimage="0x$(openssl rand -hex 32)"
-```
 
- Once the request is sent, you can get the invoice ID from the response:
-
-```json
-{
-  "id": "42",
-  "jsonrpc": "2.0",
-  "result": {
-    "invoice_address": "fibt100000000001p...",
-    "invoice": { ... }
-  }
-}
+curl -s -X POST -H "Content-Type: application/json" \
+  -d "{
+    \"id\": \"42\", \"jsonrpc\": \"2.0\", \"method\": \"new_invoice\",
+    \"params\": [{
+      \"amount\": \"0x2540be400\",
+      \"currency\": \"Fibt\",
+      \"description\": \"test invoice\",
+      \"expiry\": \"0xe10\",
+      \"payment_preimage\": \"$payment_preimage\",
+      \"hash_algorithm\": \"sha256\"
+    }]
+  }" http://localhost:8237
 ```
+  </Tab>
+  <Tab value="CCC">
+    <Callout type="info">CCC support coming soon.</Callout>
+  </Tab>
+</Tabs>
 
 ### 5. Make the Payment
 
-Now, let's send payment from Node 1 to Node 2 using the generated invoice:
-
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
 ```sh
-# Using CLI
 cd node1 && ./fnn-cli payment send_payment --invoice "fibt100000000001p..."
-
-# Or using RPC
-curl -s -X POST \
-  -H "Content-Type: application/json" \
+```
+  </Tab>
+  <Tab value="RPC">
+```sh
+curl -s -X POST -H "Content-Type: application/json" \
   -d '{
-    "id": "42",
-    "jsonrpc": "2.0",
-    "method": "send_payment",
-    "params": [{
-      "invoice": "fibt100000000001p..."  # Use the invoice string from step 4
-    }]
+    "id": "42", "jsonrpc": "2.0", "method": "send_payment",
+    "params": [{"invoice": "fibt100000000001p..."}]
   }' http://localhost:8227
 ```
+  </Tab>
+  <Tab value="CCC">
+    <Callout type="info">CCC support coming soon.</Callout>
+  </Tab>
+</Tabs>
 
 ### 6. Verify the Transfer
 
-Check the channel balance to confirm the transfer:
+Check channel balances to confirm the transfer:
 
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
 ```sh
-# Using CLI on Node 1
+# Node 1
 ./fnn-cli channel list_channels
 
-# Using CLI on Node 2 (note the different port)
+# Node 2
 ./fnn-cli --url http://127.0.0.1:8237 channel list_channels
-
-# Or using RPC
-curl -s -X POST \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "42",
-    "jsonrpc": "2.0",
-    "method": "list_channels",
-    "params": [{}]
-  }' http://localhost:8227
 ```
+  </Tab>
+  <Tab value="RPC">
+```sh
+curl -s -X POST -H "Content-Type: application/json" \
+  -d '{"id":"42","jsonrpc":"2.0","method":"list_channels","params":[{}]}' \
+  http://localhost:8227
+```
+  </Tab>
+  <Tab value="CCC">
+    <Callout type="info">CCC support coming soon.</Callout>
+  </Tab>
+</Tabs>
 
-In the response, you will get `local_balance` and `remote_balance` of the channel. For example, if Node 1 opened the channel with 500 CKB and sent 100 CKB to Node 2:
-- Node 1's `local_balance` should be approximately 400 CKB (minus fees)
-- Node 1's `remote_balance` should be 100 CKB
-
-The balances are updated after the payment is successfully sent.
+After sending 100 CKB from Node 1, Node 1's `local_balance` decreases by ~100 CKB and `remote_balance` increases by 100 CKB.
 
 ## Closing the Channel
 
-When you're done with the payment channel, you can close it:
-
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
 ```sh
-# Using CLI
-cd node1 && ./fnn-cli channel shutdown_channel --channel-id 0xcc0b319e3b1155196a4ffc6c2f71205493befee742f9bdd3ef0e11db4a9bbdac --force true
-
-# Or using RPC
-curl -s -X POST \
-  -H "Content-Type: application/json" \
+cd node1 && ./fnn-cli channel shutdown_channel \
+  --channel-id <channel_id> \
+  --force true
+```
+  </Tab>
+  <Tab value="RPC">
+```sh
+curl -s -X POST -H "Content-Type: application/json" \
   -d '{
-    "id": "42",
-    "jsonrpc": "2.0",
-    "method": "shutdown_channel",
+    "id": "42", "jsonrpc": "2.0", "method": "shutdown_channel",
     "params": [{
-      "channel_id": "0xcc0b319e3b1155196a4ffc6c2f71205493befee742f9bdd3ef0e11db4a9bbdac",
+      "channel_id": "<channel_id>",
       "close_script": {
         "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
         "hash_type": "type",
-        "args": "0x4d4ae843f62f05bf1ac601b3dbd43b5b4f9a006a"
+        "args": "<your_lock_arg>"
       },
       "fee_rate": "0x3FC"
     }]
   }' http://localhost:8227
 ```
+  </Tab>
+  <Tab value="CCC">
+    <Callout type="info">CCC support coming soon.</Callout>
+  </Tab>
+</Tabs>
 
-<Callout type="info" title="CLI vs RPC for Closing Channel">
-When using CLI with `--force true`, the `close_script` and `fee_rate` parameters are automatically determined from your node's configuration. This is the recommended approach for beginners.
-
-When using RPC, you need to manually specify the `close_script` to match your node's CKB lock script. You can get these values from:
-- `ckb-cli account list` - shows your lock script details
-- The `script` field in your account information
+<Callout type="info" title="CLI vs RPC for closing">
+With CLI `--force true`, `close_script` and `fee_rate` are determined automatically. With RPC, you must provide `close_script` matching your node's CKB lock script (get it from `ckb-cli account list`).
 </Callout>
-
-Once the channel is successfully closed, there will be a layer 1 transaction on the chain to reclaim the locked CKB. The multiple off-chain payments between the two nodes are also settled in this layer 1 transaction. You can check the transaction details in [CKB Testnet Explorer](https://testnet.explorer.nervos.org/).
-
-## Important Notes
-
-- Keep track of your channel IDs and peer pubkeys
-- Monitor your node logs for any errors or important messages
-- Make sure to properly close channels when they're no longer needed 
 
 ## Next Steps
 
-Now you know how to transfer CKB between two nodes in the Fiber network. You can try to transfer more CKB or try to transfer other tokens that are supported by the Fiber network.
-
-Check out the [Transfer Stablecoin](/docs/quick-start/transfer-stablecoin) guide for more details.
+- [Transfer Stablecoins](/docs/quick-start/transfer-stablecoin) — transfer RUSD through a multi-hop path
+- [Connect Public Nodes](/docs/quick-start/connect-nodes) — connect to the public Testnet nodes

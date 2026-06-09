@@ -1,0 +1,137 @@
+---
+title: "Run a WASM Node"
+description: "Run a Fiber node directly in your browser or Node.js app — no server required"
+date: 2026-05-25
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+## TL;DR
+
+Install `fiber-wasm`, call `fiber(config)` with a TOML config string, and you have a full Fiber node running in the browser or Node.js. No backend server needed.
+
+## What is fiber-js?
+
+fiber-js is a WebAssembly (WASM) build of the Fiber Network Node. It runs directly in the browser or Node.js and provides the same core functionality as the native Rust node (`fnn`) — embedded in your JavaScript app.
+
+| | Native Node | WASM Node |
+|---|---|---|
+| **Runtime** | Native binary | Browser or Node.js |
+| **Deployment** | Server or local machine | Embedded in web app |
+| **Public IP required** | Yes | No — relay nodes supported |
+| **Storage** | File system (SQLite/RocksDB) | IndexedDB (via WASM worker) |
+| **Use case** | Production node operators | Browser wallets, web games, client-side dApps |
+
+## Installation
+
+```bash
+npm install fiber-wasm
+# or
+pnpm add fiber-wasm
+```
+
+## Quick Start
+
+```javascript
+import init, { fiber, node_info, connect_peer, open_channel, send_payment, new_invoice } from 'fiber-wasm';
+
+// 1. Initialize the WASM module
+await init();
+
+// 2. Start the Fiber node with a TOML config
+const config = `
+[fiber]
+listening_addr = "/ip4/0.0.0.0/tcp/0"
+chain = "testnet"
+announce_listening_addr = false
+bootnode_addrs = ["/ip4/54.179.226.154/tcp/8228/p2p/Qmes1EBD4yNo9Ywkfe6eRw9tG1nVNGLDmMud1xJMsoYFKy"]
+
+[rpc]
+listening_addr = "127.0.0.1:8227"
+
+[ckb]
+rpc_url = "https://testnet.ckbapp.dev/"
+`;
+
+await fiber(config, "info");
+
+// 3. Get node info
+const info = await node_info();
+console.log("Node started:", info);
+```
+
+> **Expected Output:** The node initializes, connects to bootnodes, and starts syncing. `node_info()` returns your node's pubkey, version, and chain info.
+
+## Common Workflows
+
+### Open a Channel and Send a Payment
+
+```javascript
+// Connect to a public testnet node
+await connect_peer({
+  pubkey: "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71"
+});
+
+// Open a channel
+await open_channel({
+  pubkey: "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
+  funding_amount: 49900000000, // 499 CKB in shannons
+  public: true
+});
+
+// Create an invoice on the receiving end
+const invoice = await new_invoice({
+  amount: 100000000, // 1 CKB
+  currency: "fibt",
+  description: "Test payment"
+});
+
+// Send the payment
+await send_payment({ invoice: invoice.encoded });
+```
+
+### Keysend (No Invoice)
+
+```javascript
+await send_payment({
+  target_pubkey: "<recipient_pubkey>",
+  amount: 100000000,
+  keysend: true
+});
+```
+
+## Error Handling
+
+```javascript
+try {
+  const result = await send_payment({ invoice: "fibt1..." });
+} catch (err) {
+  console.error("Payment failed:", err);
+}
+```
+
+Common errors:
+- **"Fiber not started!"** — Call `fiber()` first
+- **"Fiber panicked, please refresh page"** — Critical error; refresh the page
+- **Configuration errors** — Check your TOML config string
+
+## API Reference
+
+fiber-js exposes 7 modules with 24 functions. All async functions return `Promise<Result<JsValue, JsValue>>`.
+
+| Module | Key Functions |
+|--------|--------------|
+| **Init** | `fiber(config, log_level)` |
+| **Channel** | `open_channel`, `list_channels`, `shutdown_channel`, `update_channel` |
+| **Payment** | `send_payment`, `get_payment`, `build_router` |
+| **Invoice** | `new_invoice`, `parse_invoice`, `get_invoice`, `cancel_invoice` |
+| **Peer** | `connect_peer`, `disconnect_peer`, `list_peers` |
+| **Graph** | `graph_nodes`, `graph_channels` |
+| **Node** | `node_info` |
+
+For the full API reference see [SDKs & APIs → fiber-js](/docs/developer/fiber-js).
+
+## Next Steps
+
+- [Basic Transfer](/docs/quick-start/basic-transfer) — send your first payment using fiber-js
+- [Build a Game with Fiber](/docs/tutorial/simple-game) — end-to-end example using fiber-js

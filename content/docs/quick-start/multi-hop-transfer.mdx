@@ -1,0 +1,337 @@
+---
+title: "Multi-hop Transfers"
+description: User manual on how to connect to the public Testnet nodes
+date: 2026-04-09
+author: "sunchengzhu"
+authorUrl: "https://github.com/sunchengzhu"
+dependencies:
+  - name: Fiber Node
+    minVersion: "0.8.0"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.8.0"
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+## TL;DR
+
+Connect your local node to Fiber's public relay nodes, open a channel, and send multi-hop payments through the Testnet. Your local node does not need a public IP.
+
+## Public Testnet Node Addresses
+
+```
+node1: /ip4/18.162.235.225/tcp/8119/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo
+node2: /ip4/18.163.221.211/tcp/8119/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC4F3p89
+```
+
+## Local Node Setup
+
+1. Download fnn from the [releases page](https://github.com/nervosnetwork/fiber/releases):
+
+   ```bash
+   mkdir tmp && cd tmp
+   tar xzvf fnn-latest.tar.gz
+   ```
+
+   <Callout type="info" title="macOS Security">
+   ```bash
+   xattr -d com.apple.quarantine fnn fnn-cli fnn-migrate
+   ```
+   </Callout>
+
+2. Create account and export private key:
+
+   ```bash
+   mkdir -p testnet-fnn/nodeA/ckb
+   ./ckb-cli account new           # save the lock_arg
+   ./ckb-cli account export --lock-arg <YOUR_LOCK_ARG> --extended-privkey-path ./exported-key
+   head -n 1 ./exported-key > testnet-fnn/nodeA/ckb/key
+   chmod 600 testnet-fnn/nodeA/ckb/key
+   ```
+
+3. Copy config and tools:
+
+   ```bash
+   cp config/testnet/config.yml testnet-fnn/nodeA
+   cp fnn-cli testnet-fnn/nodeA
+   ```
+
+   <Callout type="info" title="HTTP Proxy Issues">
+   ```bash
+   export NO_PROXY=127.0.0.1,localhost
+   ```
+   </Callout>
+
+4. Fund nodeA's address with **10,000 CKB** and **20 RUSD**:
+   - CKB: [https://faucet.nervos.org](https://faucet.nervos.org)
+   - RUSD: [https://testnet0815.stablepp.xyz/faucet](https://testnet0815.stablepp.xyz/faucet) (claim via [JoyID](https://testnet.joyid.dev/), then transfer to nodeA's address)
+
+5. Start nodeA:
+
+   ```bash
+   FIBER_SECRET_KEY_PASSWORD='123' RUST_LOG=info ./fnn -c testnet-fnn/nodeA/config.yml -d testnet-fnn/nodeA > testnet-fnn/nodeA/a.log 2>&1 &
+   ```
+
+## CKB Channel with Public Node 1
+
+<Callout type="info">
+CLI amounts are in shannons (1 CKB = 100,000,000). RPC amounts are hex strings (e.g. `"0x5f5e100"` = 100,000,000).
+</Callout>
+
+### 1. Connect to node1
+
+First get node1's pubkey:
+
+```bash
+curl -s 'http://18.162.235.225:8227' \
+  -H 'Content-Type: application/json' \
+  -d '{"id":1,"jsonrpc":"2.0","method":"node_info"}' | grep -o '"pubkey":"[^"]*"'
+```
+
+Then connect:
+
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
+```bash
+cd testnet-fnn/nodeA && ./fnn-cli peer connect_peer \
+  --address "/ip4/18.162.235.225/tcp/8119/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo"
+```
+  </Tab>
+  <Tab value="RPC">
+```bash
+curl -s 'http://127.0.0.1:8227' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "id": 1, "jsonrpc": "2.0", "method": "connect_peer",
+    "params": [{"pubkey": "<node1_pubkey>", "address": "/ip4/18.162.235.225/tcp/8119/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo"}]
+  }'
+```
+  </Tab>
+  <Tab value="CCC">
+    <Callout type="info">CCC support coming soon.</Callout>
+  </Tab>
+</Tabs>
+
+### 2. Open a CKB Channel (500 CKB minimum)
+
+_node1 requires at least 438 CKB funding amount._
+
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
+```bash
+cd testnet-fnn/nodeA && ./fnn-cli channel open_channel \
+  --pubkey <node1_pubkey> \
+  --funding-amount 50000000000 \
+  --public true
+```
+  </Tab>
+  <Tab value="RPC">
+```bash
+curl -s 'http://127.0.0.1:8227' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "id": 2, "jsonrpc": "2.0", "method": "open_channel",
+    "params": [{"pubkey": "<node1_pubkey>", "funding_amount": "0xba43b7400", "public": true}]
+  }'
+```
+  </Tab>
+  <Tab value="CCC">
+    <Callout type="info">CCC support coming soon.</Callout>
+  </Tab>
+</Tabs>
+
+### 3. Wait for ChannelReady
+
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
+```bash
+./fnn-cli channel list_channels
+```
+  </Tab>
+  <Tab value="RPC">
+```bash
+curl -s 'http://127.0.0.1:8227' \
+  -H 'Content-Type: application/json' \
+  -d '{"id": 3, "jsonrpc": "2.0", "method": "list_channels", "params": [{"peer_pubkey": "<node1_pubkey>"}]}'
+```
+  </Tab>
+  <Tab value="CCC">
+    <Callout type="info">CCC support coming soon.</Callout>
+  </Tab>
+</Tabs>
+
+<Callout type="warning">
+After `ChannelReady`, wait a few minutes before sending payments — the gossip protocol needs time to sync routing info.
+</Callout>
+
+### 4. Create an Invoice on node2
+
+Generate a preimage: `payment_preimage="0x$(openssl rand -hex 32)"`
+
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
+```bash
+./fnn-cli --url http://18.163.221.211:8227 invoice new_invoice \
+  --amount 100000000 \
+  --currency Fibt \
+  --description "test invoice" \
+  --expiry 3600 \
+  --payment-preimage $payment_preimage
+```
+  </Tab>
+  <Tab value="RPC">
+```bash
+curl -s 'http://18.163.221.211:8227' \
+  -H 'Content-Type: application/json' \
+  -d "{
+    \"id\": 4, \"jsonrpc\": \"2.0\", \"method\": \"new_invoice\",
+    \"params\": [{
+      \"amount\": \"0x5f5e100\",
+      \"currency\": \"Fibt\",
+      \"description\": \"test invoice\",
+      \"expiry\": \"0xe10\",
+      \"payment_preimage\": \"$payment_preimage\",
+      \"hash_algorithm\": \"sha256\"
+    }]
+  }"
+```
+  </Tab>
+  <Tab value="CCC">
+    <Callout type="info">CCC support coming soon.</Callout>
+  </Tab>
+</Tabs>
+
+### 5. Send Payment (nodeA → node1 → node2)
+
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
+```bash
+./fnn-cli payment send_payment --invoice "<invoice_address>"
+```
+  </Tab>
+  <Tab value="RPC">
+```bash
+curl -s 'http://127.0.0.1:8227' \
+  -H 'Content-Type: application/json' \
+  -d '{"id": 6, "jsonrpc": "2.0", "method": "send_payment", "params": [{"invoice": "<invoice_address>"}]}'
+```
+  </Tab>
+  <Tab value="CCC">
+    <Callout type="info">CCC support coming soon.</Callout>
+  </Tab>
+</Tabs>
+
+### 6. Close the Channel
+
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
+```bash
+./fnn-cli channel shutdown_channel \
+  --channel-id <channel_id> \
+  --close-script '{"code_hash":"0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8","hash_type":"type","args":"<your_lock_arg>"}'
+```
+  </Tab>
+  <Tab value="RPC">
+```bash
+curl -s 'http://127.0.0.1:8227' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "id": 9, "jsonrpc": "2.0", "method": "shutdown_channel",
+    "params": [{
+      "channel_id": "<channel_id>",
+      "close_script": {
+        "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+        "hash_type": "type",
+        "args": "<your_lock_arg>"
+      },
+      "fee_rate": "0x3FC"
+    }]
+  }'
+```
+  </Tab>
+  <Tab value="CCC">
+    <Callout type="info">CCC support coming soon.</Callout>
+  </Tab>
+</Tabs>
+
+## RUSD Channel with Public Node 1
+
+The steps are identical to the CKB channel above, with two differences:
+
+1. **Open channel** — add `funding_udt_type_script`:
+
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
+```bash
+./fnn-cli channel open_channel \
+  --pubkey <node1_pubkey> \
+  --funding-amount 20 \
+  --public true \
+  --funding-udt-type-script '{"code_hash":"0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a","hash_type":"type","args":"0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"}'
+```
+  </Tab>
+  <Tab value="RPC">
+```bash
+curl -s 'http://127.0.0.1:8227' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "id": 2, "jsonrpc": "2.0", "method": "open_channel",
+    "params": [{
+      "pubkey": "<node1_pubkey>",
+      "funding_amount": "0x2540be400",
+      "public": true,
+      "funding_udt_type_script": {
+        "code_hash": "0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a",
+        "hash_type": "type",
+        "args": "0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"
+      }
+    }]
+  }'
+```
+  </Tab>
+  <Tab value="CCC">
+    <Callout type="info">CCC support coming soon.</Callout>
+  </Tab>
+</Tabs>
+
+2. **Create invoice** — add `udt_type_script`:
+
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
+```bash
+./fnn-cli --url http://18.163.221.211:8227 invoice new_invoice \
+  --amount 100000000 \
+  --currency Fibt \
+  --description "test RUSD invoice" \
+  --expiry 3600 \
+  --udt-type-script '{"code_hash":"0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a","hash_type":"type","args":"0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"}'
+```
+  </Tab>
+  <Tab value="RPC">
+```bash
+curl -s 'http://18.163.221.211:8227' \
+  -H 'Content-Type: application/json' \
+  -d "{
+    \"id\": 4, \"jsonrpc\": \"2.0\", \"method\": \"new_invoice\",
+    \"params\": [{
+      \"amount\": \"0x5f5e100\",
+      \"currency\": \"Fibt\",
+      \"description\": \"test RUSD invoice\",
+      \"expiry\": \"0xe10\",
+      \"payment_preimage\": \"$payment_preimage\",
+      \"hash_algorithm\": \"sha256\",
+      \"udt_type_script\": {
+        \"code_hash\": \"0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a\",
+        \"hash_type\": \"type\",
+        \"args\": \"0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b\"
+      }
+    }]
+  }"
+```
+  </Tab>
+  <Tab value="CCC">
+    <Callout type="info">CCC support coming soon.</Callout>
+  </Tab>
+</Tabs>
+
+_node1 requires at least 20 RUSD funding amount. The `send_payment` call is identical to the CKB flow above._

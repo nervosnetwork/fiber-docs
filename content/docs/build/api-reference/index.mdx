@@ -1,0 +1,61 @@
+---
+title: API Overview
+description: RPC endpoint, request/response format, and authentication
+date: 2026-05-25
+---
+
+## RPC Endpoint
+
+```
+POST http://<node_address>:<port>/
+```
+
+Default: `http://127.0.0.1:8227`
+
+## Request Format
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "<method_name>",
+  "params": [<param1>, <param2>, ...],
+  "id": 1
+}
+```
+
+## Response Format
+
+### Success
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": { ... },
+  "id": 1
+}
+```
+
+### Error
+
+```json
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32600,
+    "message": "Invalid request"
+  },
+  "id": 1
+}
+```
+
+## Authentication
+
+If Biscuit authentication is enabled, include a Bearer token in the `Authorization` header:
+
+```
+Authorization: Bearer <your_biscuit_token>
+```
+
+See [Biscuit Authentication](/docs/guide/node-operator/biscuit-auth) for details.
+
+***

@@ -1,0 +1,66 @@
+---
+title: Watchtower
+description: How Watchtower protects your channel funds from fraud while you're offline
+date: 2026-05-25
+---
+
+In a payment channel network, your channel partner could attempt to broadcast an outdated commitment transaction while you are offline, stealing funds that rightfully belong to you. The **Watchtower** is a security mechanism that monitors your channels and automatically responds to fraudulent on-chain activity, even when your node is not running.
+
+## How Watchtower Works
+
+Watchtower is responsible for monitoring the state of off-chain payment channels and ensuring the security of channels and funds. Its core functions are:
+
+1. **Channel Monitoring**: Real-time monitoring of the payment channel state, including opening, updating, and closing channels.
+2. **Anomaly Detection**: Detecting abnormal activities in channels, such as malicious users attempting to close channels with old states or double-spending attacks.
+3. **Proactive Response**: When anomalies are detected, promptly broadcasting penalty transactions to the blockchain to prevent fund losses due to malicious behavior.
+
+### Penalty Mechanism
+
+Fiber's watchtower ensures that old commitment transactions are not used in an on-chain transaction by comparing the `commitment_number`. If a violation is detected (i.e., a peer submits an outdated commitment transaction), the watchtower constructs a **revocation transaction** and submits it on-chain to penalize the offender. Otherwise, it constructs and sends a **settlement transaction**.
+
+### Event-Driven Architecture
+
+Fiber's watchtower implementation uses the Actor Model. The WatchtowerActor listens for key events in the Fiber node:
+
+- When a new channel is created, it receives a `RemoteTxComplete` event, and the watchtower inserts a corresponding record into the database to start monitoring this channel.
+- When the channel is closed through mutual agreement, it receives a `ChannelClosed` event, and the watchtower removes the corresponding record from the database.
+- During TLC interactions in the channel, the watchtower receives `RemoteCommitmentSigned` and `RevokeAndAckReceived` events, updating the `revocation_data` and `settlement_data` stored in the database respectively. These fields are used later to create revocation and settlement transactions.
+
+## Configuration
+
+Watchtower can be configured in your node's config file with the following options:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `watchtower_check_interval_seconds` | u64 | `60` | Interval to check watchtower. `0` = never check. |
+| `disable_built_in_watchtower` | bool | `false` | Disable built-in watchtower actor |
+| `standalone_watchtower_rpc_url` | string | — | URL of standalone watchtower RPC server |
+| `standalone_watchtower_token` | string | — | RPC token for standalone watchtower |
+
+### Built-in vs Standalone Watchtower
+
+Fiber provides two deployment modes for Watchtower:
+
+- **Built-in Watchtower**: Enabled by default, the watchtower runs as part of your Fiber node. This is suitable for nodes that stay online most of the time.
+- **Standalone Watchtower**: A separate watchtower service that monitors your channels remotely. Configure `standalone_watchtower_rpc_url` and `standalone_watchtower_token` to connect to a standalone watchtower. This is useful if you want a dedicated always-online service to watch your channels.
+
+## Watchtower RPC API
+
+For programmatic access to watchtower functions, Fiber provides the following RPC methods:
+
+| Method | Description |
+|--------|-------------|
+| `create_watch_channel` | Create a new watched channel |
+| `remove_watch_channel` | Remove a watched channel |
+| `update_revocation` | Update revocation data for a channel |
+| `update_pending_remote_settlement` | Update pending remote settlement |
+| `update_local_settlement` | Update local settlement |
+| `create_preimage` | Create a payment preimage |
+| `remove_preimage` | Remove a payment preimage |
+
+See [Watchtower API Reference](/docs/developer/api-reference/watchtower) for detailed parameter and return type specifications.
+
+## Further Reading
+
+- [Fiber Architecture - Watchtower](/docs/res/high-level#preventing-channels-from-fraud-via-watchtower) for source code-level implementation details
+- [Light Paper - Watchtower Service](/docs/res/light-paper#watchtower-service) for the design rationale

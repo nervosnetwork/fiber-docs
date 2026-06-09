@@ -4,15 +4,17 @@ import { baseOptions } from '@/app/layout.config';
 import { source } from '@/lib/source';
 
 export default function Layout({ children }: { children: ReactNode }) {
-  // Create docs-specific options without navbar links
-  const docsOptions = {
-    ...baseOptions,
-    links: [], // Remove navbar links for docs pages
-  };
-
   return (
     <div className="bg-fd-background">
-      <DocsLayout tree={source.pageTree} {...docsOptions}>
+      <DocsLayout
+        tree={source.pageTree}
+        {...baseOptions}
+        links={[]}
+        sidebar={{
+          tabs: false,
+        }}
+        searchToggle={{ enabled: true }}
+      >
         {children}
       </DocsLayout>
     </div>

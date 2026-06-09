@@ -1,0 +1,277 @@
+---
+title: "Fiber Cheat Code"
+description: "Quick reference for common Fiber CLI commands, RPC calls, channel operations, and configuration"
+date: 2026-06-01
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+A quick-reference cheat sheet for Fiber developers and node operators. Keep this page bookmarked for everyday operations.
+
+## Node Quick Start
+
+```bash
+# Download the latest binary
+mkdir tmp && cd tmp
+tar xzvf fnn-latest.tar.gz
+
+# macOS: remove quarantine attribute
+xattr -d com.apple.quarantine fnn fnn-cli fnn-migrate
+
+# Set up keys
+ckb-cli account new
+ckb-cli account export --lock-arg <lock_arg> --extended-privkey-path ./ckb/exported-key
+head -n 1 ./ckb/exported-key > ./ckb/key
+
+# Start the node
+FIBER_SECRET_KEY_PASSWORD='your_password' RUST_LOG=info ./fnn -c config.yml -d .
+```
+
+<Callout type="info">
+  The default RPC endpoint is `http://127.0.0.1:8227`. Use `--url` with `fnn-cli` to target a different node (e.g. `./fnn-cli --url http://127.0.0.1:8237 info`).
+</Callout>
+
+<Callout type="info" title="HTTP Proxy Issues">
+  If you encounter 503 errors with `fnn-cli`, run:
+  ```bash
+  export NO_PROXY=127.0.0.1,localhost
+  ```
+</Callout>
+
+## Common CLI Commands
+
+### Node & Peer
+
+| Category | Operation | Command |
+|----------|-----------|---------|
+| Node | View node info | `fnn-cli info` |
+| Node | List available commands | `fnn-cli --help` |
+| Peer | Connect to a peer (by pubkey) | `fnn-cli peer connect_peer --pubkey <pubkey>` |
+| Peer | Connect to a peer (by address) | `fnn-cli peer connect_peer --address "/ip4/<ip>/tcp/<port>"` |
+| Peer | List connected peers | `fnn-cli peer list_peers` |
+| Peer | Disconnect a peer | `fnn-cli peer disconnect_peer --pubkey <pubkey>` |
+
+### Channel
+
+| Category | Operation | Command |
+|----------|-----------|---------|
+| Channel | Open a CKB channel | `fnn-cli channel open_channel --pubkey <pubkey> --funding-amount <amount>` |
+| Channel | Open a UDT channel | `fnn-cli channel open_channel --pubkey <pubkey> --funding-amount <amount> --udt-type-script '<json>'` |
+| Channel | List all channels | `fnn-cli channel list_channels` |
+| Channel | Close a channel | `fnn-cli channel shutdown_channel --channel-id <id>` |
+| Channel | Update channel config | `fnn-cli channel update_channel --channel-id <id> [options]` |
+
+### Invoice & Payment
+
+| Category | Operation | Command |
+|----------|-----------|---------|
+| Invoice | Create a CKB invoice | `fnn-cli invoice new_invoice --amount 1000 --currency Fibt --description "Test"` |
+| Invoice | Create a UDT invoice | `fnn-cli invoice new_invoice --amount 1000 --currency Fibt --udt-type-script '<json>'` |
+| Invoice | Parse an invoice | `fnn-cli invoice parse_invoice --invoice "fibt1..."` |
+| Payment | Send payment | `fnn-cli payment send_payment --invoice "fibt1..."` |
+| Payment | Send keysend payment | `fnn-cli payment send_payment --pubkey <pubkey> --amount <amount> --keysend` |
+| Payment | Check payment status | `fnn-cli payment get_payment --payment-hash 0x...` |
+| Payment | List all payments | `fnn-cli payment list_payments` |
+
+<Callout type="warning">
+  **Amount units differ between CLI and RPC**: CLI uses human-readable units (e.g. `1000` = 1000 CKB), while RPC uses hex shannons (e.g. `"0x0DE0B6B3A7640000"` = 1 CKB = 10<sup>8</sup> shannons). For UDT amounts, CLI uses base units directly.
+</Callout>
+
+## RPC Quick Reference
+
+The default RPC endpoint is `http://127.0.0.1:8227`. All calls use JSON-RPC 2.0.
+
+### Node & Peer
+
+| Method | Description | Key Params |
+|--------|-------------|------------|
+| `node_info` | Get node identity & config | — |
+| `connect_peer` | Connect to a remote peer | `pubkey`, `address` |
+| `disconnect_peer` | Disconnect from a peer | `pubkey` |
+| `list_peers` | List connected peers | — |
+
+### Channel
+
+| Method | Description | Key Params |
+|--------|-------------|------------|
+| `open_channel` | Open a new channel | `pubkey`, `funding_amount`, `funding_fee_rate`, `udt_type_script` |
+| `list_channels` | List all channels | — |
+| `shutdown_channel` | Close a channel | `channel_id` |
+| `update_channel` | Update channel parameters | `channel_id`, `tlc_fee_proportional_millionths`, `tlc_min_value`, `tlc_expiry_delta` |
+
+### Invoice & Payment
+
+| Method | Description | Key Params |
+|--------|-------------|------------|
+| `new_invoice` | Create an invoice | `amount`, `currency`, `description`, `expiry`, `udt_type_script` |
+| `parse_invoice` | Decode an invoice string | `invoice` |
+| `send_payment` | Send a payment | `invoice` or `target_pubkey` + `amount` |
+| `get_payment` | Get payment status | `payment_hash` |
+| `list_payments` | List all payments | — |
+
+### Example RPC Call
+
+```bash
+curl -s -X POST -H "Content-Type: application/json" \
+  -d '{"id": 42, "jsonrpc": "2.0", "method": "node_info", "params": []}' \
+  http://127.0.0.1:8227
+```
+
+## Channel Lifecycle
+
+```
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  Awaiting    │────▶│  Channel     │────▶│   Closing    │
+│   Lockin     │     │    Ready     │     │              │
+└──────────────┘     └──────┬───────┘     └──────┬───────┘
+                           │                     │
+                           ▼                     ▼
+                    ┌──────────────┐     ┌──────────────┐
+                    │   Normal     │     │    Closed    │
+                    │  Operation   │     │              │
+                    └──────────────┘     └──────────────┘
+```
+
+| State | Description |
+|-------|-------------|
+| **AwaitingLockin** | Funding transaction submitted, waiting for on-chain confirmation |
+| **ChannelReady** | Channel is open and operational; off-chain payments are possible |
+| **Closing** | A shutdown request has been initiated |
+| **Closed** | Channel is fully settled on-chain |
+
+<Callout type="info">
+  Use `fnn-cli channel list_channels` to check the state of your channels. Each side must reserve **99 CKB** (98 for commitment lock + 1 for shutdown fee).
+</Callout>
+
+## Payment Lifecycle
+
+```
+Created ──▶ Inflight ──┬──▶ Success
+                       └──▶ Failed
+```
+
+| State | Description |
+|-------|-------------|
+| **Created** | Payment session initialized, routing in progress |
+| **Inflight** | Payment is being forwarded through the network |
+| **Success** | Payment settled; preimage revealed, funds transferred |
+| **Failed** | Payment permanently failed (expired invoice, no route, etc.) |
+
+Fiber uses a **two-level state machine**: a high-level `PaymentSession` represents the intent, and one or more `PaymentAttempt`s handle actual routing. Failed attempts are automatically retried with different routes.
+
+## Fee Calculation
+
+The forwarding fee for a TLC (Timelock Contract) is calculated as:
+
+```
+fee = ⌈(amount × tlc_fee_proportional_millionths) / 1,000,000⌉
+```
+
+**Example**: With `tlc_fee_proportional_millionths = 1000` (0.1%), forwarding 1,000 CKB earns the relay node 1 CKB.
+
+<Callout type="info">
+  The fee is calculated using the **outbound** channel's configuration. For a path A → B → C, the fee B charges is based on the channel between B and C, not A and B.
+</Callout>
+
+## Important Constants & Parameters
+
+| Parameter | Purpose | Default / Typical Value |
+|-----------|---------|------------------------|
+| **Reserved CKB** | Channel reserve for lock and fees | 99 CKB (98 commitment + 1 shutdown fee) |
+| `tlc_fee_proportional_millionths` | Forwarding fee rate | 1000 (= 0.1%) |
+| `tlc_min_value` | Minimum TLC value to forward | 0 (any amount) |
+| `tlc_expiry_delta` | TLC expiry window (milliseconds) | 86400000 (1 day) |
+| `to_self_delay` | Commitment delay (epochs) | 1 epoch (~4 hours) |
+| `max_tlc_value_in_flight` | Max total TLC value in flight | Set at channel open, not updatable |
+| `max_tlc_number_in_flight` | Max number of TLCs in flight | 125 |
+| `open_channel_auto_accept_min_ckb_funding_amount` | Min funding for auto-accept | 49900000000 (≥ 499 CKB) |
+| `auto_accept_channel_ckb_funding_amount` | Auto-accept contribution | 25000000000 (250 CKB) |
+
+## Capacity Formula
+
+Each channel side must reserve CKB for on-chain operations:
+
+```
+Available Balance = Funded Amount − 99 CKB
+```
+
+**Example**: Fund 499 CKB → 499 − 99 = **400 CKB** available for off-chain payments.
+
+<Callout type="warning">
+  The 99 CKB reserve is **per side**. In a two-party channel, both sides must reserve this amount. This reserve is not available for payments — it covers the commitment transaction lock and the shutdown transaction fee.
+</Callout>
+
+## Testnet Resources
+
+| Resource | URL | Notes |
+|----------|-----|-------|
+| CKB Testnet Faucet | [faucet.nervos.org](https://faucet.nervos.org) | Get testnet CKB |
+| RUSD Stablecoin | [testnet0815.stablepp.xyz](https://testnet0815.stablepp.xyz/stablecoin) | Mint testnet RUSD |
+| CKB Explorer | [explorer.nervos.org](https://explorer.nervos.org/aggron) | Testnet block explorer |
+| Fiber Dashboard | [dashboard.fiber.channel](https://dashboard.fiber.channel/nodes) | Network topology & stats |
+| Fiber Releases | [GitHub Releases](https://github.com/nervosnetwork/fiber/releases) | Download latest binary |
+
+### Public Testnet Nodes
+
+| Name | Pubkey | Auto-accept CKB | Auto-accept UDT |
+|------|--------|------------------|------------------|
+| fiber-testnet-public-bottle | `02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71` | ≥ 499 CKB | RUSD ≥ 20 |
+| fiber-testnet-public-bracer | `0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc` | ≥ 499 CKB | RUSD ≥ 20 |
+
+## Common Patterns
+
+### Multi-Hop Routing
+
+You don't need a direct channel to every peer. Fiber automatically discovers paths through intermediate relay nodes:
+
+```
+┌───────┐        ┌───────┐        ┌───────┐        ┌───────┐
+│ nodeA │ ─────▶ │ node1 │ ─────▶ │ node2 │ ─────▶ │ nodeB │
+│:8227  │        │public │        │public │        │:8237  │
+└───────┘        └───────┘        └───────┘        └───────┘
+  sender        relay node 1     relay node 2      receiver
+```
+
+Local nodes do not need a public IP — they connect through public relay nodes. See [Multi-Hop Routing](/docs/guide/routing/multi-hop) for full details.
+
+### Channel Rebalancing
+
+When one side of a channel is depleted, rebalance by sending a payment back to yourself:
+
+**Automatic** — use `send_payment` with `allow_self_payment: true`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "send_payment",
+  "params": [{
+    "target_pubkey": "<your_own_pubkey>",
+    "amount": "0x5F5E100",
+    "keysend": true,
+    "allow_self_payment": true
+  }],
+  "id": 1
+}
+```
+
+**Manual** — use `build_router` + `send_payment_with_router` for control over the exact path. See [Channel Rebalancing](/docs/guide/channels/channel-rebalancing) for details.
+
+### Keysend Payments
+
+Send a payment without an invoice by specifying the recipient's pubkey directly:
+
+```bash
+fnn-cli payment send_payment --pubkey <recipient_pubkey> --amount 1000 --keysend
+```
+
+Keysend is useful for spontaneous payments, tipping, and machine-to-machine transactions where the recipient cannot pre-generate an invoice.
+
+---
+
+**Further reading**:
+
+- [Channel Lifecycle](/docs/guide/channels/channel-lifecycle) — detailed channel state transitions
+- [Payment Lifecycle](/docs/guide/payments/payment-lifecycle) — payment session and attempt states
+- [HTTP RPC Guide](/docs/developer/http-rpc-guide) — full RPC API reference
+- [Network Resources](/docs/res/network-resources) — all testnet resources in one place
+- [Channel Rebalancing](/docs/guide/channels/channel-rebalancing) — liquidity management

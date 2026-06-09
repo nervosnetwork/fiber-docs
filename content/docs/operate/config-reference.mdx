@@ -1,0 +1,199 @@
+---
+title: Configuration Reference
+description: Complete reference for all config.yml fields, environment variables, and defaults
+date: 2026-05-25
+---
+
+Fiber Node is configured via a `config.yml` file. This page documents all available fields, their types, defaults, and usage.
+
+## Configuration Priority
+
+Environment variables > Command-line arguments > `config.yml` > Built-in defaults
+
+## Top-Level Structure
+
+```yaml
+fiber:
+  # P2P network and channel configuration
+rpc:
+  # JSON-RPC server configuration
+ckb:
+  # CKB blockchain integration
+cch:
+  # Cross-Chain Hub configuration (optional)
+services:
+  - fiber
+  - rpc
+  - ckb
+```
+
+`services` specifies which services to run. At least one is required. Options: `fiber`, `rpc`, `ckb`, `cch`.
+
+---
+
+## Fiber Section (`fiber`)
+
+### Network Configuration
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `listening_addr` | string | `/ip4/0.0.0.0/tcp/0` | TCP listening address for P2P connections (multiaddr format) |
+| `announce_listening_addr` | bool | `false` | Whether to announce the listening address to peers |
+| `announce_private_addr` | bool | `false` | Whether to announce private addresses (only for private networks) |
+| `announced_addrs` | string[] | `[]` | Public addresses to announce (multiaddr format). Set this to your public IP. |
+| `announced_node_name` | string | — | Node name shown in RPC responses, TUI, and network graph |
+| `bootnode_addrs` | string[] | `[]` | Bootstrap node addresses for initial peer discovery (multiaddr format) |
+| `chain` | string | **required** | Chain specification: `"mainnet"`, `"testnet"`, or path to custom chain spec |
+
+### Channel Configuration
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `open_channel_auto_accept_min_ckb_funding_amount` | u64 | `10000000000` (100 CKB) | Minimum CKB funding to auto-accept channel requests |
+| `auto_accept_channel_ckb_funding_amount` | u64 | `9900000000` (99 CKB) | CKB amount to auto-accept. Set to `0` to disable auto-accept. |
+| `to_be_accepted_channels_number_limit` | usize | `20` | Max pending channels from one peer |
+| `to_be_accepted_channels_bytes_limit` | usize | `50000` | Max storage bytes of pending channels from one peer |
+| `funding_timeout_seconds` | u64 | `86400` (1 day) | Timeout for funding transaction confirmation |
+| `external_funding_timeout_seconds` | u64 | `300` (5 min) | Timeout waiting for externally signed funding tx |
+
+### TLC Configuration
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `tlc_expiry_delta` | u64 | `86400000` (1 day, ms) | Time window to forward a TLC |
+| `tlc_min_value` | u128 | `0` | Minimum TLC value (`0` = no minimum) |
+| `tlc_fee_proportional_millionths` | u128 | `1000` | Fee for forwarding TLCs (1000 = 0.1%) |
+
+### Peer Connection
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `max_inbound_peers` | usize | `16` | Maximum inbound connections |
+| `min_outbound_peers` | usize | `8` | Minimum outbound connections to maintain |
+| `enable_peer_reconnect_backoff` | bool | `true` | Auto-reconnect for peers with active channels |
+
+### Gossip Network
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `sync_network_graph` | bool | `true` | Whether to sync network graph from peers |
+| `gossip_network_maintenance_interval_ms` | u64 | `60000` (1 min) | Interval for gossip network maintenance |
+| `gossip_store_maintenance_interval_ms` | u64 | `20000` | Interval for gossip store maintenance |
+
+### Watchtower
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `watchtower_check_interval_seconds` | u64 | `60` | Interval to check watchtower. `0` = never check. |
+| `disable_built_in_watchtower` | bool | `false` | Disable built-in watchtower actor |
+| `standalone_watchtower_rpc_url` | string | — | URL of standalone watchtower RPC server |
+| `standalone_watchtower_token` | string | — | RPC token for standalone watchtower |
+
+### Proxy & Tor
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `proxy.proxy_url` | string | — | SOCKS5 proxy URL (e.g., `socks5://127.0.0.1:9050`) |
+| `proxy.proxy_random_auth` | bool | `true` | Random username/password for Tor stream isolation |
+| `onion.listen_on_onion` | bool | `false` | Make node reachable via .onion address |
+| `onion.onion_server` | string | — | Tor SOCKS5 proxy URL |
+| `onion.tor_controller` | string | `127.0.0.1:9051` | Tor controller address |
+
+---
+
+## RPC Section (`rpc`)
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `listening_addr` | string | — | Listen address for JSON-RPC (e.g., `127.0.0.1:8227`). **Required** if RPC service enabled. |
+| `biscuit_public_key` | string | — | Public key for Biscuit authorization. If set, RPC requires Bearer token auth. |
+| `enabled_modules` | string[] | all modules | RPC modules to enable: `cch`, `channel`, `graph`, `payment`, `info`, `invoice`, `peer`, `watchtower` |
+| `cors_enabled` | bool | `false` | Enable CORS for HTTP RPC |
+| `cors_allowed_origins` | string[] | `[]` | Allowed origins for CORS (empty = allow all if CORS enabled) |
+
+---
+
+## CKB Section (`ckb`)
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `rpc_url` | string | `http://127.0.0.1:8114` | CKB node RPC URL |
+| `udt_whitelist` | array | `[]` | Supported UDT configurations (see below) |
+
+### UDT Configuration
+
+```yaml
+ckb:
+  udt_whitelist:
+    - name: "USDI"
+      script:
+        code_hash: "0x..."
+        hash_type: type
+        args: "0x..."
+      auto_accept_amount: 10000000  # Optional: auto-accept amount
+      cell_deps:
+        - type_id:
+            code_hash: "0x..."
+            hash_type: type
+            args: "0x..."
+```
+
+---
+
+## CCH Section (`cch`) — Cross-Chain Hub
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `lnd_rpc_url` | string | `https://127.0.0.1:10009` | LND gRPC endpoint |
+| `lnd_cert_path` | string | — | Path to TLS cert for gRPC |
+| `lnd_macaroon_path` | string | — | Path to Macaroon file |
+| `wrapped_btc_type_script_args` | string | **required** | Wrapped BTC UDT type script args |
+| `order_expiry_delta_seconds` | u64 | `129600` (36h) | Cross-chain order expiry time |
+| `base_fee_sats` | u64 | `0` | Base fee per order (satoshis) |
+| `fee_rate_per_million_sats` | u64 | `1` | Proportional fee per million satoshis |
+
+---
+
+## Environment Variables
+
+All config fields can be overridden with environment variables using the prefix pattern:
+
+- `FIBER_*` for the `fiber` section (e.g., `FIBER_LISTENING_ADDR`)
+- `RPC_*` for the `rpc` section (e.g., `RPC_LISTENING_ADDR`)
+- `CKB_*` for the `ckb` section (e.g., `CKB_NODE_RPC_URL`)
+- `CCH_*` for the `cch` section (e.g., `CCH_LND_RPC_URL`)
+
+**Special variable**: `FIBER_SECRET_KEY_PASSWORD` — Required to decrypt the CKB private key at startup.
+
+---
+
+## Example: Minimal Testnet Config
+
+```yaml
+fiber:
+  listening_addr: "/ip4/0.0.0.0/tcp/8228"
+  bootnode_addrs:
+    - "/ip4/54.179.226.154/tcp/8228/p2p/Qmes1EBD4yNo9Ywkfe6eRw9tG1nVNGLDmMud1xJMsoYFKy"
+  announce_listening_addr: true
+  chain: testnet
+  scripts:
+    - name: FundingLock
+      script: { code_hash: "0x6c67887fe201ee0c7853f1682c0b77c0e6214044c156c7558269390a8afa6d7c", hash_type: type, args: "0x" }
+      cell_deps: []
+    - name: CommitmentLock
+      script: { code_hash: "0x740dee83f87c6f309824d8fd3fbdd3c8380ee6fc9acc90b1a748438afcdf81d8", hash_type: type, args: "0x" }
+      cell_deps: []
+
+rpc:
+  listening_addr: "127.0.0.1:8227"
+
+ckb:
+  rpc_url: "https://testnet.ckbapp.dev/"
+
+services:
+  - fiber
+  - rpc
+  - ckb
+```
+
+> **Tip**: Use the config files from the [Fiber repository](https://github.com/nervosnetwork/fiber/tree/main/config) as starting points — they include the correct script hashes and bootnode addresses for each network.

@@ -1,0 +1,94 @@
+---
+title: Unidirectional Channel
+description: Open a one-way payment channel where funds can only flow from initiator to acceptor
+date: 2026-05-25
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+<Callout type="info">
+  This page is a work in progress. Detailed operational guides and examples will be added soon.
+</Callout>
+
+A **unidirectional channel** (also called a one-way channel) is a payment channel where funds can only flow in a single direction: from the channel initiator to the acceptor. Unlike a standard bidirectional channel, the acceptor cannot send payments back through the channel.
+
+## When to Use a Unidirectional Channel
+
+Unidirectional channels are useful in scenarios where:
+
+- **One-way streaming payments**: A subscriber pays a content provider continuously, but never expects refunds or payments back
+- **Merchant-only receiving**: A merchant opens a channel solely to receive customer payments
+- **Simplified channel management**: No need to worry about balanced liquidity in both directions
+
+## How It Works
+
+In a unidirectional channel:
+
+1. The **initiator** opens the channel and provides all the funding
+2. The **acceptor** does not contribute any funds to the channel
+3. The initiator can send payments to the acceptor through off-chain TLC updates
+4. The acceptor **cannot** send payments back to the initiator through this channel
+5. When the channel closes, the final balance is settled on-chain
+
+<Callout type="warning">
+  Unidirectional channels **cannot be public**. They will not be broadcast to the network graph, so they cannot be used for routing payments from other nodes.
+</Callout>
+
+## Opening a Unidirectional Channel
+
+Set `one_way: true` when calling `open_channel`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "open_channel",
+  "params": [
+    {
+      "peer_id": "QmbLM...",
+      "funding_amount": "0x77359400",
+      "one_way": true
+    }
+  ],
+  "id": 1
+}
+```
+
+Or using `fnn-cli`:
+
+```bash
+fnn-cli channel open_channel --peer-id QmbLM... --funding-amount 49900000000 --one-way
+```
+
+## Channel Properties
+
+| Property | Unidirectional Channel | Bidirectional Channel |
+|----------|----------------------|----------------------|
+| Funding | Only initiator funds | Both parties fund |
+| Payment direction | Initiator → Acceptor only | Both directions |
+| Public visibility | Cannot be public | Can be public |
+| Routing capability | Cannot route third-party payments | Can route payments |
+| Use case | Streaming, receiving | General P2P payments |
+
+## Monitoring
+
+When listing channels, check `is_one_way` to verify the channel type:
+
+```bash
+fnn-cli channel list_channels
+```
+
+The response will include:
+
+```json
+{
+  "channel_id": "0x...",
+  "is_one_way": true,
+  "state": { "state_name": "ChannelReady" }
+}
+```
+
+## Related Topics
+
+- [Channel Lifecycle](/docs/guide/channels/channel-lifecycle) — full channel state transitions
+- [Channel Rebalancing](/docs/guide/channels/channel-rebalancing) — adjust liquidity in bidirectional channels
+- [Payment Lifecycle](/docs/guide/payments/payment-lifecycle) — how payments are processed

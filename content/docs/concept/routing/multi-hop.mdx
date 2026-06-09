@@ -1,0 +1,180 @@
+---
+title: Multi-Hop
+description: How to run a relay node that earns fees by forwarding payments for other users
+date: 2026-05-25
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+## TL;DR
+
+Run a well-connected node with public channels, configure your fee policy, and earn forwarding fees. You need a stable server, public IP, and sufficient liquidity on both sides of your channels.
+
+When you run a Fiber node and open public channels, other users can route payments through your node. You earn a small fee (configured via `tlc_fee_proportional_millionths`) for each payment you forward. This guide covers what you need to know to operate a profitable relay node.
+
+## Why Run a Relay Node?
+
+- **Earn fees**: Every payment forwarded through your node earns a forwarding fee
+- **Support the network**: Relay nodes provide the connectivity that makes multi-hop payments possible
+- **No active management required**: Once configured, payments are forwarded automatically
+
+## Requirements
+
+- A **server with a public IP address** (or a way to expose your node via port forwarding)
+- **Sufficient CKB** to fund channels (at minimum 499 CKB per channel side)
+- **Stable uptime** — payments can only route through your node when it's online
+- **Balanced liquidity** — you need funds on both sides of your channels to forward payments in both directions
+
+## Setting Up Your Node
+
+### 1. Configure Public Address
+
+In your `config.yml`, set `announce_listening_addr: true` and add your public IP:
+
+```yaml
+fiber:
+  listening_addr: "/ip4/0.0.0.0/tcp/8228"
+  announce_listening_addr: true
+  announced_addrs:
+    - "/ip4/YOUR_PUBLIC_IP/tcp/8228"
+```
+
+<Callout type="warning">
+  Without a publicly reachable address, other nodes cannot initiate connections to you. You must either set `announced_addrs` to your public IP or use a relay/VPN service.
+</Callout>
+
+### 2. Configure Auto-Accept
+
+To automatically accept channel opening requests from other users:
+
+```yaml
+fiber:
+  open_channel_auto_accept_min_ckb_funding_amount: 49900000000  # ≥ 499 CKB
+  auto_accept_channel_ckb_funding_amount: 25000000000  # 250 CKB inbound liquidity
+```
+
+This means:
+- Channels with at least 499 CKB funding will be auto-accepted
+- Your node will contribute 250 CKB to each auto-accepted channel
+
+### 3. Configure Your Fee Policy
+
+Your fee policy determines how much you earn for forwarding payments:
+
+```yaml
+fiber:
+  tlc_fee_proportional_millionths: 1000  # 0.1% fee
+  tlc_min_value: 0                        # No minimum TLC value
+  tlc_expiry_delta: 86400000              # 1 day expiry window
+```
+
+**Fee formula**: `fee = ⌈(amount × tlc_fee_proportional_millionths) / 1,000,000⌉`
+
+**Example**: With `1000` (0.1% fee), forwarding 1000 CKB earns you 1 CKB.
+
+<Callout type="info">
+  **Choosing your fee rate**: Lower fees attract more traffic but earn less per payment. Higher fees earn more per payment but may cause payments to route through other nodes instead. The public Fiber nodes currently use 0.1%.
+</Callout>
+
+### 4. Open Channels to Well-Connected Nodes
+
+Connect to public nodes and open channels:
+
+```bash
+# Connect to a public node
+fnn-cli peer connect_peer --pubkey 02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71
+
+# Open a channel
+fnn-cli channel open_channel --pubkey 02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71 --funding-amount 49900000000
+```
+
+### 5. Enable UDT Channels (Optional)
+
+If you want to forward UDT (stablecoin) payments:
+
+```yaml
+ckb:
+  udt_whitelist:
+    - name: "USDI"
+      script:
+        code_hash: "0x..."
+        hash_type: type
+        args: "0x..."
+      auto_accept_amount: 10000000
+```
+
+## Maintaining Liquidity
+
+The most important aspect of running a relay node is maintaining **balanced liquidity** across your channels.
+
+### The Problem: One-Sided Channels
+
+After forwarding many payments in one direction, your channels become unbalanced:
+
+```
+Your Channel with Node A:   local: 10 CKB   remote: 490 CKB  (inbound-heavy)
+Your Channel with Node B:   local: 490 CKB  remote: 10 CKB   (outbound-heavy)
+```
+
+You can forward payments from B → A, but not from A → B, because you have no local balance in the A channel.
+
+### Solution: Channel Rebalancing
+
+Use [Channel Rebalancing](/docs/guide/channels/channel-rebalancing) to shift liquidity between channels. You can:
+
+1. **Automatic rebalancing**: Use `send_payment` with `allow_self_payment: true` to let the routing algorithm find a circular path
+2. **Manual rebalancing**: Use `build_router` + `send_payment_with_router` to target specific channels
+
+### Monitoring Your Channels
+
+Regularly check your channel balances:
+
+```bash
+fnn-cli channel list_channels
+```
+
+Look for channels where one side is depleted. These channels cannot forward payments in the depleted direction.
+
+## Monitoring Your Node
+
+### Uptime
+
+Your node must be online to forward payments. Consider:
+- Running on a reliable server (cloud VPS recommended)
+- Setting up process monitoring (e.g., systemd, Docker restart policy)
+- Monitoring your node's health via `fnn-cli info`
+
+### Network Graph Visibility
+
+Ensure your node is visible in the network graph:
+
+```bash
+fnn-cli graph graph_nodes
+```
+
+If your node doesn't appear, check that:
+- `auto_announce_node` is `true` (default)
+- Your node has at least one public channel
+
+### Payment Metrics
+
+Track your forwarding activity:
+
+```bash
+fnn-cli payment list_payments
+```
+
+## Security Considerations
+
+- **Biscuit Auth**: If your RPC is publicly accessible, enable [Biscuit Authentication](/docs/guide/node-operator/biscuit-auth) to protect your RPC endpoint
+- **Private Key Security**: Never expose `FIBER_SECRET_KEY_PASSWORD` or the `ckb/key` file
+- **Backup**: Regularly back up your node data — see [Backup Guide](/docs/guide/node-operator/backup)
+- **Firewall**: Only expose the P2P port (8228) and optionally the RPC port (8227). Keep the RPC port restricted to trusted IPs if possible.
+
+## Related Topics
+
+- [Run a Node](/docs/quick-start/run-a-node) — basic node setup
+- [Configuration Reference](/docs/guide/node-operator/config-reference) — all config.yml fields
+- [Channel Rebalancing](/docs/guide/channels/channel-rebalancing) — shift liquidity between channels
+- [Troubleshooting](/docs/guide/node-operator/troubleshooting) — common issues
+- [Network Resources](/docs/res/network-resources) — public nodes and faucets

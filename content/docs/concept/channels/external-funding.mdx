@@ -1,0 +1,61 @@
+---
+title: External Funding
+description: Open a payment channel using funds from an external wallet instead of the channel parties
+date: 2026-05-25
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+<Callout type="info">
+  This page is a work in progress. The content below provides an overview of the feature. Detailed step-by-step instructions will be added soon.
+</Callout>
+
+## TL;DR
+
+Call `open_channel_with_external_funding` to get an unsigned transaction, sign it with your external wallet, then submit via `submit_signed_funding_tx`. Do not modify the transaction structure after it is returned.
+
+External funding allows you to open a payment channel using funds from an **external wallet** (e.g., a third-party CKB wallet) rather than requiring the channel parties themselves to provide the funding. This is useful when you want to delegate the funding transaction to a separate wallet application.
+
+## How It Works
+
+1. Call `open_channel_with_external_funding` to negotiate the channel parameters. This returns an `unsigned_funding_tx`.
+2. The external wallet signs the CKB cells it contributed for funding.
+3. Submit the signed transaction via `submit_signed_funding_tx`.
+
+## Important Constraints
+
+<Callout type="warning">
+  Do not rebuild the transaction or modify `inputs`, `outputs`, `outputs_data`, or `cell_deps` after it is returned. The transaction structure is frozen at the point of creation.
+</Callout>
+
+## Signing the Funding Transaction
+
+### For Rust Developers
+
+If you are using secp256k1-sighash locks, refer to the development-only `sign_external_funding_tx` implementation for how to sign the transaction. This helper only covers secp256k1 signing — it resolves previous outputs, groups matching lock scripts, signs each script group, and writes the signature into `WitnessArgs.lock`.
+
+### For JavaScript Developers
+
+Refer to the `fiber-wallet` example using `@ckb-ccc/ccc`. The main signing flow is `signFundingTx`, with `toCccTransaction` for JSON-RPC to CCC conversion and `withFundingTxWitnesses` for copying signed witnesses back to the original transaction.
+
+The example supports:
+- Standard CCC signers
+- OmniLock witness preparation
+- JoyID redirect signing
+
+## RPC Example
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "open_channel_with_external_funding",
+  "params": [
+    {
+      "pubkey": "<peer_pubkey>",
+      "funding_amount": "0x77359400",
+      "funding_type_script": null
+    }
+  ],
+  "id": 1
+}
+```

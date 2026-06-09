@@ -1,0 +1,24 @@
+{
+  "title": "RPC API Reference",
+  "pages": [
+    "index",
+    "---Node---",
+    "info",
+    "peer",
+    "---Channels---",
+    "channel",
+    "---Payments---",
+    "invoice",
+    "payment",
+    "---Network---",
+    "graph",
+    "---Cross-Chain---",
+    "cch",
+    "---Dev & Tooling---",
+    "dev",
+    "prof",
+    "watchtower",
+    "---Types---",
+    "types"
+  ]
+}

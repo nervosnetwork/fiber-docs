@@ -1,0 +1,73 @@
+---
+title: Cross-Chain HTLC
+description: How Fiber enables atomic cross-chain payments between CKB and Bitcoin Lightning Network
+date: 2026-05-25
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+<Callout type="info">
+  This page is a work in progress. Detailed operational guides for cross-chain swaps will be added soon.
+</Callout>
+
+Fiber supports cross-chain payments between the CKB network and the Bitcoin Lightning Network using **Hash Time-Locked Contracts (HTLC)**. This enables atomic swaps — transactions that either complete in full or not at all, eliminating the risk of partial transfers.
+
+## How It Works
+
+Cross-chain HTLC involves three actors:
+
+- **Alice** — in the CKB (Fiber) network, wants to send or receive funds
+- **Bob** — in the Bitcoin (Lightning) network, wants to receive or send funds
+- **Ingrid** — the **Cross-Chain Hub (CCH)** service provider who runs both a Fiber node and a Lightning node
+
+### CKB → Bitcoin (Send BTC)
+
+1. Bob generates a Lightning invoice for X BTC
+2. Alice creates a CCH order with `send_btc`, providing the Lightning invoice
+3. Ingrid accepts the order and creates an invoice in the Fiber network for X + F (wrapped BTC + fee)
+4. Alice pays the Fiber invoice
+5. Ingrid pays the Lightning invoice to Bob
+6. Both payments settle atomically
+
+### Bitcoin → CKB (Receive BTC)
+
+1. Alice creates a CCH order with `receive_btc`
+2. Ingrid creates a Lightning invoice
+3. Bob pays the Lightning invoice
+4. Ingrid pays the Fiber invoice to Alice
+5. Both payments settle atomically
+
+## Requirements
+
+- The assets in both networks must maintain a **fixed swap ratio** (e.g., 1:1 wrapped BTC on CKB)
+- Both networks must use the **same hash algorithm** for HTLCs
+- The CCH operator charges a fee for the swap service
+
+## Expiry Safety
+
+Cross-chain payments require careful time lock management to prevent fund loss. The CCH validates that:
+
+- The outgoing invoice's final expiry is less than half of the incoming invoice's expiry
+- Route-level expiry is checked dynamically after the incoming payment is accepted
+
+See [CCH Expiry Dependency](https://github.com/nervosnetwork/fiber/blob/main/docs/specs/cch-expiry-dependency.md) for the full specification.
+
+## RPC Methods
+
+| Method | Description |
+|--------|-------------|
+| `send_btc` | Create a CCH order to pay a BTC Lightning invoice |
+| `receive_btc` | Create a CCH order to receive BTC via Fiber |
+| `get_cch_order` | Get a CCH order by payment hash |
+
+## Future: PTLC
+
+Fiber plans to migrate from HTLC to **Point Time-Locked Contracts (PTLC)**, which offer:
+- Improved privacy (hidden payment hash)
+- Reduced on-chain footprint (adaptor signatures)
+- Enhanced security (resistance to wormhole attacks)
+
+## Related Topics
+
+- [Invoice Guide](/docs/guide/payments/invoice-guide) — creating and managing invoices
+- [Hold Invoice](/docs/guide/payments/hold-invoice) — deferred settlement for conditional payments

@@ -1,0 +1,78 @@
+---
+title: Network Resources
+description: All Fiber Testnet resources in one place — public nodes, faucets, explorers, and more
+date: 2026-05-25
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+This page is the single source of truth for Fiber Testnet resources. All public nodes, faucets, and tools are listed here.
+
+<Callout type="warning">
+  Testnet resources may change without notice. This page is updated to reflect the current state. If you find outdated information, please [open an issue](https://github.com/nervosnetwork/fiber-docs/issues).
+</Callout>
+
+## Public Nodes
+
+### Mainnet
+
+| Name | Pubkey | Auto-accept CKB | Auto-accept UDT |
+|------|--------|------------------|------------------|
+| fiber-mainnet-public-ca | `03a8d7da8d0934363dbc17f52c872e8d833016415266eabb3527439c5dd17adc6b` | ≥ 499 CKB | USDI ≥ 0.1 |
+| fiber-mainnet-public-tokyo | `033a69e5be369dab43aefa96fa729d83c571ccb066f312136c6ab2d354fcc028f9` | ≥ 499 CKB | USDI ≥ 0.1 |
+
+### Testnet
+
+| Name | Pubkey | Auto-accept CKB | Auto-accept UDT |
+|------|--------|------------------|------------------|
+| fiber-testnet-public-bottle | `02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71` | ≥ 499 CKB | RUSD ≥ 20 |
+| fiber-testnet-public-bracer | `0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc` | ≥ 499 CKB | RUSD ≥ 20 |
+
+<Callout type="info">
+  Since v0.8.0, Fiber uses **pubkey** (hex-encoded secp256k1) for peer identification. Use `connect_peer` with the pubkey — the node will resolve the address automatically via gossip.
+</Callout>
+
+## Faucets
+
+| Resource | URL | Notes |
+|----------|-----|-------|
+| CKB Testnet Faucet | [https://faucet.nervos.org](https://faucet.nervos.org) | Get testnet CKB |
+| RUSD (Stablecoin) | [https://testnet0815.stablepp.xyz/stablecoin](https://testnet0815.stablepp.xyz/stablecoin) | Mint testnet RUSD stablecoin |
+
+## Block Explorers
+
+| Resource | URL |
+|----------|-----|
+| CKB Testnet Explorer | [https://explorer.nervos.org/aggron](https://explorer.nervos.org/aggron) |
+| Fiber Network Dashboard | [https://dashboard.fiber.channel/nodes](https://dashboard.fiber.channel/nodes) |
+
+## Network Topology
+
+The typical testnet topology for multi-hop payments:
+
+```
+┌───────┐        ┌───────┐        ┌───────┐        ┌───────┐
+│ nodeA │ ─────▶ │ node1 │ ─────▶ │ node2 │ ─────▶ │ nodeB │
+│:8227  │        │public │        │public │        │:8237  │
+└───────┘        └───────┘        └───────┘        └───────┘
+  sender        relay node 1     relay node 2      receiver
+```
+
+Local nodes (nodeA, nodeB) do not need to expose a public address — they connect through the public relay nodes.
+
+## Channel Capacity
+
+When opening a channel, each side must reserve **99 CKB** (98 CKB for commitment lock + 1 CKB for shutdown transaction fee). This reserved amount is not available for off-chain payments.
+
+**Example**: If you fund 499 CKB and the public node contributes 250 CKB:
+- Your available balance: 499 - 99 = **400 CKB**
+- Public node available: 250 - 99 = **151 CKB**
+
+## Node Downloads
+
+Download the latest Fiber Node binary from the [GitHub Releases page](https://github.com/nervosnetwork/fiber/releases).
+
+## Getting Help
+
+- [GitHub Issues](https://github.com/nervosnetwork/fiber/issues) — bug reports and feature requests
+- [Fiber Documentation](/docs) — full documentation

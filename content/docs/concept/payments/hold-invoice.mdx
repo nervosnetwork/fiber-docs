@@ -1,0 +1,81 @@
+---
+title: Hold Invoice
+description: Deferred settlement invoices for conditional payments in the Fiber network
+date: 2026-05-25
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+<Callout type="info">
+  This page is a work in progress. Detailed usage examples and API reference will be added soon.
+</Callout>
+
+A **hold invoice** (also known as a HODL invoice) is a special type of invoice where the payment is accepted but not immediately settled. The recipient must manually settle the invoice after verifying some condition is met. This enables conditional payment patterns such as:
+
+- **Atomic swaps**: Ensure both sides of a trade complete before releasing funds
+- **Digital goods delivery**: Release payment only after confirming the buyer received the goods
+- **Escrow services**: A third party holds the payment until conditions are satisfied
+
+## How Hold Invoices Differ from Regular Invoices
+
+| | Regular Invoice | Hold Invoice |
+|---|---|---|
+| **Settlement** | Automatic — funds are released immediately when the preimage is revealed | Manual — the recipient must explicitly call `settle_invoice` |
+| **Preimage** | Generated automatically by the node | The recipient provides a known preimage when creating the invoice |
+| **Payment hash** | `blake2b_256(random_preimage)` | `blake2b_256(provided_preimage)` — the hash is deterministic |
+| **Risk** | Low — payment is instant | The sender's funds are locked until the recipient settles or the invoice expires |
+| **Use case** | Everyday payments | Conditional payments, atomic swaps, escrow |
+
+## How It Works
+
+1. **Creation**: The recipient creates a hold invoice by providing a `preimage` parameter. The payment hash is derived as `blake2b_256(preimage)`.
+
+2. **Payment**: The sender pays the invoice as usual. The payment reaches the recipient's node and enters the **Accepted** state — the funds are locked but not yet settled.
+
+3. **Settlement**: Once the condition is met, the recipient calls `settle_invoice` with the preimage. This releases the funds to the recipient.
+
+4. **Cancellation**: If the condition is never met, the recipient can call `cancel_invoice` to return the funds to the sender.
+
+## Creating a Hold Invoice
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "new_invoice",
+  "params": [
+    {
+      "amount": "0x3E8",
+      "currency": "fibt",
+      "preimage": "0x...",
+      "description": "Hold invoice for atomic swap"
+    }
+  ],
+  "id": 1
+}
+```
+
+<Callout type="warning">
+  When creating a hold invoice, you must store the `preimage` securely. You will need it to settle the invoice later. If you lose the preimage, the funds will remain locked until the invoice expires.
+</Callout>
+
+## Settling a Hold Invoice
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "settle_invoice",
+  "params": [
+    {
+      "payment_hash": "0x...",
+      "preimage": "0x..."
+    }
+  ],
+  "id": 1
+}
+```
+
+## Related Topics
+
+- [Invoice Guide](/docs/guide/payments/invoice-guide) — general invoice usage
+- [Invoice Protocol](/docs/res/invoice-protocol) — the technical specification
+- [Cross-Chain HTLC](/docs/res/cross-chain-htlc) — how hold invoices enable cross-chain swaps

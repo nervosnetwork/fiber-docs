@@ -1,0 +1,60 @@
+---
+title: Module `Peer`
+description: Peer management RPC methods
+date: 2026-05-25
+---
+
+## Module `Peer`
+
+RPC module for peer management.
+
+
+### Method `connect_peer`
+
+Connect to a peer.
+
+#### Params
+
+* `address` - `Option<String>`, The address of the peer to connect to (as a multiaddr string).
+ Either `address` or `pubkey` must be provided.
+* `pubkey` - `Option<[Pubkey](#type-pubkey)>`, The public key of the peer to connect to.
+ The node resolves the address from locally synced graph data.
+* `save` - `Option<bool>`, Whether to save the peer address to the peer store.
+* `addr_type` - `Option<[TransportType](#type-transporttype)>`, Filter addresses by transport type when connecting by pubkey.
+ If not specified, the node uses target-specific defaults:
+ native builds choose from `tcp` addresses only, while wasm builds choose from `ws`/`wss`.
+
+#### Returns
+
+* None
+
+***
+
+
+
+### Method `disconnect_peer`
+
+Disconnect from a peer.
+
+#### Params
+
+* `pubkey` - [Pubkey](#type-pubkey), The public key of the peer to disconnect.
+
+#### Returns
+
+* None
+
+***
+
+
+
+### Method `list_peers`
+
+List connected peers
+
+#### Params
+* None
+
+#### Returns
+
+* `peers` - `Vec<[PeerInfo](#type-peerinfo)>`, A list of connected peers.
