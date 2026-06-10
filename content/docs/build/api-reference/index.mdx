@@ -1,36 +1,69 @@
 ---
-title: API Overview
-description: RPC endpoint, request/response format, and authentication
-date: 2026-05-25
+title: RPC Overview
+description: Technical reference for RPC endpoint format, JSON-RPC request/response structure, and authentication
+date: 2026-06-10
 ---
 
-## RPC Endpoint
+# RPC Overview
+
+The **JSON-RPC interface** is the primary way applications interact with a Fiber Network Node (FNN). Whether you are building a wallet, a payment processor, a network explorer, or automating channel management, you communicate with the node through this HTTP-based RPC layer.
+
+Fiber's RPC server is built on [jsonrpsee](https://github.com/paritytech/jsonrpsee), a Rust JSON-RPC framework. It speaks standard JSON-RPC 2.0 over HTTP and supports both synchronous method calls and WebSocket-based pub/sub for real-time store change notifications.
+
+---
+
+## Endpoint
 
 ```
 POST http://<node_address>:<port>/
 ```
 
-Default: `http://127.0.0.1:8227`
+The listen address is controlled by the `rpc.listening_addr` configuration field. The example configs shipped with the node use:
 
-## Request Format
+```
+http://127.0.0.1:8227
+```
+
+Because the RPC server binds to a single TCP socket, all modules share the same endpoint. There is no per-module URL path (e.g., `/v1/channel`); instead, you specify the target method inside the JSON-RPC request body.
+
+---
+
+## JSON-RPC Request Format
+
+Every request is a standard JSON-RPC 2.0 object sent as an HTTP POST with `Content-Type: application/json`.
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "<method_name>",
-  "params": [<param1>, <param2>, ...],
+  "method": "node_info",
+  "params": [],
   "id": 1
 }
 ```
 
-## Response Format
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `jsonrpc` | `string` | Yes | Must be `"2.0"`. |
+| `method` | `string` | Yes | The RPC method name (e.g., `send_payment`, `open_channel`). |
+| `params` | `array` | Yes | Method arguments as a single-element array containing the params object. Even methods that take no arguments must send an empty array `[]`. |
+| `id` | `number \| string \| null` | Yes | Client-defined request identifier; echoed back in the response for correlation. |
+
+> **Implementation detail:** Internally, the middleware may inject an `RpcContext` object as the first element of the `params` array when authentication is enabled and the method requires caller identity (e.g., watchtower operations). Client callers do not need to construct this themselves; the server injects it after verifying the Biscuit token.
+
+---
+
+## JSON-RPC Response Format
 
 ### Success
 
 ```json
 {
   "jsonrpc": "2.0",
-  "result": { ... },
+  "result": {
+    "version": "0.8.1",
+    "pubkey": "03a1b2c3...",
+    "channel_count": "0x5"
+  },
   "id": 1
 }
 ```
@@ -48,14 +81,216 @@ Default: `http://127.0.0.1:8227`
 }
 ```
 
+Fiber uses standard jsonrpsee error codes where applicable. In addition, authentication failures return a custom error:
+
+| Code | Message | Meaning |
+|------|---------|---------|
+| `-32999` | `Unauthorized` | The request lacked a valid Biscuit token, the token was revoked, or the token does not carry the required permission for the method. |
+
+---
+
+## RPC Modules
+
+Functionality is grouped into **modules**. You can selectively enable or disable modules via the `rpc.enabled_modules` config field. By default, all stable modules are enabled.
+
+| Module | Description |
+|--------|-------------|
+| `info` | Node identity, version, and runtime parameters. |
+| `peer` | Connect, disconnect, and list P2P peers. |
+| `channel` | Open, accept, close, update, and list payment channels. |
+| `payment` | Send payments, query payment status, and build custom routes. |
+| `invoice` | Create, parse, cancel, and settle BOLT-11 style invoices. |
+| `graph` | Query the network graph for nodes and channels. |
+| `cch` | Cross-Chain Hub operations (BTC ↔ CKB swaps). |
+| `watchtower` | Channel monitoring and revocation data for watchtower services. |
+| `pubsub` | WebSocket subscription to store change events. |
+| `dev` | **Debug builds only.** Low-level debugging helpers. |
+| `prof` | **Requires `pprof` feature.** CPU/memory profiling endpoints. |
+
+Modules are activated at server startup. If a module is disabled, its methods are not registered and will return a `"Method not found"` error.
+
+---
+
 ## Authentication
 
-If Biscuit authentication is enabled, include a Bearer token in the `Authorization` header:
+Fiber uses [Biscuit](https://www.biscuitsec.org/) bearer tokens for RPC authorization. Biscuit is a decentralized, attenuable authorization token format similar in spirit to JWT but with fine-grained, rule-based policies written in Datalog.
+
+### When is auth required?
+
+- **Private addresses** (loopback, LAN, unspecified interfaces like `127.0.0.1`, `[::1]`, `192.168.x.x`): Authentication is optional. If no `biscuit_public_key` is configured, the server accepts all local requests.
+- **Public addresses**: Authentication is **mandatory**. The server will refuse to start on a public IP unless `rpc.biscuit_public_key` is set. This is a hard safety guard to prevent accidental exposure of an open RPC.
+
+### Sending a token
+
+Include the Base64-encoded Biscuit token in the HTTP `Authorization` header:
 
 ```
-Authorization: Bearer <your_biscuit_token>
+Authorization: Bearer <biscuit_token>
 ```
 
-See [Biscuit Authentication](/docs/guide/node-operator/biscuit-auth) for details.
+### Permission model
 
-***
+Each method is protected by a Datalog rule that checks for a specific permission fact in the token. Permissions are scoped by resource and access level:
+
+- `read("<resource>")` — grants read-only access to that resource.
+- `write("<resource>")` — grants read and write access.
+
+Resources map roughly to modules: `node`, `peers`, `channels`, `payments`, `invoices`, `graph`, `cch`, `watchtower`, `chain`, `messages`, `pprof`.
+
+For example, to call `send_payment`, the token must contain `write("payments")`. To call `node_info`, the token needs `read("node")`.
+
+For a full rule table and instructions on generating keys and tokens, see [Biscuit Authentication](/docs/concept/security/biscuit-auth).
+
+---
+
+## Configuration
+
+RPC settings live under the `rpc:` key in `config.yml`:
+
+```yaml
+rpc:
+  listening_addr: "127.0.0.1:8227"
+  biscuit_public_key: "ed25519/17b172749be74276f0ed35a5d0685752684a3c5722114bba447a2f301136db79"
+  enabled_modules:
+    - info
+    - peer
+    - channel
+    - payment
+    - invoice
+    - graph
+  cors_enabled: true
+  cors_allowed_origins:
+    - "https://myapp.example.com"
+```
+
+You can also override every field via environment variables or CLI flags:
+
+```bash
+# Environment variable
+export RPC_LISTENING_ADDR="127.0.0.1:8227"
+
+# CLI flag
+fiber-bin --rpc-listening-addr "127.0.0.1:8227" --rpc-biscuit-public-key "ed25519/..."
+```
+
+### CORS
+
+If `cors_enabled` is `true`, the server adds Cross-Origin Resource Sharing headers to HTTP responses. When `cors_allowed_origins` is empty, all origins are allowed (`*`). If you list specific origins, preflight `OPTIONS` requests are handled automatically.
+
+---
+
+## Concrete Example
+
+Below is a complete curl conversation with a locally running Fiber node. No authentication is needed because the node is listening on localhost and `biscuit_public_key` is not configured.
+
+### 1. Query node information
+
+```bash
+curl -X POST http://127.0.0.1:8227 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "node_info",
+    "params": [],
+    "id": 1
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "version": "0.8.1",
+    "commit_hash": "b5600232",
+    "pubkey": "03a1b2c3d4e5f6...",
+    "features": ["announcement"],
+    "node_name": "my-node",
+    "addresses": ["/ip4/127.0.0.1/tcp/8228/p2p/Qm..."],
+    "chain_hash": "0x92b197aa1f0cb...",
+    "open_channel_auto_accept_min_ckb_funding_amount": "0x2540be400",
+    "auto_accept_channel_ckb_funding_amount": "0x24e273300",
+    "default_funding_lock_script": {
+      "code_hash": "0x...",
+      "hash_type": "type",
+      "args": "0x"
+    },
+    "tlc_expiry_delta": "0x5265c00",
+    "tlc_min_value": "0x0",
+    "tlc_fee_proportional_millionths": "0x3e8",
+    "channel_count": "0x2",
+    "pending_channel_count": "0x0",
+    "peers_count": "0x3",
+    "udt_cfg_infos": []
+  },
+  "id": 1
+}
+```
+
+### 2. Send a payment (with authentication)
+
+If your node requires Biscuit auth, add the `Authorization` header:
+
+```bash
+curl -X POST http://127.0.0.1:8227 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ErsBClEKBXBlZXJzCghwYXltZW50cxgD..." \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "send_payment",
+    "params": [{
+      "target_pubkey": "02abcd...",
+      "amount": "0x3e8",
+      "keysend": true
+    }],
+    "id": 2
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "payment_hash": "0x1234...",
+    "status": "Created",
+    "created_at": "0x...",
+    "last_updated_at": "0x...",
+    "failed_error": null,
+    "fee": "0x0"
+  },
+  "id": 2
+}
+```
+
+---
+
+## WebSocket Subscriptions
+
+In addition to request/response HTTP calls, the `pubsub` module exposes a WebSocket subscription endpoint:
+
+- **Subscribe:** `subscribe_store_changes`
+- **Unsubscribe:** `unsubscribe_store_changes`
+- **Notification topic:** `store_changes`
+
+This is primarily used by external services (such as a standalone Cross-Chain Hub instance) to receive real-time store change events from the Fiber node without polling.
+
+---
+
+## Security Checklist
+
+1. **Never expose an unauthenticated RPC to the public internet.** The node will block this at startup, but double-check your `listening_addr` and firewall rules.
+2. **Keep the Biscuit private key offline.** Only the public key belongs in the node config.
+3. **Scope tokens narrowly.** Create tokens with the minimum permissions required (e.g., `read("graph")` only, rather than an all-access token).
+4. **Use CORS allowlists** in production rather than `*`.
+5. **Prefer localhost or Unix-domain sockets** when the client and node run on the same machine.
+
+---
+
+## Further Reading
+
+- [Biscuit Authentication](/docs/concept/security/biscuit-auth) — key generation, token creation, and permission rules
+- [Configuration Reference](/docs/operate/config-reference) — all `rpc.*` config fields
+- The per-method API references in this section for detailed parameter and return types
