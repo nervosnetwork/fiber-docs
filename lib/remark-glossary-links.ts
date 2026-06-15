@@ -25,16 +25,13 @@ const GLOSSARY_TERMS: Record<string, string> = {
   watchtower: "watchtower",
   "Gossip Protocol": "gossip-protocol",
   "gossip protocol": "gossip-protocol",
-  Invoice: "invoice",
-  invoice: "invoice",
-  "Hold Invoice": "hold-invoice",
-  "hold invoice": "hold-invoice",
+  
   Asset: "asset",
   Node: "node",
   "Fiber Network": "fiber-network",
 };
 
-const GLOSSARY_URL = "/docs/guide/core-concepts/glossary";
+const GLOSSARY_URL = "/docs/res/glossary";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AstNode = any;

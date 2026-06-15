@@ -1,39 +1,236 @@
 ---
 title: Trampoline Routing
-description: How Fiber enables lightweight clients to delegate route finding to trampoline nodes
-date: 2026-05-25
+description: How Fiber delegates pathfinding to trampoline nodes so lightweight clients can route payments without a full network graph
+date: 2026-06-15
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
-<Callout type="info">
-  This page is a work in progress. Detailed operational guides and examples will be added soon.
-</Callout>
+## TL;DR
 
-Trampoline routing allows a sender with limited routing information to delegate pathfinding to intermediate **trampoline nodes**. Instead of computing the full route to the destination, the sender only needs a route to the first trampoline node — the rest of the path is handled by the trampoline nodes themselves.
+Trampoline routing lets a sender delegate pathfinding to well-connected intermediate nodes called **trampoline nodes**. Instead of computing the full route to the recipient, the sender only needs to find a path to the first trampoline node. The remaining route is encoded inside a smaller **inner trampoline onion** that is embedded in the outer payment packet. Each trampoline node independently finds a route to the next hop, peeling one layer of the inner onion and launching a fresh payment downstream. The final recipient sees only the final payload and settles the payment as usual.
+
+This design is essential for lightweight clients that cannot store the full network graph, for bridging payments across disconnected sub-networks, and for routing through private channels that are invisible to the sender.
 
 ## Why Trampoline Routing?
 
-In a standard multi-hop payment, the sender must know the entire network topology to compute a route. This is problematic for:
+In a standard [multi-hop payment](/docs/concept/routing/multi-hop), the sender must know the entire network topology to compute a route from source to destination. The routing module searches the local graph — built from gossip messages advertising channels, node addresses, and fee policies — and produces a complete hop-by-hop path. This works well for nodes that maintain a full graph view, but it creates problems for several important use cases that trampoline routing is designed to address.
 
-- **Lightweight clients** (e.g., mobile wallets) that don't store the full network graph
-- **Privacy-conscious users** who don't want to reveal the full route
-- **Nodes behind NAT** that have limited visibility of the network
+## When to Use Trampoline Routing
+
+### Mobile and Lightweight Clients
+
+The most common scenario is a mobile wallet or lightweight node that has gossip sync disabled to save bandwidth and storage. Such a node only knows about its direct channel partners — it has no visibility into the broader network graph. Without trampoline routing, this node simply cannot send multi-hop payments because it has no way to construct a complete route.
+
+With trampoline routing, the mobile wallet only needs to know the pubkey of a single well-connected trampoline node (typically operated by the wallet service provider or a public infrastructure node). The wallet routes to the trampoline node through its direct channel, and the trampoline node — which maintains a full graph — handles the rest of the pathfinding.
+
+```
+Mobile Wallet ──▶ [direct channel] ──▶ Service Provider (Trampoline) ──▶ ... ──▶ Recipient
+                  (sender sees this)   (full graph, finds the rest)
+```
+
+This is the primary use case: enabling nodes with minimal graph knowledge to participate in the payment network as full senders.
+
+### Private Channel as the Last Hop
+
+A recipient may be reachable only through a **private channel** — a channel that was not announced via gossip and is therefore invisible to the broader network. This is common when a user opens a channel with a specific merchant or service provider without broadcasting it.
+
+```
+Alice ──▶ Bob ──▶ Carol ──▶ Dave (private channel) ──▶ Eve
+                            ↑ not visible to Alice
+```
+
+In this scenario, Alice has no way to discover the Dave→Eve channel through gossip. Even if she knows Eve's pubkey, source routing will fail because no public path leads to Eve. By specifying Dave (or Carol, if Dave is also a trampoline node) as a trampoline hop, Alice can deliver the payment to the trampoline node, and the trampoline node — which knows about the private channel — can forward it to Eve.
+
+### Bridging Separate Network Clusters
+
+As the Fiber network grows, it may naturally partition into clusters — groups of well-connected nodes with only a few channels bridging between them. A sender in one cluster may have detailed knowledge of its local topology but no visibility into a distant cluster where the recipient lives.
+
+```
+Cluster A                          Cluster B
+┌─────────────┐                   ┌─────────────┐
+│  Sender ──▶ │ ──▶ Trampoline ──▶│ ──▶ Recipient │
+│  (full graph │    (bridge node,  │   (full graph │
+│   of A)      │     knows both)   │    of B)      │
+└─────────────┘                   └─────────────┘
+```
+
+Trampoline routing lets each cluster maintain its own graph knowledge while using bridge nodes as trampolines to route across clusters. The sender routes within its own cluster to the bridge node, and the bridge node routes within the destination cluster to the recipient. This is more scalable than requiring every node to maintain a global graph.
+
+### Payment Service Providers
+
+A payment service provider (PSP) or exchange can operate trampoline nodes as part of its infrastructure. Customers send payments to the PSP's trampoline node, and the PSP leverages its well-connected position and full graph knowledge to route payments efficiently across the network. This model decouples the routing intelligence from the end-user client:
+
+- The customer's node stays lightweight (no gossip, no graph)
+- The PSP's trampoline node handles all pathfinding and retry logic
+- The customer only needs to trust the PSP for routing, not for custody (funds are still secured by TLCs)
+
+This architecture mirrors the trampoline model in the Lightning Network, where service providers operate trampoline nodes to enable their users to send payments without maintaining a routing table.
+
+### Choosing Between Source and Trampoline Routing
+
+In practice, you should use trampoline routing when the sender has limited graph visibility (gossip sync disabled, mobile client, stale graph after restart), when the recipient is reachable only through private channels, or when the payment must cross network cluster boundaries. For well-connected nodes with a full and current graph view, standard source routing typically provides more efficient and predictable results — the sender can optimize fees and expiry across the entire route rather than delegating those decisions to intermediate nodes.
 
 ## How It Works
 
+A trampoline payment proceeds through the same four phases as a standard multi-hop payment — pathfinding, onion construction, hop-by-hop forwarding, and settlement — but with an additional layer of indirection.
+
 ```
-Sender → [Outer Onion] → First Trampoline → [Inner Onion] → Next Trampoline → ... → Final Recipient
+Sender ──▶ [Outer Onion] ──▶ First Trampoline ──▶ [Inner Onion] ──▶ Next Trampoline ──▶ ... ──▶ Recipient
 ```
 
-1. The sender builds a normal outer onion to the first trampoline node
-2. The remaining route is encoded in an **inner trampoline onion**
-3. Each trampoline node peels one layer of the inner onion and forwards the payment
-4. The final recipient sees only the final payload and settles the payment
+### Sender: Route to the First Trampoline
+
+The sender's pathfinding task is dramatically simplified. Instead of computing a route all the way to the recipient, the sender only needs a route from itself to the first trampoline node. The routing module runs the standard graph search algorithm against the local network graph, but the target is the first trampoline node rather than the final recipient.
+
+The amount locked on this outer route is `final_amount + max_fee_amount`, where `max_fee_amount` is the total fee budget the sender is willing to spend across all trampoline hops. The sender delivers this full amount to the first trampoline node; any fees consumed by the outer route reduce what the first trampoline receives.
+
+### Inner Trampoline Onion Construction
+
+Once the outer route is computed, the sender builds an inner trampoline onion that encodes the remaining hops. This inner onion uses the same Sphinx construction as the outer payment onion, but with a smaller packet size of 1300 bytes (compared to the outer onion's 6500 bytes) because it must fit inside the outer onion's hop payload.
+
+The inner onion contains one layer per trampoline hop, plus a final layer for the recipient. Each trampoline hop carries a **Forward** payload with the following information:
+
+- `next_node_id` — the public key of the next trampoline node (or the final recipient)
+- `amount_to_forward` — the amount that must arrive at the next hop
+- `build_max_fee_amount` — the fee budget allocated for this hop's own sub-route
+- `tlc_expiry_delta` and `tlc_expiry_limit` — expiry constraints for the downstream TLCs
+- `hash_algorithm` — the hash algorithm used for the payment hash
+- `max_parts` — optional parameter controlling multi-path splitting for the downstream sub-route
+
+The final layer carries a **Final** payload with the `final_amount`, the `final_tlc_expiry_delta`, and optionally a `payment_preimage` (for keysend payments) and custom records (for multi-path payments).
+
+The trampoline onion bytes are embedded in the last hop of the outer payment onion's `custom_records` using a reserved key. This keeps the outer `PaymentHopData` schema unchanged, maintaining backward compatibility with nodes that do not support trampoline routing.
+
+```
+Outer Onion:
+  [Hop 1: Sender → Relay A]
+  [Hop 2: Relay A → Relay B]
+  [Hop 3: Relay B → First Trampoline] ← carries inner trampoline onion in custom_records
+
+Inner Trampoline Onion:
+  [Layer 1: First Trampoline → Second Trampoline]  (Forward payload)
+  [Layer 2: Second Trampoline → Recipient]          (Forward or Final payload)
+```
+
+### Trampoline Node: Forwarding
+
+When a node receives a payment and detects a trampoline payload embedded in the outer onion, it switches from normal forwarding to trampoline forwarding. The process involves several steps:
+
+**1. Feature check.** The node verifies that it supports trampoline routing (feature bit 5, `TRAMPOLINE_ROUTING`). If the feature is not enabled, the node returns a `RequiredNodeFeatureMissing` error.
+
+**2. Peel the inner onion.** Using its private key, the trampoline node decrypts one layer of the inner trampoline onion, revealing its `TrampolineHopPayload`.
+
+**3. Validate the forward payload.** The node checks that the incoming amount exceeds `amount_to_forward` (the difference is the available fee), and that this available fee exactly matches `build_max_fee_amount`. This ensures that the sender's fee allocation is correctly propagated.
+
+**4. Launch a downstream payment.** The trampoline node creates a brand-new payment to `next_node_id` using its own `PaymentActor`. This downstream payment carries:
+
+- The `amount_to_forward` as the payment amount
+- The `build_max_fee_amount` as the routing fee budget
+- A `TrampolineContext` containing the remaining inner onion (for the next trampoline hop) and a reference to the incoming TLC
+
+The downstream payment goes through the normal pathfinding and onion construction process. If the trampoline node is forwarding to another trampoline, the inner onion is embedded again. If it is forwarding to the final recipient, the remaining onion contains only the Final payload.
+
+<Callout type="info">
+  Each trampoline node independently finds its own route to the next hop. This means the trampoline node uses its local network graph — which may be more complete than the sender's — to compute the best path. If the downstream payment fails, the trampoline node's `PaymentActor` can retry with an alternate route, just like any other payment.
+</Callout>
+
+### Final Recipient: Settlement
+
+When the outer onion reaches the final recipient and contains a trampoline payload, the recipient peels the inner trampoline onion to extract the Final payload. This payload provides the `final_amount`, the expiry delta, and any optional preimage or custom records.
+
+The recipient validates that the forwarded amount matches the expected final amount, checks the payment against the outstanding invoice, and settles the TLC by revealing the preimage. From the recipient's perspective, the payment looks like a normal incoming payment — the trampoline routing is transparent.
+
+### Upstream TLC Resolution
+
+Each trampoline node holds an incoming (upstream) TLC from the previous hop and an outgoing (downstream) TLC from its own payment. When the downstream payment completes:
+
+**On success:** The trampoline node receives the preimage from the downstream settlement and fulfills the upstream TLC by sending a `RemoveTlcFulfill` message back to the previous hop. The preimage cascades backward through the entire route.
+
+**On failure:** The trampoline node wraps the downstream error in a `TrampolineFailed` error structure — which includes the trampoline node's ID and the inner error packet — and fails the upstream TLC with a `RemoveTlcFail` message. The error propagates backward to the sender, who can decide whether to retry the entire payment.
+
+## Fee Behavior
+
+Trampoline routing introduces a two-level fee structure: fees for the outer route (sender to first trampoline) and fees for the inner trampoline hops.
+
+### Fee Allocation
+
+The sender specifies a `max_fee_amount` that covers the entire trampoline route. The fee is consumed in order:
+
+1. **Outer route fees** are deducted first. The sender locks `final_amount + max_fee_amount` on the first hop of the outer route. Each relay node on the outer route takes its fee, reducing the amount that arrives at the first trampoline node.
+
+2. **Trampoline hop fees** are allocated from the remaining budget. The sender splits the residual fee evenly across all trampoline hops, passing each hop's share as `build_max_fee_amount` in the inner onion payload.
+
+3. **Each trampoline node** uses its `build_max_fee_amount` as the routing fee budget for finding a path to the next hop. Any relay fees on the sub-route between two trampoline nodes are paid from this budget.
+
+### Fee Formula
+
+The forwarding fee at each relay node follows the standard TLC fee formula:
+
+```
+fee = ceil((amount_to_forward x fee_rate) / 1,000,000)
+```
+
+Where `fee_rate` is the node's configured `tlc_fee_proportional_millionths`. A value of `1000` corresponds to a 0.1% fee.
+
+<Callout type="info">
+  **Example**: Alice sends 1000 CKB to Eve through trampoline node Bob, with `max_fee_amount` of 10 CKB. Alice locks 1010 CKB on her outer route to Bob. If the outer route costs 2 CKB in relay fees, Bob receives 1008 CKB. Bob's `build_max_fee_amount` is 8 CKB (the remaining budget). Bob finds a route to Eve and forwards 1000 CKB, keeping up to 8 CKB as the cumulative fee for the sub-route.
+</Callout>
+
+### Fee Estimation
+
+When the sender does not have detailed fee information for the trampoline hops (for example, when gossip sync is disabled), the routing module estimates fees using a default fee rate. The recommended minimum fee is computed as `ceil(final_amount * DEFAULT_FEE_RATE / 1,000,000)` per trampoline hop, providing a reasonable guardrail for the `max_fee_amount` parameter.
+
+## Expiry Behavior
+
+Each trampoline hop adds a default expiry delta (`DEFAULT_TLC_EXPIRY_DELTA`) to the total time-lock duration. This ensures that every intermediate node on every sub-route has enough time to settle or fail the payment before its TLC expires.
+
+The total accumulated expiry delta across all remaining trampoline hops must not exceed `tlc_expiry_limit`, which sets an upper bound on how far into the future a TLC can be locked. If the accumulated delta would exceed this limit, the route construction fails.
+
+## Error Handling
+
+Trampoline payments can fail at any level: on the outer route, within a trampoline node's downstream payment, or at the final recipient. The error handling mechanism preserves the layered structure of the payment.
+
+When a downstream payment fails at a trampoline node, the error is wrapped in a `TlcErrData::TrampolineFailed` structure that contains:
+
+- `node_id` — the public key of the trampoline node where the failure occurred
+- `inner_error_packet` — the encrypted error packet from the downstream payment
+
+This wrapped error is sent back through the upstream TLC, propagating to the sender via the normal error path. The sender's `PaymentActor` can then decode the error, update its local graph, and decide whether to retry the payment — potentially choosing a different first trampoline node or adjusting the fee budget.
+
+<Callout type="warning">
+  If a trampoline node's downstream payment exhausts its `build_max_fee_amount` without finding a viable route (for example, because relay fees on the sub-route are higher than expected), the payment fails with a fee-insufficient error. The sender can retry with a higher `max_fee_amount` or different trampoline hops.
+</Callout>
+
+Common error scenarios include:
+
+| Error | Where It Occurs | Typical Cause |
+|-------|----------------|---------------|
+| `TemporaryChannelFailure` | Outer or sub-route | Channel liquidity exhausted |
+| `FeeInsufficient` | Trampoline node | `build_max_fee_amount` too small for the sub-route |
+| `RequiredNodeFeatureMissing` | Trampoline node | Node does not support trampoline routing |
+| `IncorrectOrUnknownPaymentDetails` | Final recipient | Invoice mismatch or expired invoice |
+| `ExpiryTooSoon` | Any hop | Expiry window too narrow for remaining hops |
+
+## Privacy Benefits
+
+Trampoline routing provides meaningful privacy improvements over standard source routing.
+
+In a multi-hop payment with source routing, the sender knows the complete path from source to destination. While intermediate nodes only see their predecessor and successor (thanks to onion routing), the sender has full visibility into the route topology. If the sender is also a relay node, it can observe which nodes are transacting.
+
+With trampoline routing, the sender only knows the route to the first trampoline node. The trampoline nodes know only their immediate predecessor and successor in the trampoline chain. The final recipient sees only the last hop and cannot determine the origin of the payment. This creates a stronger privacy boundary:
+
+- **The sender** does not learn the topology between the first trampoline and the recipient.
+- **Each trampoline node** learns only the previous and next hop in the chain, not the full trampoline route.
+- **The final recipient** cannot correlate the payment with the original sender.
+
+This is particularly valuable for lightweight clients that would otherwise need to request routing information from a centralized service, leaking their payment intentions.
 
 ## Using Trampoline Routing
 
-Set `trampoline_hops` in the `send_payment` RPC to specify trampoline nodes:
+### Via RPC
+
+Set the `trampoline_hops` field in the `send_payment` RPC to specify the trampoline nodes. When this field is provided, the routing module automatically switches to trampoline routing mode.
 
 ```json
 {
@@ -43,8 +240,8 @@ Set `trampoline_hops` in the `send_payment` RPC to specify trampoline nodes:
     {
       "invoice": "fibt1...",
       "trampoline_hops": [
-        { "pubkey": "<trampoline_node_1_pubkey>" },
-        { "pubkey": "<trampoline_node_2_pubkey>" }
+        "<trampoline_node_1_pubkey>",
+        "<trampoline_node_2_pubkey>"
       ],
       "max_fee_amount": "0x5F5E100"
     }
@@ -53,37 +250,59 @@ Set `trampoline_hops` in the `send_payment` RPC to specify trampoline nodes:
 }
 ```
 
+The `trampoline_hops` array is an ordered list of public keys. The first entry is the node the sender routes to directly; subsequent entries form the trampoline chain. The final recipient is implied by the invoice and must not appear in the trampoline hops list.
+
 <Callout type="warning">
-  When using `trampoline_hops`, `max_fee_amount` must be provided. This sets the maximum fee budget for the trampoline route.
+  When using `trampoline_hops`, `max_fee_amount` is required. This sets the total fee budget for the entire trampoline route, including both the outer route and all trampoline sub-routes.
 </Callout>
 
-## Fee Behavior
+### Feature Negotiation
 
-- The sender routes to the first trampoline with `final_amount + max_fee_amount`
-- Any fee spent on the outer route reduces what the first trampoline receives
-- The remaining fee budget is split evenly across trampoline hops as `build_max_fee_amount`
-- The forwarding fee follows the standard TLC fee formula:
+Trampoline routing uses feature bit 5 (`TRAMPOLINE_ROUTING`) in the node feature vector. By default, Fiber nodes advertise trampoline routing as a required feature. A node must support this feature to act as a trampoline hop. If a payment encounters a node that does not advertise trampoline support, the routing module skips that node during trampoline hop selection.
 
-  ```
-  fee = ⌈(amount_to_forward × fee_rate) / 1,000,000⌉
-  ```
+Invoices can also signal trampoline support via the `allow_trampoline_routing()` check on the invoice's feature bits. This allows the recipient to indicate whether it can process trampoline payments.
+
+### Keysend Payments
+
+Trampoline routing supports keysend payments (where the sender generates the preimage instead of the recipient). The preimage is included in the inner onion's Final payload and propagated to the recipient during settlement. Keysend over trampoline works the same way as standard keysend, with the only difference being that the routing is delegated to trampoline nodes.
 
 ## Constraints
 
-| Constraint | Value |
-|------------|-------|
-| Max trampoline hops | 5 (`MAX_TRAMPOLINE_HOPS_LIMIT`) |
-| `max_fee_amount` | Required when `trampoline_hops` is set |
-| Expiry delta | Each hop adds a default delta; total must not exceed `tlc_expiry_limit` |
+Trampoline routing introduces several constraints beyond those of standard multi-hop payments:
 
-## Privacy Benefits
+| Constraint | Value | Notes |
+|------------|-------|-------|
+| Max trampoline hops | 5 | Defined as `MAX_TRAMPOLINE_HOPS_LIMIT` |
+| `max_fee_amount` | Required | Must be set when `trampoline_hops` is provided |
+| Duplicate hops | Rejected | The trampoline hops list must not contain duplicates |
+| Target in hops | Rejected | The final recipient must not appear in `trampoline_hops` |
+| Self-payment | Incompatible | `allow_self_payment` cannot be used with trampoline routing |
+| MPP with multiple trampoline hops | Incompatible | `max_parts > 1` requires exactly 1 trampoline hop |
+| Inner packet size | 1300 bytes | Smaller than the outer onion's 6500 bytes |
 
-Trampoline routing improves payment privacy because:
-- The sender only knows the route to the first trampoline
-- Trampoline nodes only know the previous and next hop
-- The final recipient cannot see the full route
+<Callout type="info">
+  The MPP (Multi-Path Payment) restriction exists because splitting a trampoline payment across multiple paths would require coordinating multiple inner onions, each with their own trampoline hop chain. With a single trampoline hop, MPP works normally — the sender splits the payment across multiple routes to the trampoline node, and the trampoline node forwards each part independently.
+</Callout>
+
+## Trampoline vs. Source Routing
+
+Understanding when to use trampoline routing versus standard source routing helps in choosing the right approach for a given payment scenario.
+
+| Aspect | Source Routing | Trampoline Routing |
+|--------|---------------|-------------------|
+| Route knowledge | Sender knows the full path | Sender only knows path to first trampoline |
+| Onion layers | Single outer onion | Two layers: outer + inner trampoline onion |
+| Pathfinding | Sender does all pathfinding | Each trampoline node does its own pathfinding |
+| Fee allocation | Sender allocates fees per hop | Fee budget split across trampoline hops |
+| MPP support | Full MPP support | MPP only with single trampoline hop |
+| Self-payment | Supported (circular routes) | Not supported |
+| Retry behavior | Sender retries with new route | Each trampoline independently retries its sub-route |
+| Error propagation | Direct onion error unwrapping | Errors wrapped in `TrampolineFailed` at each boundary |
+
+In practice, trampoline routing is most useful when the sender has limited graph visibility (gossip sync disabled, mobile client), when the recipient is reachable only through private channels, or when the network spans disconnected sub-graphs. For well-connected nodes with a full graph view, standard source routing typically provides more efficient and predictable results.
 
 ## Related Topics
 
-- [Payment Lifecycle](/docs/guide/payments/payment-lifecycle) — how payments are processed
-- [P2P Message Protocol](/docs/res/p2p-message) — message-level details
+- [Multi-Hop Payments](/docs/concept/routing/multi-hop) — the foundation that trampoline routing builds on
+- [Payment Lifecycle](/docs/concept/payments/payment-lifecycle) — how payment sessions and attempts are managed
+- [Invoice Guide](/docs/concept/payments/invoice-guide) — creating invoices and understanding payment parameters
