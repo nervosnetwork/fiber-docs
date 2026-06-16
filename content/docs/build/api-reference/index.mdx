@@ -91,7 +91,9 @@ Fiber uses standard jsonrpsee error codes where applicable. In addition, authent
 
 ## RPC Modules
 
-Functionality is grouped into **modules**. You can selectively enable or disable modules via the `rpc.enabled_modules` config field. By default, all stable modules are enabled.
+Functionality is grouped into **modules**. You can selectively enable or disable modules via the `rpc.enabled_modules` config field.
+
+By default, the stable modules `cch`, `channel`, `graph`, `info`, `invoice`, `payment`, and `peer` are enabled. The `watchtower` module is also enabled when the node is compiled with the `watchtower` feature. The `pubsub`, `dev`, and `prof` modules are **not** enabled by default.
 
 | Module | Description |
 |--------|-------------|
@@ -117,7 +119,8 @@ Fiber uses [Biscuit](https://www.biscuitsec.org/) bearer tokens for RPC authoriz
 
 ### When is auth required?
 
-- **Private addresses** (loopback, LAN, unspecified interfaces like `127.0.0.1`, `[::1]`, `192.168.x.x`): Authentication is optional. If no `biscuit_public_key` is configured, the server accepts all local requests.
+- **Private addresses** (loopback, LAN, and link-local interfaces like `127.0.0.1`, `[::1]`, `192.168.x.x`): Authentication is optional. If no `biscuit_public_key` is configured, the server accepts all local requests.
+- **Unspecified bind addresses** (`0.0.0.0`, `[::]`): Treated as public addresses. Authentication is **mandatory**.
 - **Public addresses**: Authentication is **mandatory**. The server will refuse to start on a public IP unless `rpc.biscuit_public_key` is set. This is a hard safety guard to prevent accidental exposure of an open RPC.
 
 ### Sending a token
@@ -133,7 +136,7 @@ Authorization: Bearer <biscuit_token>
 Each method is protected by a Datalog rule that checks for a specific permission fact in the token. Permissions are scoped by resource and access level:
 
 - `read("<resource>")` — grants read-only access to that resource.
-- `write("<resource>")` — grants read and write access.
+- `write("<resource>")` — grants write access to that resource only; it does **not** imply read access.
 
 Resources map roughly to modules: `node`, `peers`, `channels`, `payments`, `invoices`, `graph`, `cch`, `watchtower`, `chain`, `messages`, `pprof`.
 
@@ -152,12 +155,14 @@ rpc:
   listening_addr: "127.0.0.1:8227"
   biscuit_public_key: "ed25519/17b172749be74276f0ed35a5d0685752684a3c5722114bba447a2f301136db79"
   enabled_modules:
-    - info
-    - peer
+    - cch
     - channel
-    - payment
-    - invoice
     - graph
+    - info
+    - invoice
+    - payment
+    - peer
+    # - watchtower  # only when compiled with the watchtower feature
   cors_enabled: true
   cors_allowed_origins:
     - "https://myapp.example.com"
@@ -170,7 +175,7 @@ You can also override every field via environment variables or CLI flags:
 export RPC_LISTENING_ADDR="127.0.0.1:8227"
 
 # CLI flag
-fiber-bin --rpc-listening-addr "127.0.0.1:8227" --rpc-biscuit-public-key "ed25519/..."
+fnn --rpc-listening-addr "127.0.0.1:8227" --rpc-biscuit-public-key "ed25519/..."
 ```
 
 ### CORS

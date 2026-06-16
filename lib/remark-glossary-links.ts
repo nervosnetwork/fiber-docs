@@ -34,7 +34,7 @@ const GLOSSARY_TERMS: Record<string, string> = {
   "Fiber Network": "fiber-network",
 };
 
-const GLOSSARY_URL = "/docs/guide/core-concepts/glossary";
+const GLOSSARY_URL = "/docs/res/glossary";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AstNode = any;
