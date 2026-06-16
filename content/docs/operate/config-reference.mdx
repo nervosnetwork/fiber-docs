@@ -1,16 +1,39 @@
 ---
 title: Configuration Reference
-description: Complete reference for all config.yml fields, environment variables, and defaults
-date: 2026-05-25
+description: Reference for Fiber Node config.yml fields, supported overrides, and defaults
+date: 2026-06-16
 ---
 
-Fiber Node is configured via a `config.yml` file. This page documents all available fields, their types, defaults, and usage.
+Fiber Node is mainly configured by `config.yml`. Many fields in this file can also be set from command-line flags or environment variables when starting `fnn`.
 
-## Configuration Priority
+## Configuration Loading
 
-Environment variables > Command-line arguments > `config.yml` > Built-in defaults
+Native `fnn` loads configuration file in this order:
 
-## Top-Level Structure
+1. `-c, --config <path>` if provided.
+2. `$BASE_DIR/config.yml` when `-d, --dir <BASE_DIR>` is provided.
+3. `$HOME/.fiber-node/config.yml`.
+
+Values from command-line flags and supported environment variables override `config.yml`; values not provided by either source fall back to built-in defaults. If both a command-line flag and its environment variable are provided, use the command-line value as the effective override.
+
+`services` decides which services start. Set it in `config.yml`, or pass one or more service names with `-s, --services` when starting `fnn`, for example `--services fiber,rpc,ckb`. When the command line includes at least one service name, that list replaces the `services` list in `config.yml`; when no service name is provided, `fnn` uses the list from `config.yml`. Valid service names are `fiber`, `rpc`, `ckb`, and `cch`.
+
+Data directories are derived from `BASE_DIR`, which defaults to `$HOME/.fiber-node` and can be changed with global `-d, --dir`. Native startup sets service directories to `$BASE_DIR/fiber`, `$BASE_DIR/ckb`, and `$BASE_DIR/cch`; do not rely on per-service `base_dir` entries in `config.yml`. The generated help may list per-service base directory flags and environment variables, but native startup rewrites those service directories from `BASE_DIR`.
+
+> **Tip**: Run `fnn --help` to list the available configuration flags and environment variables. Most service-scoped options are generated from the same config structs that parse `config.yml`, so the corresponding YAML fields work too. For example, `--fiber-listening-addr` maps to `fiber.listening_addr`, and `--rpc-listening-addr` maps to `rpc.listening_addr`.
+
+### Global Startup Options
+
+These options affect native `fnn` startup. They are not `config.yml` fields.
+
+| Option | Description |
+|--------|-------------|
+| `-c, --config <path>` | Load the specified config file. |
+| `-d, --dir <BASE_DIR>` | Set `BASE_DIR`; also changes the implicit config path to `$BASE_DIR/config.yml` when `--config` is not provided. |
+| `-s, --services <services>` | Services to start. When present, this replaces the `services` list from `config.yml`. Values are comma-separated or space-separated. |
+| `--check-validate` | Validate the Fiber store database and exit without starting services. |
+
+## Top-Level Fields
 
 ```yaml
 fiber:
@@ -27,58 +50,112 @@ services:
   - ckb
 ```
 
-`services` specifies which services to run. At least one is required. Options: `fiber`, `rpc`, `ckb`, `cch`.
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `services` | string[] | **required** | Services to run. Valid values: `fiber`, `rpc`, `ckb`, `cch`. |
+| `fiber` | object | `{}` | Fiber P2P, channel, gossip, watchtower, proxy, and Tor settings. |
+| `rpc` | object | `{}` | JSON-RPC server settings. |
+| `ckb` | object | `{}` | CKB chain integration and funding transaction settings. |
+| `cch` | object | `{}` | Cross-Chain Hub settings. Native builds only. |
 
----
+Service dependencies:
+
+- `fiber` requires `ckb`.
+- `cch` requires either the in-process `fiber` service or `cch.fiber_rpc_url`.
+- Standalone `cch` mode, where `fiber` is not running in the same process, also requires `cch.wrapped_btc_type_script`.
 
 ## Fiber Section (`fiber`)
 
-### Network Configuration
+### Network
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `listening_addr` | string | `/ip4/0.0.0.0/tcp/0` | TCP listening address for P2P connections (multiaddr format) |
+| `reuse_port_for_websocket` | bool | `true` | Also listen on a WebSocket multiaddr using the same TCP port. |
 | `announce_listening_addr` | bool | `false` | Whether to announce the listening address to peers |
-| `announce_private_addr` | bool | `false` | Whether to announce private addresses (only for private networks) |
+| `announce_private_addr` | bool | `false` | Whether to announce and process private addresses. Keep `false` unless testing or running a private network. |
 | `announced_addrs` | string[] | `[]` | Public addresses to announce (multiaddr format). Set this to your public IP. |
 | `announced_node_name` | string | — | Node name shown in RPC responses, TUI, and network graph |
 | `bootnode_addrs` | string[] | `[]` | Bootstrap node addresses for initial peer discovery (multiaddr format) |
-| `chain` | string | **required** | Chain specification: `"mainnet"`, `"testnet"`, or path to custom chain spec |
+| `chain` | string | **required** | Chain specification: `mainnet`, `testnet`, or a custom chain spec path relative to `BASE_DIR`. |
+| `scripts` | array | `[]` | Fiber contract script configuration. Mainnet/testnet configs should provide at least `FundingLock` and `CommitmentLock` entries from the bundled templates. |
 
-### Channel Configuration
+### Contract Scripts
+
+```yaml
+fiber:
+  scripts:
+    - name: FundingLock
+      script:
+        code_hash: 0x...
+        hash_type: type
+        args: 0x
+      cell_deps:
+        - type_id:
+            code_hash: 0x...
+            hash_type: type
+            args: 0x...
+        - cell_dep:
+            out_point:
+              tx_hash: 0x...
+              index: 0x0
+            dep_type: code
+```
+
+`name` must be one of the contract names used by Fiber, such as `FundingLock` or `CommitmentLock`. Each `cell_deps` entry must contain exactly one of `type_id` or `cell_dep`.
+
+### Channel
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `open_channel_auto_accept_min_ckb_funding_amount` | u64 | `10000000000` (100 CKB) | Minimum CKB funding to auto-accept channel requests |
 | `auto_accept_channel_ckb_funding_amount` | u64 | `9900000000` (99 CKB) | CKB amount to auto-accept. Set to `0` to disable auto-accept. |
 | `to_be_accepted_channels_number_limit` | usize | `20` | Max pending channels from one peer |
-| `to_be_accepted_channels_bytes_limit` | usize | `50000` | Max storage bytes of pending channels from one peer |
+| `to_be_accepted_channels_bytes_limit` | usize | `51200` (50 KiB) | Max storage bytes of pending channels from one peer |
+| `pending_channels_number_limit` | usize | `100` | Global max pending channel openings |
 | `funding_timeout_seconds` | u64 | `86400` (1 day) | Timeout for funding transaction confirmation |
 | `external_funding_timeout_seconds` | u64 | `300` (5 min) | Timeout waiting for externally signed funding tx |
 
-### TLC Configuration
+### TLC
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `tlc_expiry_delta` | u64 | `86400000` (1 day, ms) | Time window to forward a TLC |
+| `tlc_expiry_delta` | u64 | `14400000` (4 hours, ms) | Expiry delta used when forwarding a TLC |
 | `tlc_min_value` | u128 | `0` | Minimum TLC value (`0` = no minimum) |
 | `tlc_fee_proportional_millionths` | u128 | `1000` | Fee for forwarding TLCs (1000 = 0.1%) |
 
-### Peer Connection
+`final_tlc_expiry_delta` is not a node-level config field. It is a payment/invoice-level value with separate defaults in the payment code.
+
+### Node Announcements, Peers, and Gossip
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
+| `auto_announce_node` | bool | `true` | Whether to automatically announce this node on startup. |
+| `announce_node_interval_seconds` | u64 | `3600` (1 hour) | NodeAnnouncement reannounce interval. `0` means never reannounce. |
 | `max_inbound_peers` | usize | `16` | Maximum inbound connections |
 | `min_outbound_peers` | usize | `8` | Minimum outbound connections to maintain |
 | `enable_peer_reconnect_backoff` | bool | `true` | Auto-reconnect for peers with active channels |
+| `sync_network_graph` | bool | `true` | Whether to sync network graph from peers |
+| `gossip_network_maintenance_interval_ms` | u64 | `60000` (1 min) | Interval for gossip network maintenance |
+| `gossip_store_maintenance_interval_ms` | u64 | `20000` (20 sec) | Interval for gossip store maintenance |
+| `gossip_network_num_targeted_active_syncing_peers` | usize | `3` | Number of peers to actively request missed gossip messages from |
+| `gossip_network_num_targeted_outbound_passive_syncing_peers` | usize | `3` | Number of outbound peers targeted for passive gossip syncing |
 
-### Gossip Network
+### Gossip Policy
+
+`gossip_policy` is a config-file-only field. It is intentionally not exposed as a CLI flag or environment variable.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `sync_network_graph` | bool | `true` | Whether to sync network graph from peers |
-| `gossip_network_maintenance_interval_ms` | u64 | `60000` (1 min) | Interval for gossip network maintenance |
-| `gossip_store_maintenance_interval_ms` | u64 | `20000` | Interval for gossip store maintenance |
+| `gossip_policy.ban.threshold` | u32 | `100` | Ban score threshold. `0` disables this limiter. |
+| `gossip_policy.ban.duration_ms` | u64 | `600000` (10 min) | Ban duration. `0` disables this limiter. |
+| `gossip_policy.outbound_global.rate_bytes_per_sec` | u64 | `1024000` | Global outbound gossip byte rate |
+| `gossip_policy.outbound_global.burst_bytes` | u64 | `2048000` | Global outbound gossip burst size |
+| `gossip_policy.outbound_peer.rate_bytes_per_sec` | u64 | `51200` | Per-peer outbound gossip byte rate |
+| `gossip_policy.outbound_peer.burst_bytes` | u64 | `102400` | Per-peer outbound gossip burst size |
+| `gossip_policy.outbound_delay_queue_capacity` | usize | `1024` | Max delayed outbound gossip payloads queued per peer |
+| `gossip_policy.inbound_channel_update.interval_ms` | u64 | `60000` | Inbound channel update rate-limit interval |
+| `gossip_policy.inbound_channel_update.burst` | u32 | `10` | Inbound channel update burst size |
 
 ### Watchtower
 
@@ -89,15 +166,30 @@ services:
 | `standalone_watchtower_rpc_url` | string | — | URL of standalone watchtower RPC server |
 | `standalone_watchtower_token` | string | — | RPC token for standalone watchtower |
 
+If `disable_built_in_watchtower` is `true`, `standalone_watchtower_rpc_url` must be set.
+
 ### Proxy & Tor
+
+`proxy` and `onion` are config-file-only fields. They are not exposed as direct CLI flags or environment variables.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `proxy.proxy_url` | string | — | SOCKS5 proxy URL (e.g., `socks5://127.0.0.1:9050`) |
 | `proxy.proxy_random_auth` | bool | `true` | Random username/password for Tor stream isolation |
 | `onion.listen_on_onion` | bool | `false` | Make node reachable via .onion address |
-| `onion.onion_server` | string | — | Tor SOCKS5 proxy URL |
+| `onion.onion_server` | string | — | Tor SOCKS5 server for outbound `.onion` connections, e.g. `127.0.0.1:9050` |
+| `onion.p2p_listen_address` | string | derived | Local address the onion service forwards to, e.g. `127.0.0.1:8228` |
+| `onion.onion_private_key_path` | string | `$BASE_DIR/fiber/onion_private_key` | Path for the onion service private key |
 | `onion.tor_controller` | string | `127.0.0.1:9051` | Tor controller address |
+| `onion.tor_password` | string | — | Tor controller password |
+| `onion.onion_external_port` | u16 | `8228` | External port exposed by the onion service |
+| `onion.onion_service_start_timeout` | usize | `5` | Seconds to wait for onion service registration |
+
+### Feature-Gated Fields
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `metrics_addr` | string | — | Metrics endpoint address, available only when the binary is built with the `metrics` feature. |
 
 ---
 
@@ -105,11 +197,17 @@ services:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `listening_addr` | string | — | Listen address for JSON-RPC (e.g., `127.0.0.1:8227`). **Required** if RPC service enabled. |
+| `listening_addr` | string | `[::1]:0` | Listen address for JSON-RPC. The bundled configs use `127.0.0.1:8227`. |
 | `biscuit_public_key` | string | — | Public key for Biscuit authorization. If set, RPC requires Bearer token auth. |
-| `enabled_modules` | string[] | all modules | RPC modules to enable: `cch`, `channel`, `graph`, `payment`, `info`, `invoice`, `peer`, `watchtower` |
+| `enabled_modules` | string[] | see below | RPC modules to enable |
 | `cors_enabled` | bool | `false` | Enable CORS for HTTP RPC |
 | `cors_allowed_origins` | string[] | `[]` | Allowed origins for CORS (empty = allow all if CORS enabled) |
+
+Default modules are `cch`, `channel`, `graph`, `payment`, `info`, `invoice`, and `peer`. Builds with the `watchtower` feature also enable `watchtower` by default.
+
+Available module names include `cch`, `channel`, `graph`, `payment`, `info`, `invoice`, `peer`, `pubsub`, `watchtower`, `dev` in debug builds, and `prof` when built with the `pprof` feature.
+
+If `listening_addr` is public, `biscuit_public_key` is required. Without auth, the RPC server refuses to bind public addresses such as `0.0.0.0:8227`.
 
 ---
 
@@ -119,6 +217,8 @@ services:
 |-------|------|---------|-------------|
 | `rpc_url` | string | `http://127.0.0.1:8114` | CKB node RPC URL |
 | `udt_whitelist` | array | `[]` | Supported UDT configurations (see below) |
+| `tx_tracing_polling_interval_ms` | u64 | `4000` | Polling interval for the CKB transaction tracing actor |
+| `funding_tx_shell_builder` | string | — | External command used to build funding transactions |
 
 ### UDT Configuration
 
@@ -138,6 +238,15 @@ ckb:
             args: "0x..."
 ```
 
+`script.args` is compiled as a regular expression and matched against the UDT type script args rendered as a `0x`-prefixed hex string. Use an exact regex if you only want to match one token.
+
+Each UDT `cell_deps` entry must contain exactly one of:
+
+- `type_id`, a script used to resolve the current cell dep through the CKB indexer.
+- `cell_dep`, a direct `out_point` plus `dep_type`.
+
+`funding_tx_shell_builder` is configured under `ckb`, but its environment variable is `FIBER_FUNDING_TX_SHELL_BUILDER`. The command receives a funding request JSON object on stdin and must print a CKB transaction JSON object to stdout on success.
+
 ---
 
 ## CCH Section (`cch`) — Cross-Chain Hub
@@ -151,19 +260,101 @@ ckb:
 | `order_expiry_delta_seconds` | u64 | `129600` (36h) | Cross-chain order expiry time |
 | `base_fee_sats` | u64 | `0` | Base fee per order (satoshis) |
 | `fee_rate_per_million_sats` | u64 | `1` | Proportional fee per million satoshis |
+| `btc_final_tlc_expiry_delta_blocks` | u64 | `360` | Final TLC relative expiry in BTC blocks |
+| `ckb_final_tlc_expiry_delta_seconds` | u64 | `216000` (60h) | Final TLC relative expiry for CKB Fiber payments |
+| `min_outgoing_invoice_expiry_delta_seconds` | u64 | `21600` (6h) | Minimum acceptable relative expiry for outgoing invoices |
+| `fiber_rpc_url` | string | — | External Fiber RPC endpoint for standalone CCH mode |
+| `wrapped_btc_type_script` | string | — | Full wrapped BTC type script JSON. Required in standalone CCH mode. |
+| `ignore_startup_failure` | bool | `false` | Config-file-only setting to ignore CCH startup failure. |
+
+Relative `lnd_cert_path` and `lnd_macaroon_path` values are resolved under the effective CCH data directory, normally `$BASE_DIR/cch`.
 
 ---
 
 ## Environment Variables
 
-All config fields can be overridden with environment variables using the prefix pattern:
+Only fields wired to `clap` can be overridden by environment variables. List values use comma-separated strings. Complex values such as `FIBER_SCRIPTS` and `CKB_UDT_WHITELIST` are easier and less error-prone in YAML.
 
-- `FIBER_*` for the `fiber` section (e.g., `FIBER_LISTENING_ADDR`)
-- `RPC_*` for the `rpc` section (e.g., `RPC_LISTENING_ADDR`)
-- `CKB_*` for the `ckb` section (e.g., `CKB_NODE_RPC_URL`)
-- `CCH_*` for the `cch` section (e.g., `CCH_LND_RPC_URL`)
+### Fiber
+
+| Field | Environment variable |
+|-------|----------------------|
+| `listening_addr` | `FIBER_LISTENING_ADDR` |
+| `announce_listening_addr` | `FIBER_ANNOUNCE_LISTENING_ADDR` |
+| `announce_private_addr` | `FIBER_ANNOUNCE_PRIVATE_ADDR` |
+| `announced_addrs` | `FIBER_ANNOUNCED_ADDRS` |
+| `bootnode_addrs` | `FIBER_BOOTNODE_ADDRS` |
+| `announced_node_name` | `FIBER_ANNOUNCED_NODE_NAME` |
+| `chain` | `FIBER_CHAIN` |
+| `scripts` | `FIBER_SCRIPTS` |
+| `open_channel_auto_accept_min_ckb_funding_amount` | `FIBER_OPEN_CHANNEL_AUTO_ACCEPT_MIN_CKB_FUNDING_AMOUNT` |
+| `auto_accept_channel_ckb_funding_amount` | `FIBER_AUTO_ACCEPT_CHANNEL_CKB_FUNDING_AMOUNT` |
+| `tlc_expiry_delta` | `FIBER_TLC_EXPIRY_DELTA` |
+| `tlc_min_value` | `FIBER_TLC_MIN_VALUE` |
+| `tlc_fee_proportional_millionths` | `FIBER_TLC_FEE_PROPORTIONAL_MILLIONTHS` |
+| `auto_announce_node` | `FIBER_AUTO_ANNOUNCE_NODE` |
+| `announce_node_interval_seconds` | `FIBER_ANNOUNCE_NODE_INTERVAL_SECONDS` |
+| `gossip_network_maintenance_interval_ms` | `FIBER_GOSSIP_NETWORK_MAINTENANCE_INTERVAL_MS` |
+| `max_inbound_peers` | `FIBER_MAX_INBOUND_PEERS` |
+| `min_outbound_peers` | `FIBER_MIN_OUTBOUND_PEERS` |
+| `enable_peer_reconnect_backoff` | `FIBER_ENABLE_PEER_RECONNECT_BACKOFF` |
+| `gossip_store_maintenance_interval_ms` | `FIBER_GOSSIP_STORE_MAINTENANCE_INTERVAL_MS` |
+| `gossip_network_num_targeted_active_syncing_peers` | `FIBER_GOSSIP_NETWORK_NUM_TARGETED_ACTIVE_SYNCING_PEERS` |
+| `gossip_network_num_targeted_outbound_passive_syncing_peers` | `FIBER_GOSSIP_NETWORK_NUM_TARGETED_OUTBOUND_PASSIVE_SYNCING_PEERS` |
+| `sync_network_graph` | `FIBER_SYNC_NETWORK_GRAPH` |
+| `watchtower_check_interval_seconds` | `FIBER_WATCHTOWER_CHECK_INTERVAL_SECONDS` |
+| `standalone_watchtower_rpc_url` | `FIBER_STANDALONE_WATCHTOWER_RPC_URL` |
+| `standalone_watchtower_token` | `FIBER_STANDALONE_WATCHTOWER_TOKEN` |
+| `disable_built_in_watchtower` | `FIBER_DISABLE_BUILT_IN_WATCHTOWER` |
+| `to_be_accepted_channels_number_limit` | `FIBER_TO_BE_ACCEPTED_CHANNELS_NUMBER_LIMIT` |
+| `to_be_accepted_channels_bytes_limit` | `FIBER_TO_BE_ACCEPTED_CHANNELS_BYTESS_LIMIT` |
+| `pending_channels_number_limit` | `FIBER_PENDING_CHANNELS_NUMBER_LIMIT` |
+| `funding_timeout_seconds` | `FIBER_FUNDING_TIMEOUT_SECONDS` |
+| `external_funding_timeout_seconds` | `FIBER_EXTERNAL_FUNDING_TIMEOUT_SECONDS` |
+| `reuse_port_for_websocket` | `FIBER_REUSE_PORT_FOR_WEBSOCKET` |
+| `metrics_addr` | `FIBER_METRICS_ADDR` |
+
+`FIBER_TO_BE_ACCEPTED_CHANNELS_BYTESS_LIMIT` keeps the current source spelling of the environment variable. The YAML field and CLI flag use `bytes`.
+
+### RPC
+
+| Field | Environment variable |
+|-------|----------------------|
+| `listening_addr` | `RPC_LISTENING_ADDR` |
+| `biscuit_public_key` | `RPC_BISCUIT_PUBLIC_KEY` |
+| `enabled_modules` | `RPC_ENABLED_MODULES` |
+| `cors_enabled` | `RPC_CORS_ENABLED` |
+| `cors_allowed_origins` | `RPC_CORS_ALLOWED_ORIGINS` |
+
+### CKB
+
+| Field | Environment variable |
+|-------|----------------------|
+| `rpc_url` | `CKB_NODE_RPC_URL` |
+| `udt_whitelist` | `CKB_UDT_WHITELIST` |
+| `tx_tracing_polling_interval_ms` | `CKB_TX_TRACING_POLLING_INTERVAL_MS` |
+| `funding_tx_shell_builder` | `FIBER_FUNDING_TX_SHELL_BUILDER` |
+
+### CCH
+
+| Field | Environment variable |
+|-------|----------------------|
+| `lnd_rpc_url` | `CCH_LND_RPC_URL` |
+| `lnd_cert_path` | `CCH_LND_CERT_PATH` |
+| `lnd_macaroon_path` | `CCH_LND_MACAROON_PATH` |
+| `wrapped_btc_type_script_args` | `CCH_WRAPPED_BTC_TYPE_SCRIPT_ARGS` |
+| `order_expiry_delta_seconds` | `CCH_ORDER_EXPIRY_DELTA_SECONDS` |
+| `base_fee_sats` | `CCH_BASE_FEE_SATS` |
+| `fee_rate_per_million_sats` | `CCH_FEE_RATE_PER_MILLION_SATS` |
+| `btc_final_tlc_expiry_delta_blocks` | `CCH_BTC_FINAL_TLC_EXPIRY_DELTA_BLOCKS` |
+| `ckb_final_tlc_expiry_delta_seconds` | `CCH_CKB_FINAL_TLC_EXPIRY_DELTA_SECONDS` |
+| `min_outgoing_invoice_expiry_delta_seconds` | `CCH_MIN_OUTGOING_INVOICE_EXPIRY_DELTA_SECONDS` |
+| `fiber_rpc_url` | `CCH_FIBER_RPC_URL` |
+| `wrapped_btc_type_script` | `CCH_WRAPPED_BTC_TYPE_SCRIPT` |
 
 **Special variable**: `FIBER_SECRET_KEY_PASSWORD` — Required to decrypt the CKB private key at startup.
+
+No supported direct environment variable exists for native service directories, `fiber.proxy`, `fiber.onion`, `fiber.gossip_policy`, or `cch.ignore_startup_failure`.
 
 ---
 
@@ -174,15 +365,40 @@ fiber:
   listening_addr: "/ip4/0.0.0.0/tcp/8228"
   bootnode_addrs:
     - "/ip4/54.179.226.154/tcp/8228/p2p/Qmes1EBD4yNo9Ywkfe6eRw9tG1nVNGLDmMud1xJMsoYFKy"
+    - "/ip4/16.163.7.105/tcp/8228/p2p/QmdyQWjPtbK4NWWsvy8s69NGJaQULwgeQDT5ZpNDrTNaeV"
   announce_listening_addr: true
   chain: testnet
   scripts:
     - name: FundingLock
-      script: { code_hash: "0x6c67887fe201ee0c7853f1682c0b77c0e6214044c156c7558269390a8afa6d7c", hash_type: type, args: "0x" }
-      cell_deps: []
+      script:
+        code_hash: 0x6c67887fe201ee0c7853f1682c0b77c0e6214044c156c7558269390a8afa6d7c
+        hash_type: type
+        args: 0x
+      cell_deps:
+        - type_id:
+            code_hash: 0x00000000000000000000000000000000000000000000000000545950455f4944
+            hash_type: type
+            args: 0x3cb7c0304fe53f75bb5727e2484d0beae4bd99d979813c6fc97c3cca569f10f6
+        - cell_dep:
+            out_point:
+              tx_hash: 0x12c569a258dd9c5bd99f632bb8314b1263b90921ba31496467580d6b79dd14a7
+              index: 0x0
+            dep_type: code
     - name: CommitmentLock
-      script: { code_hash: "0x740dee83f87c6f309824d8fd3fbdd3c8380ee6fc9acc90b1a748438afcdf81d8", hash_type: type, args: "0x" }
-      cell_deps: []
+      script:
+        code_hash: 0x740dee83f87c6f309824d8fd3fbdd3c8380ee6fc9acc90b1a748438afcdf81d8
+        hash_type: type
+        args: 0x
+      cell_deps:
+        - type_id:
+            code_hash: 0x00000000000000000000000000000000000000000000000000545950455f4944
+            hash_type: type
+            args: 0xf7e458887495cf70dd30d1543cad47dc1dfe9d874177bf19291e4db478d5751b
+        - cell_dep:
+            out_point:
+              tx_hash: 0x12c569a258dd9c5bd99f632bb8314b1263b90921ba31496467580d6b79dd14a7
+              index: 0x0
+            dep_type: code
 
 rpc:
   listening_addr: "127.0.0.1:8227"
@@ -196,4 +412,4 @@ services:
   - ckb
 ```
 
-> **Tip**: Use the config files from the [Fiber repository](https://github.com/nervosnetwork/fiber/tree/main/config) as starting points — they include the correct script hashes and bootnode addresses for each network.
+> **Tip**: Use the config files from the [Fiber repository](https://github.com/nervosnetwork/fiber/tree/main/config) as starting points. They include current script hashes, cell deps, UDT whitelist entries, and bootnode addresses for each network.
