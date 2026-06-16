@@ -24,7 +24,7 @@ Running a node gives you a local view of the Fiber network and the ability to:
 - **Route payments** — forward payments for others and collect routing fees if you run a well-connected public node.
 - **Gossip with the network** — discover peers, channels, and fee policies through the P2P protocol.
 
-All of this happens through a JSON-RPC interface (and an optional CLI wrapper). The node itself is responsible for channel state management, HTLC/PTLC-style locking, and publishing the correct on-chain settlement transaction when a channel closes.
+All of this happens through a JSON-RPC interface (and an optional CLI wrapper). The node itself is responsible for channel state management, `HTLC`/`PTLC`-style locking, and publishing the correct on-chain settlement transaction when a channel closes.
 
 ## Node Forms
 
@@ -48,11 +48,11 @@ Use the native node when you need full control, persistent storage, and the abil
 
 ### WASM Node (`fiber-wasm` / `fiber-js`)
 
-`fiber-wasm` compiles the same node logic to WebAssembly so it can run inside a browser or a Node.js process. It stores data in IndexedDB (via a WASM worker) and is designed for client-side applications that do not want to operate a backend server.
+`fiber-wasm` compiles the same node logic to WebAssembly so it can run inside a browser or a `Node.js` process. It stores data in IndexedDB (via a WASM worker) and is designed for client-side applications that do not want to operate a backend server.
 
 | Aspect | Details |
 |--------|---------|
-| **Runtime** | Browser or Node.js |
+| **Runtime** | Browser or `Node.js` |
 | **Best for** | Browser wallets, web games, client-side dApps |
 | **Storage** | IndexedDB |
 | **Network exposure** | No public IP required; can connect through relay nodes |
@@ -91,17 +91,17 @@ You will need:
 - Sufficient CKB/UDT liquidity to fund and maintain channels.
 - (Optional) A TLS proxy if you also want browser/WASM clients to reach you over WSS.
 
-→ See [WSS Configuration](https://github.com/nervosnetwork/fiber/blob/main/docs/fiber-node-wss.md) for browser-facing deployments.
+→ See [WSS Configuration](https://github.com/nervosnetwork/fiber/blob/develop/docs/fiber-node-wss.md) for browser-facing deployments.
 
 ### Private Node Behind Relay
 
 Not every node has to be public. A private node can open outbound channels to public relay nodes and then send or receive payments through those relays. This is the easiest way to participate without exposing a public IP or running server infrastructure.
 
-This pattern is covered in the [Public Nodes User Manual](https://github.com/nervosnetwork/fiber/blob/main/docs/public-nodes.md) and is the default mental model for the WASM node.
+This pattern is covered in the [Public Nodes User Manual](https://github.com/nervosnetwork/fiber/blob/develop/docs/public-nodes.md) and is the default mental model for the WASM node.
 
 ### Browser-Embedded Node
 
-With `fiber-wasm`, a Fiber node can live inside a web page. The user starts the node by calling `fiber(config)` in JavaScript, and the node connects to Testnet bootnodes over WebSocket. This is ideal for wallets, games, and demos where installation friction must be minimal.
+With `fiber-wasm`, a Fiber node can live inside a web page. Application code creates a `Fiber` instance and starts it with `fiber.start(config, fiberKeyPair, ckbSecretKey, ...)`; the node can then connect to Testnet bootnodes over WebSocket. This is ideal for wallets, games, and demos where installation friction must be minimal.
 
 → [Run a WASM Node](/docs/quick-start/run-a-node/fiberjs)
 
@@ -120,10 +120,14 @@ Testnet is the recommended place to start. Once you are comfortable with channel
 
 Regardless of the form you choose, running a node requires:
 
-1. **A CKB private key** — used to sign funding and settlement transactions. FNN stores it encrypted under `FIBER_SECRET_KEY_PASSWORD`.
+1. **A CKB private key** — Native `fnn` uses a CKB private key file protected by `FIBER_SECRET_KEY_PASSWORD`; WASM/`fiber-js` receives key material through the JS API.
+   - Generate one with [`ckb-cli`](https://github.com/nervosnetwork/ckb-cli) or export it from a CKB wallet. Native `fnn` expects a hex key placed at ``<ckb_base_dir>/key`` and will migrate it to an encrypted file on first start.
 2. **A CKB RPC endpoint** — the node reads chain state and broadcasts transactions through it.
+   - For Testnet, the sample `config/testnet/config.yml` uses `https://testnet.ckbapp.dev/`. For Mainnet, run your own CKB node or use a trusted RPC provider.
 3. **A `config.yml`** — selects the network, bootnodes, listening addresses, RPC port, and whitelisted UDTs.
+   - Start from [`config/testnet/config.yml`](https://github.com/nervosnetwork/fiber/blob/develop/config/testnet/config.yml) or [`config/mainnet/config.yml`](https://github.com/nervosnetwork/fiber/blob/develop/config/mainnet/config.yml) in the Fiber repo and adjust the values for your deployment.
 4. **Enough CKB for on-chain fees and channel reserve** — opening a channel requires funding CKB on-chain, and each side reserves 99 CKB for the commitment lock and shutdown fee.
+   - On Testnet, request CKB from a faucet; on Mainnet, transfer CKB from an existing wallet. If you plan to route UDT payments, you also need the corresponding UDT liquidity.
 
 <Callout type="warning">
 Keep your node data directory, especially `fiber/store` and the `ckb/key` file, backed up and secure. Losing channel state can mean losing funds.
