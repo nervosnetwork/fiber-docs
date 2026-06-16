@@ -10,59 +10,69 @@ The Fiber ecosystem includes several tools and libraries that serve different ro
 
 ## Ecosystem Map
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                     Node Layer                           │
-│  ┌──────────────────┐    ┌──────────────────┐          │
-│  │     fnn           │    │    fiber-js       │          │
-│  │  (Rust Native)    │    │   (WASM Node)     │          │
-│  │  Server/Desktop   │    │  Browser/Node.js  │          │
-│  └────────┬─────────┘    └────────┬──────────┘          │
-│           │                        │                      │
-├───────────┼────────────────────────┼──────────────────────┤
-│           ▼                        ▼                      │
-│                    Access Layer                           │
-│  ┌──────────────────┐    ┌──────────────────┐          │
-│  │   HTTP RPC       │    │  fiber-js API     │          │
-│  │  (JSON-RPC 2.0)  │    │  (WASM Bindings)  │          │
-│  │  Any language     │    │  JS/TS only       │          │
-│  └────────┬─────────┘    └────────┬──────────┘          │
-│           │                        │                      │
-├───────────┼────────────────────────┼──────────────────────┤
-│           ▼                        ▼                      │
-│                  CLI & Tools                              │
-│  ┌──────────────────┐    ┌──────────────────┐          │
-│  │    fnn-cli        │    │   fnn-migrate     │          │
-│  │  Node management  │    │  Data migration   │          │
-│  └──────────────────┘    └──────────────────┘          │
-│                                                           │
-├──────────────────────────────────────────────────────────┤
-│              Cryptography & Contracts                     │
-│  ┌──────────────────┐    ┌──────────────────┐          │
-│  │  fiber-sphinx     │    │  fiber-scripts    │          │
-│  │  Onion routing    │    │  On-chain locks   │          │
-│  │  cryptography     │    │  (Funding/Commit) │          │
-│  └──────────────────┘    └──────────────────┘          │
-└─────────────────────────────────────────────────────────┘
+```text
+┌──────────────────────────────────────────────────────────────────────┐
+│ Application Layer                                                    │
+│   ┌──────────────────────────┐    ┌──────────────────────────┐       │
+│   │ Operators / backends     │    │ Wallets / dApps / games  │       │
+│   │ Services in any language │    │ Browser UI (JS/TS)       │       │
+│   └─────────────┬────────────┘    └─────────────┬────────────┘       │
+│                 │                               │                    │
+│                 ▼                               ▼                    │
+├──────────────────────────────────────────────────────────────────────┤
+│ Access / API Layer                                                   │
+│   ┌──────────────────────────┐    ┌──────────────────────────┐       │
+│   │ HTTP JSON-RPC / fnn-cli  │    │ @nervosnetwork/fiber-js  │       │
+│   │ Native node control      │    │ JS/TS API + workers      │       │
+│   └─────────────┬────────────┘    └─────────────┬────────────┘       │
+│                 │                               │                    │
+│                 │                               ▼                    │
+├──────────────────────────────────────────────────────────────────────┤
+│ Runtime Layer                                                        │
+│   ┌──────────────────────────┐    ┌──────────────────────────┐       │
+│   │ fnn native binary        │    │ fiber-wasm               │       │
+│   │ crates/fiber-bin         │    │ wasm-bindgen wrapper     │       │
+│   └─────────────┬────────────┘    │ crates/fiber-wasm        │       │
+│                 │                 └─────────────┬────────────┘       │
+│                 │                               │                    │
+│                 └───────────────┬───────────────┘                    │
+│                                 ▼                                    │
+├──────────────────────────────────────────────────────────────────────┤
+│ Shared Core Layer                                                    │
+│   ┌──────────────────────────────────────────────────────────────┐   │
+│   │ fiber-lib (package name: fnn)                                │   │
+│   │ Actors, RPC handlers, channels, graph, invoices, payments    │   │
+│   └──────────────────────────────┬───────────────────────────────┘   │
+│                                  ▼                                   │
+├──────────────────────────────────────────────────────────────────────┤
+│ Shared Supporting Crates / Assets                                    │
+│   fiber-store · fiber-types · fiber-json-types · fiber-sphinx         │
+│   fiber-scripts                                                      │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-## Node Layer
+## Runtime Stacks
 
 ### fnn — Rust Native Node
 
-[fnn](https://github.com/nervosnetwork/fiber) is the reference implementation of the Fiber Network Node, written in Rust. It runs as a native binary on Linux, macOS, and Windows.
+[fnn](https://github.com/nervosnetwork/fiber) is the reference implementation of the Fiber Network Node, written in Rust. It runs as a native binary on Linux, macOS, and Windows. In the Fiber source tree, the `fnn` binary is built from [`crates/fiber-bin`](https://github.com/nervosnetwork/fiber/tree/main/crates/fiber-bin), which depends on the shared [`crates/fiber-lib`](https://github.com/nervosnetwork/fiber/tree/main/crates/fiber-lib) crate.
 
 **Choose fnn if**:
 - You want to run a production node on a server
 - You need the best performance and full feature set
 - You want to be a relay node or liquidity provider on the network
 
-### fiber-js — WASM Node
+### fiber-js — Browser WASM Node
 
-[fiber-js](https://github.com/nervosnetwork/fiber/tree/main/crates/fiber-wasm) is a WebAssembly build of the Fiber node that runs in the browser or Node.js. It provides the same core functionality as fnn but can be embedded into JavaScript applications.
+[fiber-js](https://github.com/nervosnetwork/fiber/tree/main/fiber-js) is the JavaScript/TypeScript API layer above Fiber WASM. It is bundled for browser runtime environments, starts Web Workers for the Fiber node and IndexedDB storage, and exposes common Fiber node operations through a JS API. It also targets modern mobile browsers that support WebAssembly, Web Workers, and IndexedDB, so browser wallets and dApps can offer Fiber functionality on mobile devices without a native app.
+
+The browser stack has one more layer than the native stack: application code calls `@nervosnetwork/fiber-js`, `fiber-js` loads [`crates/fiber-wasm`](https://github.com/nervosnetwork/fiber/tree/main/crates/fiber-wasm) through a worker, and `fiber-wasm` wraps the same shared `fiber-lib` node core with `wasm-bindgen`.
+
+`fiber-js` is close to the Fiber RPC shape for common channel, peer, invoice, payment, graph, and info workflows, but it is not a full replacement for `fnn`. The native `fnn` binary remains the more complete choice for long-running nodes, production operations, CCH, watchtower, profiling, and other advanced node scenarios.
 
 **Choose fiber-js if**:
 - You want to build a browser-based wallet or dApp
+- You need the same Fiber integration to work in desktop and mobile browsers
 - You don't want to run a separate server
 - You are building a web game with micro-payments
 
@@ -70,30 +80,34 @@ The Fiber ecosystem includes several tools and libraries that serve different ro
 
 ### HTTP RPC
 
-The HTTP JSON-RPC interface is the standard way to interact with a running fnn node. Any language with an HTTP client can use it.
+The HTTP JSON-RPC interface is the standard way to interact with a running native `fnn` node. Any language with an HTTP client can use it.
 
 **Choose HTTP RPC if**:
 - You have a running fnn node and want to control it programmatically
 - You are building a backend service that integrates with Fiber
 - You prefer to use a language other than JavaScript/TypeScript
 
-See the [HTTP RPC Guide](/docs/developer/http-rpc-guide) for details.
+See the [API Reference](/docs/build/api-reference) for details.
 
-### @ckb-ccc/core (Community)
+### fiber-js API
 
-[@ckb-ccc/core](https://github.com/ckb-dev/ccc) is a community library that provides a JavaScript/TypeScript wrapper for the Fiber HTTP RPC. It is not an official SDK, but it simplifies RPC access from JavaScript.
+The `@nervosnetwork/fiber-js` API is the browser-facing integration layer. It does not talk to a local HTTP server. Instead, it sends commands to its Fiber Web Worker, and that worker invokes the functions exported by `fiber-wasm`.
 
-## CLI & Tools
+## Runtime-Specific Operations
+
+The native and WASM runtimes have different operational surfaces. Native `fnn` exposes HTTP RPC and CLI-based node-maintenance tooling. `fiber-js` embeds the WASM node in browser workers, uses IndexedDB-backed storage through the WASM database worker, and presents a JS/TS API to application code. Both paths share `fiber-lib` underneath, including the store-migration entrypoint used when each runtime opens its store.
 
 ### fnn-cli
 
 [fnn-cli](https://github.com/nervosnetwork/fiber/tree/main/crates/fiber-cli) is the official command-line tool for managing a Fiber node. It supports both one-shot commands and an interactive REPL with tab completion.
 
-### fnn-migrate
+### Built-in Storage Migration
 
-[fnn-migrate](https://github.com/nervosnetwork/fiber/tree/main/migrate) is a data migration tool used when upgrading between Fiber versions that have breaking changes in the storage format.
+Storage migration is part of the shared Fiber node startup path in current releases. Native `fnn` runs the unified migration system from [`crates/fiber-store`](https://github.com/nervosnetwork/fiber/tree/main/crates/fiber-store) when it opens a filesystem-backed store. The WASM runtime also enters the same migration path when `fiber-wasm` opens its browser-backed store before node services start.
 
-## Cryptography & Contracts
+The standalone `fnn-migrate` binary is a legacy tool kept under [`migrate_archive`](https://github.com/nervosnetwork/fiber/tree/main/migrate_archive). Use it only for databases older than the unified migration epoch, such as the v0.8.x upgrade path described by the Fiber repository. For current native stores, back up the data directory, start `fnn`, and let the built-in migration system run.
+
+## Cryptography & On-Chain Scripts
 
 ### fiber-sphinx
 
@@ -101,7 +115,7 @@ See the [HTTP RPC Guide](/docs/developer/http-rpc-guide) for details.
 
 ### fiber-scripts
 
-[fiber-scripts](https://github.com/nervosnetwork/fiber-scripts) contains the on-chain CKB scripts (smart contracts) that secure Fiber payment channels:
+[fiber-scripts](https://github.com/nervosnetwork/fiber-scripts) contains the CKB on-chain scripts that secure Fiber payment channels:
 - **Funding Lock**: Secures the multi-sig output that funds a channel
 - **Commitment Lock**: Enforces the revocation mechanism and dispute resolution
 
@@ -109,9 +123,9 @@ See the [HTTP RPC Guide](/docs/developer/http-rpc-guide) for details.
 
 | I want to... | Use |
 |---|---|
-| Run a production node | [fnn](/docs/quick-start/run-a-node) + [fnn-cli](/docs/developer/toolchain) |
-| Control a node from my backend | [HTTP RPC](/docs/developer/http-rpc-guide) |
-| Build a browser wallet | [fiber-js](/docs/developer/fiber-js) |
-| Add payments to my web game | [fiber-js](/docs/developer/fiber-js) or [HTTP RPC](/docs/developer/http-rpc-guide) |
-| Do cross-chain swaps (BTC ↔ CKB) | [fnn](/docs/quick-start/run-a-node) with CCH feature |
+| Run a production node | [fnn](/docs/quick-start/run-a-node) + [fnn-cli](#fnn-cli) |
+| Control a node from my backend | [HTTP RPC](/docs/build/api-reference) |
+| Build a browser wallet | [fiber-js](/docs/build/fiber-js) |
+| Add payments to my web game | [fiber-js](/docs/build/fiber-js) or [HTTP RPC](/docs/build/api-reference) |
+| Do cross-chain swaps (BTC ↔ CKB) | [fnn](/docs/quick-start/run-a-node) with the CCH service configured |
 | Understand the protocol | [Tech Explanation](/docs/res/light-paper) |
