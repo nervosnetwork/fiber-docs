@@ -12,7 +12,7 @@ import { Callout } from 'fumadocs-ui/components/callout';
 
 ## What Is CCH?
 
-**CCH (Cross-Chain Hub)** is a service built into Fiber that bridges the CKB ecosystem and the Bitcoin Lightning Network using **Hash Time-Locked Contracts (HTLCs)**. It lets users atomically swap wrapped BTC on CKB for native BTC on Lightning, and vice versa — without trusting a third party with custody.
+**CCH (Cross-Chain Hub)** is a service built into Fiber that bridges the CKB ecosystem and the Bitcoin Lightning Network using **[Hash Time-Locked Contracts (HTLCs)](/docs/res/glossary#htlc-hashed-timelock-contract)**. It lets users atomically swap wrapped BTC on CKB for native BTC on Lightning, and vice versa — without trusting a third party with custody.
 
 The key guarantee is **atomicity**: either both legs of the swap settle, or neither does. The CCH operator (commonly called *Ingrid* in the literature) cannot steal funds because the same payment hash / preimage locks both sides.
 
@@ -20,7 +20,7 @@ The key guarantee is **atomicity**: either both legs of the swap settle, or neit
 
 For developers building on Fiber, CCH unlocks several possibilities:
 
-- **Payment interoperability**: A Fiber user can pay any Lightning invoice, and a Lightning user can pay any Fiber invoice.
+- **Payment interoperability**: A Fiber user can pay compatible [Lightning invoices](/docs/concept/payments/invoice-guide), and a Lightning user can pay compatible [Fiber invoices](/docs/concept/payments/invoice-guide).
 - **Liquidity bootstrapping**: CCH operators can earn fees by providing swap liquidity between the two networks.
 - **No custodial risk**: The swap is enforced by HTLCs on both chains, not by legal contracts.
 
@@ -117,7 +117,7 @@ Actions are triggered by state changes:
 2. **On `IncomingAccepted`** (`on_entering`): `SendOutgoingPayment` + `TrackOutgoingPayment` are scheduled.
 3. **On `OutgoingInFlight`** (`on_entering`): `TrackOutgoingPayment` is scheduled (ensures we keep watching).
 4. **On `OutgoingSuccess`** (`on_entering`): `SettleIncomingInvoice` is scheduled.
-5. **On final states** (`Success` / `Failed`): No further actions. Scheduler queues a prune job (21 days later).
+5. **On final states** (`Success` / `Failed`): No further actions. Final orders are pruned after their scheduled order expiry time plus an additional 21-day retention period.
 
 Actions are executed with **exponential backoff retry** (1 second base, capped at 10 minutes). Permanent errors fail the order immediately; transient errors are retried.
 
@@ -132,7 +132,7 @@ Alice wants Bob (on Lightning) to receive BTC.
 3. **CCH validates**:
    - The BTC invoice network matches the CKB network (mainnet ↔ mainnet, testnet ↔ testnet, regtest ↔ regtest).
    - The BTC invoice has an amount.
-   - The BTC invoice's `min_final_cltv_expiry_delta` is safe relative to CKB's final TLC expiry.
+   - The BTC invoice's `min_final_cltv_expiry_delta` is safe relative to CKB's final [TLC](/docs/res/glossary#htlc-hashed-timelock-contract) expiry.
    - The invoice has not expired and has enough remaining expiry.
 4. **CCH computes the fee**: `fee = base_fee + amount * fee_rate / 1_000_000`.
 5. **CCH creates a Fiber invoice** for `amount + fee` sats, locked with the same `payment_hash`, using the wrapped BTC type script.
@@ -167,16 +167,21 @@ Alice (on Fiber) wants to receive BTC from Bob (on Lightning).
 
 ### Configuration
 
-CCH is enabled by adding a `[cch]` section to your Fiber config file (or via CLI flags / env vars):
+To run CCH, add `cch` to the `services` list and configure the `cch` section in your Fiber `config.yml` (or provide the equivalent CLI flags / environment variables):
 
-```toml
-[cch]
-lnd_rpc_url = "https://127.0.0.1:10009"
-lnd_cert_path = "/path/to/tls.cert"
-lnd_macaroon_path = "/path/to/admin.macaroon"
-wrapped_btc_type_script_args = "0x..."
-base_fee_sats = 0
-fee_rate_per_million_sats = 1
+```yaml
+services:
+  - fiber
+  - rpc
+  - cch
+
+cch:
+  lnd_rpc_url: "https://127.0.0.1:10009"
+  lnd_cert_path: "/path/to/tls.cert"
+  lnd_macaroon_path: "/path/to/admin.macaroon"
+  wrapped_btc_type_script_args: "0x..."
+  base_fee_sats: 0
+  fee_rate_per_million_sats: 1
 ```
 
 | Config Key | Default | Description |
@@ -356,11 +361,11 @@ If you want to dive deeper into the implementation, here are the key files in th
 
 ## Future: PTLC
 
-Fiber plans to migrate from HTLC to **Point Time-Locked Contracts (PTLC)**, which offer:
+Fiber plans to migrate from HTLC to **[Point Time-Locked Contracts (PTLC)](/docs/res/glossary#ptlc-point-timelock-contract)**, which offer:
 
 - **Improved privacy**: No shared payment hash across hops (the hash is hidden via adaptor signatures).
 - **Reduced on-chain footprint**: Smaller witness data when channels are force-closed.
-- **Enhanced security**: Resistance to wormhole attacks in multi-hop routing.
+- **Enhanced security**: Resistance to wormhole attacks in [multi-hop routing](/docs/concept/routing/multi-hop).
 
 PTLC will replace the SHA-256 hash lock with Schnorr adaptor signatures. Until then, CCH requires `hash_algorithm = Sha256` for LND compatibility.
 
@@ -368,4 +373,7 @@ PTLC will replace the SHA-256 hash lock with Schnorr adaptor signatures. Until t
 
 - [Invoice Guide](/docs/concept/payments/invoice-guide) — How Fiber invoices work
 - [Hold Invoice](/docs/concept/payments/hold-invoice) — Deferred settlement for conditional payments
+- [Multi-Hop Routing](/docs/concept/routing/multi-hop) — How payments route through intermediate nodes
+- [Payment Channel Network](/docs/res/payment-channel) — HTLC concepts and security considerations
+- [Glossary](/docs/res/glossary) — Definitions of HTLC, PTLC, and other Fiber terms
 - [CCH API Reference](/docs/build/api-reference/cch) — Complete RPC schema
