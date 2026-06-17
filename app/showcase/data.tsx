@@ -1,4 +1,15 @@
-export const showcaseProjects = [
+export type ShowcaseProject = {
+  id: string;
+  title: string;
+  description: string;
+  githubUrl?: string;
+  demoUrl?: string;
+  category: string;
+  tags: string[];
+  language?: string;
+};
+
+export const showcaseProjects: ShowcaseProject[] = [
   {
     id: "fiber-dashboard",
     title: "Fiber Dashboard",
@@ -93,6 +104,16 @@ export const showcaseProjects = [
     githubUrl: "https://github.com/toastmanAu/blackboxdata-site",
     category: "Apps & Demos",
     tags: ["POS", "Merchant", "Hardware"],
+  },
+  {
+    id: "ev-charging",
+    title: "EV Charging",
+    description:
+      "EV charging simulation that uses Fiber micropayments for usage-based charging flows.",
+    githubUrl: "https://github.com/HappySonnyDev/fiber-charge-sim",
+    category: "Apps & Demos",
+    tags: ["Micropayments", "Simulation"],
+    language: "TypeScript",
   },
   {
     id: "micro-payment-game",
@@ -228,6 +249,17 @@ export const showcaseProjects = [
     demoUrl: "https://www.npmjs.com/package/@fiber-pay/cli",
     category: "Dev Tools",
     tags: ["CLI", "Payments", "AI-friendly"],
+    language: "TypeScript",
+  },
+  {
+    id: "fiber-studio",
+    title: "Fiber Studio",
+    description:
+      "Desktop UI that wraps the official FNN binary, letting users run a Nervos CKB payment-channel node without touching the terminal.",
+    githubUrl: "https://github.com/chukwuma619/fiber-studio",
+    demoUrl: "https://fiber-desktop.vercel.app/",
+    category: "Dev Tools",
+    tags: ["Node Setup", "Dashboard UI"],
     language: "TypeScript",
   },
   {
