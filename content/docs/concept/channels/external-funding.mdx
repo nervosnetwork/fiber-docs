@@ -14,11 +14,15 @@ Use this flow when the funding Cells are controlled by a wallet or Lock Script o
 
 ## How It Works
 
-1. Call `open_channel_with_external_funding` to negotiate the channel and receive `channel_id` plus `unsigned_funding_tx`.
-2. Sign the returned transaction with the external wallet.
-3. Submit the signed transaction with `submit_signed_funding_tx`.
+In an app integration, Fiber acts as the channel negotiator while the wallet remains the owner of the funding Cells. The flow is:
 
-After the unsigned transaction is returned, the transaction structure is frozen. The external signer should only fill the corresponding `witnesses` for the cells it signs.
+1. The app calls `open_channel_with_external_funding` to ask the Fiber node to prepare an externally funded channel.
+2. Fiber negotiates the channel and returns `channel_id` plus `unsigned_funding_tx`.
+3. The app passes that exact transaction to the external wallet for signing.
+4. The wallet signs the inputs it controls and returns the signed witnesses.
+5. The app submits the signed transaction back to Fiber with `submit_signed_funding_tx`.
+
+After the unsigned transaction is returned, the transaction structure is frozen. The app or wallet should only fill the corresponding `witnesses`; it should not rebuild the transaction or modify its structure.
 
 <Callout type="warning">
   Do not rebuild the transaction or modify `inputs`, `outputs`, `outputs_data`,
