@@ -98,7 +98,7 @@ fnn-cli channel open_channel --pubkey <acceptor_pubkey> --funding-amount 4990000
 ```
 
 <Callout>
-  The `funding_amount` is in **shannons** (1 CKB = 10⁸ shannons). By default, 99 CKB is reserved for the channel reserve (98 CKB minimum cell capacity + 1 CKB default shutdown fee), so the available balance for payments is `funding_amount - 99_00000000` shannons. This default can be adjusted via the `FIBER_AUTO_ACCEPT_CHANNEL_CKB_FUNDING_AMOUNT` environment variable.
+  The `funding_amount` is in **shannons** (1 CKB = 10⁸ shannons). By default, 99 CKB is reserved for the channel reserve (98 CKB minimum cell capacity + 1 CKB default shutdown fee), so the available balance for payments is `funding_amount - 99_00000000` shannons. The `FIBER_AUTO_ACCEPT_CHANNEL_CKB_FUNDING_AMOUNT` environment variable controls the auto-accept funding contribution (the amount the acceptor automatically contributes when accepting a channel open request), not the channel reserve itself.
 </Callout>
 
 ## Sending Payments
@@ -185,7 +185,7 @@ Response:
       "is_public": false,
       "is_one_way": true,
       "is_acceptor": false,
-      "state": { "state_name": "CHANNEL_READY" },
+      "state": { "state_name": "ChannelReady" },
       "local_balance": "0x9c16f4300",
       "remote_balance": "0x1dcd65000"
     }

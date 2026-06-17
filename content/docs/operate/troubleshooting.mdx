@@ -64,7 +64,7 @@ See [Payment Lifecycle](/docs/concept/payments/payment-lifecycle) for details on
 - One or more attempts failed with retryable errors, and the retry limit has been reached.
 
 **Solutions**:
-- Check `last_error` on the payment to identify which attempt failed.
+- Check `failed_error` on the payment to identify which attempt failed.
 - Wait for the system's automatic retry mechanism to find alternate paths.
 - If the payment times out, retry with a higher `max_parts` value to increase route diversity.
 
@@ -179,7 +179,7 @@ See [Unidirectional Channel](/docs/concept/channels/unidirectional-channel) for 
 
 **Solutions**:
 - Double-check that you are using the exact preimage that was used to compute the `payment_hash`.
-- If generating preimages programmatically, verify the hash immediately after creation: `sha256(preimage) == payment_hash`.
+- If generating preimages programmatically, verify the hash immediately after creation: `hash_algorithm(preimage) == payment_hash` (where `hash_algorithm` is `ckb_hash` by default, unless `sha256` is specified in the invoice).
 
 ### Preimage Lost Before Settlement
 

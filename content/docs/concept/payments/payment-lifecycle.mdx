@@ -95,7 +95,7 @@ The payment could not be completed. All routing attempts have been exhausted and
 | `InsufficientBalance` | The sender's channels do not have enough local balance |
 | `TemporaryChannelFailure` | A channel temporarily lacks liquidity (retryable) |
 
-The `last_error` and `last_error_code` fields on the session provide the most recent failure reason.
+The `failed_error` field on the session provides the most recent failure reason from the RPC response.
 
 ## Attempt States
 
@@ -218,7 +218,7 @@ For payments to recipients that are not well-connected in the network graph, Fib
 2. A nested **trampoline onion packet** (embedded in the payment onion's custom records) encodes the trampoline hops and their instructions
 3. Each trampoline node peels its layer, performs its own route-finding to the next trampoline node (or the final recipient), and forwards the payment
 
-Trampoline routing is especially useful for mobile or light nodes that do not maintain a full network graph. The maximum number of trampoline hops is 5, and trampoline routing forces single-path (non-MPP) payments.
+Trampoline routing is especially useful for mobile or light nodes that do not maintain a full network graph. The maximum number of trampoline hops is 5. MPP is only allowed with a single trampoline hop; multiple trampoline hops force single-path behavior.
 
 ## Multi-Path Payments
 
@@ -241,7 +241,7 @@ MPP requires three conditions:
 - The payment is not a keysend (keysend payments are always single-path)
 
 <Callout type="warning">
-  Trampoline routing is not compatible with MPP. When trampoline hops are specified, the payment is forced into single-path mode (`max_parts` is effectively 1).
+  MPP is only allowed with a single trampoline hop. When multiple trampoline hops are specified, the payment is forced into single-path mode (`max_parts` is effectively 1).
 </Callout>
 
 ## Payment Fees
@@ -312,8 +312,7 @@ The payment response includes:
 | `status` | Session status: `Created`, `Inflight`, `Success`, or `Failed` |
 | `amount` | The total target amount |
 | `fee_paid` | Total routing fees paid across all successful attempts |
-| `last_error` | The most recent error message (if failed) |
-| `last_error_code` | The structured error code (e.g., `TemporaryChannelFailure`) |
+| `failed_error` | The most recent error message (if failed) |
 
 If `status` is `Inflight`, the payment is still being processed — likely waiting for TLC propagation or retry. Payments in `Inflight` for an extended period may indicate a stuck route; the system's periodic status check will eventually time out unresponsive attempts.
 
@@ -323,7 +322,7 @@ If `status` is `Inflight`, the payment is still being processed — likely waiti
 |---------|--------|--------------|----------|
 | Payment stuck | `Inflight` (long time) | A hop is offline or unresponsive | Wait for TLC expiry timeout; the system will fail and retry the attempt |
 | Payment failed immediately | `Failed` | No route with sufficient liquidity | Open a channel to a well-connected node, or try MPP |
-| Partial payment delivered | `Inflight` (no progress) | Some attempts failed, remaining are retrying | Wait for retries or check `last_error` for the failure reason |
+| Partial payment delivered | `Inflight` (no progress) | Some attempts failed, remaining are retrying | Wait for retries or check `failed_error` for the failure reason |
 | Fee too high | `Failed` | Route fees exceed `max_fee_amount` | Increase `max_fee_amount` or `max_fee_rate`, or use a shorter route |
 | Wrong amount | `Failed` | Invoice amount mismatch | Verify the invoice amount and payment hash before paying |
 

@@ -172,8 +172,8 @@ All numeric fields in the RPC are hex-encoded. The `amount` is in shannons (`0x3
 | `amount` | `u128` (hex) | Yes | Invoice amount in shannons |
 | `currency` | `Currency` | Yes | `Fibb` (mainnet), `Fibt` (testnet), or `Fibd` (devnet) |
 | `description` | `string` | No | Human-readable description (max 639 chars) |
-| `payment_preimage` | `Hash256` | No | Settlement preimage. Mutually exclusive with `payment_hash`. If both are omitted, a random preimage is generated |
-| `payment_hash` | `Hash256` | No | Payment hash only (creates a [hold invoice](/docs/concept/payments/hold-invoice)). Mutually exclusive with `payment_preimage` |
+| `payment_preimage` | `Hash256` | No | Settlement preimage. Mutually exclusive with `payment_hash`. If both are omitted, Fiber generates a random preimage and computes the payment hash using the specified hash algorithm (`ckb_hash` by default) |
+| `payment_hash` | `Hash256` | No | Payment hash only (creates a [hold invoice](/docs/concept/payments/hold-invoice)). The caller supplies the hash; the preimage must be provided later via `settle_invoice`. Mutually exclusive with `payment_preimage` |
 | `expiry` | `u64` (hex) | No | Invoice validity period in seconds |
 | `fallback_address` | `string` | No | CKB on-chain fallback address |
 | `final_expiry_delta` | `u64` (hex) | No | Final TLC expiry delta in milliseconds (min ~160 minutes, max 14 days) |
