@@ -1,5 +1,5 @@
 ---
-title: "Run a Fiber Node: Overview"
+title: "Overview"
 description: "What it means to run a Fiber node, the available node forms, and how to pick the right deployment for your use case"
 date: 2026-06-13
 ---
@@ -20,7 +20,7 @@ Running a node gives you a local view of the Fiber network and the ability to:
 
 - **Maintain payment channels** — open, update, and close channels with other nodes.
 - **Send and receive payments** — both direct peer payments and multi-hop routed payments.
-- **Swap assets** — move value across CKB-native assets (CKB, UDTs such as USDI/RUSD), and across networks (e.g., between Lightning and Fiber via cross-chain constructs).
+- **Swap assets** — move value across CKB-native assets (CKB and whitelisted UDTs such as USDI on Mainnet and RUSD on Testnet) and across networks (e.g., between Lightning and Fiber via cross-chain constructs).
 - **Route payments** — forward payments for others and collect routing fees if you run a well-connected public node.
 - **Gossip with the network** — discover peers, channels, and fee policies through the P2P protocol.
 
@@ -91,13 +91,13 @@ You will need:
 - Sufficient CKB/UDT liquidity to fund and maintain channels.
 - (Optional) A TLS proxy if you also want browser/WASM clients to reach you over WSS.
 
-→ See [WSS Configuration](https://github.com/nervosnetwork/fiber/blob/develop/docs/fiber-node-wss.md) for browser-facing deployments.
+→ See [WSS Configuration](https://github.com/nervosnetwork/fiber/blob/v0.9.0-rc3/docs/fiber-node-wss.md) for browser-facing deployments.
 
 ### Private Node Behind Relay
 
 Not every node has to be public. A private node can open outbound channels to public relay nodes and then send or receive payments through those relays. This is the easiest way to participate without exposing a public IP or running server infrastructure.
 
-This pattern is covered in the [Public Nodes User Manual](https://github.com/nervosnetwork/fiber/blob/develop/docs/public-nodes.md) and is the default mental model for the WASM node.
+This pattern is covered in the [Public Nodes User Manual](https://github.com/nervosnetwork/fiber/blob/v0.9.0-rc3/docs/public-nodes.md) and is the default mental model for the WASM node.
 
 ### Browser-Embedded Node
 
@@ -116,18 +116,11 @@ Fiber supports both Mainnet and Testnet deployments. The network is selected in 
 
 Testnet is the recommended place to start. Once you are comfortable with channel management, payment flows, and backup procedures, move the same setup to Mainnet.
 
-## What You Need Before Starting
+## Before You Start
 
-Regardless of the form you choose, running a node requires:
+At a minimum, you need a **CKB private key**. You can generate one with [`ckb-cli`](https://github.com/nervosnetwork/ckb-cli) or export it from a CKB wallet.
 
-1. **A CKB private key** — Native `fnn` uses a CKB private key file protected by `FIBER_SECRET_KEY_PASSWORD`; WASM/`fiber-js` receives key material through the JS API.
-   - Generate one with [`ckb-cli`](https://github.com/nervosnetwork/ckb-cli) or export it from a CKB wallet. Native `fnn` expects a hex key placed at ``<ckb_base_dir>/key`` and will migrate it to an encrypted file on first start.
-2. **A CKB RPC endpoint** — the node reads chain state and broadcasts transactions through it.
-   - For Testnet, the sample `config/testnet/config.yml` uses `https://testnet.ckbapp.dev/`. For Mainnet, run your own CKB node or use a trusted RPC provider.
-3. **A `config.yml`** — selects the network, bootnodes, listening addresses, RPC port, and whitelisted UDTs.
-   - Start from [`config/testnet/config.yml`](https://github.com/nervosnetwork/fiber/blob/develop/config/testnet/config.yml) or [`config/mainnet/config.yml`](https://github.com/nervosnetwork/fiber/blob/develop/config/mainnet/config.yml) in the Fiber repo and adjust the values for your deployment.
-4. **Enough CKB for on-chain fees and channel reserve** — opening a channel requires funding CKB on-chain, and each side reserves 99 CKB for the commitment lock and shutdown fee.
-   - On Testnet, request CKB from a faucet; on Mainnet, transfer CKB from an existing wallet. If you plan to route UDT payments, you also need the corresponding UDT liquidity.
+The detailed prerequisites — CKB RPC endpoints, `config.yml`, how much CKB to reserve, and whether a one-way channel lets the other side join without depositing CKB — are covered in the native and WASM guides linked below.
 
 <Callout type="warning">
 Keep your node data directory, especially `fiber/store` and the `ckb/key` file, backed up and secure. Losing channel state can mean losing funds.
