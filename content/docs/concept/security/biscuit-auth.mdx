@@ -23,9 +23,10 @@ Here's a step-by-step breakdown of the process:
 3.  **Token Extraction and Verification**: The middleware extracts the Base64-encoded token from the header, decodes it, and verifies its signature using the server's configured public key. If the signature is invalid, the request is immediately rejected.
 
 4.  **Rule-based Authorization**: If the signature is valid, the middleware proceeds to the authorization step.
-    *   Fiber maintains a predefined set of authorization rules for each RPC method. For example, the `open_channel` method requires a token with the `write("channels")` permission.
+    *   Fiber maintains a predefined set of authorization rules for each RPC method. For example, the `open_channel` method requires a token with the `write("channels")` permission. There are three permission types: `read` (read-only access), `write` (mutate access), and `internal` (reserved for internal services). Note that `write` does **not** imply `read` — they are independent grants.
     *   The middleware builds a Biscuit **Authorizer**. This authorizer is loaded with the rule corresponding to the RPC method being called.
-    *   It also adds contextual facts to the authorizer, such as the current time (e.g., `time(2023-10-27T10:00:00Z)`) and any parameters from the request. This allows for policies that depend on time or specific request data.
+    *   It also adds contextual facts to the authorizer, such as the current time (e.g., `time(2023-10-27T10:00:00Z)`). This allows for policies that depend on time (e.g., token expiration checks).
+    *   For watchtower methods, the middleware additionally requires that the token contains a `node($id)` fact. This `node_id` is extracted from the token and injected into the RPC request as context, enabling channel-level authorization scoped to the calling node.
 
 5.  **Policy Execution**: The authorizer then evaluates the token against the loaded rules and facts. It checks if the permissions granted in the token (the "authority" block and any attenuated blocks) satisfy the requirements of the RPC method's policy.
 
@@ -38,83 +39,64 @@ This entire process happens transparently for the RPC methods themselves. The lo
 The current rules for each RPC methods:
 
 ``` rust
-// Cch 
-rule("send_btc", r#"allow if write("cch");"#); 
-rule("receive_btc", r#"allow if read("cch");"#); 
-rule("get_cch_order", r#"allow if read("cch");"#); 
-// channels 
-rule("open_channel", r#"allow if write("channels");"#); 
-rule("accept_channel", r#"allow if write("channels");"#); 
-rule("abandon_channel", r#"allow if write("channels");"#); 
-rule("list_channels", r#"allow if read("channels");"#); 
-rule("shutdown_channel", r#"allow if write("channels");"#); 
-rule("update_channel", r#"allow if write("channels");"#); 
-// dev 
-rule("commitment_signed", r#"allow if write("messages");"#); 
-rule("add_tlc", r#"allow if write("channels");"#); 
-rule("remove_tlc", r#"allow if write("channels");"#); 
-rule(
-    "check_channel_shutdown",
-    r#"allow if write("channels");"#,
-);
-rule( 
-    "submit_commitment_transaction", 
-    r#"allow if write("chain");"#, 
-); 
-// graph 
-rule("graph_nodes", r#"allow if read("graph");"#); 
-rule("graph_channels", r#"allow if read("graph");"#); 
+// Cch
+rule("send_btc", r#"allow if write("cch");"#);
+rule("receive_btc", r#"allow if write("cch");"#);
+rule("get_cch_order", r#"allow if read("cch");"#);
 
-// info 
-rule("node_info", r#"allow if read("node");"#); 
-rule("new_invoice", r#"allow if write("invoices");"#); 
-rule("parse_invoice", r#"allow if read("invoices");"#); 
-rule("get_invoice", r#"allow if read("invoices");"#); 
-rule("cancel_invoice", r#"allow if write("invoices");"#); 
-rule("settle_invoice", r#"allow if write("invoices");"#); 
+// internal
+rule("subscribe_store_changes", r#"allow if internal("store_changes");"#);
 
-// payment 
-rule("send_payment", r#"allow if write("payments");"#); 
-rule("get_payment", r#"allow if read("payments");"#); 
-rule("build_router", r#"allow if read("payments");"#); 
-rule("send_payment_with_router", r#"allow if write("payments");"#); 
+// channels
+rule("open_channel", r#"allow if write("channels");"#);
+rule("accept_channel", r#"allow if write("channels");"#);
+rule("abandon_channel", r#"allow if write("channels");"#);
+rule("list_channels", r#"allow if read("channels");"#);
+rule("shutdown_channel", r#"allow if write("channels");"#);
+rule("update_channel", r#"allow if write("channels");"#);
+rule("open_channel_with_external_funding", r#"allow if write("channels");"#);
+rule("submit_signed_funding_tx", r#"allow if write("channels");"#);
+// dev
+rule("commitment_signed", r#"allow if write("dev");"#);
+rule("add_tlc", r#"allow if write("dev");"#);
+rule("remove_tlc", r#"allow if write("dev");"#);
+rule("check_channel_shutdown", r#"allow if write("dev");"#);
+rule("sign_external_funding_tx", r#"allow if write("dev");"#);
+rule("submit_commitment_transaction", r#"allow if write("dev");"#);
+// prof
+rule("pprof", r#"allow if write("pprof");"#);
+// graph
+rule("graph_nodes", r#"allow if read("graph");"#);
+rule("graph_channels", r#"allow if read("graph");"#);
 
-// peer 
-rule("connect_peer", r#"allow if write("peers");"#); 
-rule("disconnect_peer", r#"allow if write("peers");"#); 
-rule("list_peers", r#"allow if read("peers");"#); 
+// info
+rule("node_info", r#"allow if read("node");"#);
+rule("new_invoice", r#"allow if write("invoices");"#);
+rule("parse_invoice", r#"allow if read("invoices");"#);
+rule("get_invoice", r#"allow if read("invoices");"#);
+rule("cancel_invoice", r#"allow if write("invoices");"#);
+rule("settle_invoice", r#"allow if write("invoices");"#);
 
-// watchtower 
-rule( 
-    "create_watch_channel", 
-    r#" 
-    allow if write("watchtower"); 
-    allow if right({channel_id}, "watchtower"); 
-    "#, 
-); 
-rule( 
-    "remove_watch_channel", 
-    r#" 
-    allow if write("watchtower"); 
-    allow if right({channel_id}, "watchtower"); 
-    "#, 
-); 
-rule( 
-    "update_revocation", 
-    r#" 
-    allow if write("watchtower"); 
-    allow if right({channel_id}, "watchtower"); 
-    "#, 
-); 
-rule( 
-    "update_local_settlement", 
-    r#" 
-    allow if write("watchtower"); 
-    allow if right({channel_id}, "watchtower"); 
-    "#, 
-); 
-rule("create_preimage", r#"allow if write("watchtower");"#); 
-rule("remove_preimage", r#"allow if write("watchtower");"#); 
+// payment
+rule("send_payment", r#"allow if write("payments");"#);
+rule("get_payment", r#"allow if read("payments");"#);
+rule("list_payments", r#"allow if read("payments");"#);
+rule("build_router", r#"allow if read("payments");"#);
+rule("send_payment_with_router", r#"allow if write("payments");"#);
+
+// peer
+rule("connect_peer", r#"allow if write("peers");"#);
+rule("disconnect_peer", r#"allow if write("peers");"#);
+rule("list_peers", r#"allow if read("peers");"#);
+
+// watchtower (all watchtower methods also require RPC context for channel-level auth)
+rule("create_watch_channel", r#"allow if write("watchtower");"#);
+rule("remove_watch_channel", r#"allow if write("watchtower");"#);
+rule("update_revocation", r#"allow if write("watchtower");"#);
+rule("update_pending_remote_settlement", r#"allow if write("watchtower");"#);
+rule("update_local_settlement", r#"allow if write("watchtower");"#);
+rule("create_preimage", r#"allow if write("watchtower");"#);
+rule("remove_preimage", r#"allow if write("watchtower");"#);
 ```
 
 ## 3. How to Configure Biscuit Auth in Fiber
@@ -164,10 +146,10 @@ rpc:
 
 #### Using Command-Line Arguments
 
-When starting the `fiber-bin` executable, you can pass the public key as a command-line argument:
+When starting the `fnn` executable, you can pass the public key as a command-line argument:
 
 ```bash
-fiber-bin --rpc-biscuit-public-key "ed25519/17b172749be74276f0ed35a5d0685752684a3c5722114bba447a2f301136db79"
+fnn --rpc-biscuit-public-key "ed25519/17b172749be74276f0ed35a5d0685752684a3c5722114bba447a2f301136db79"
 ```
 
 #### Via Environment Variables
@@ -176,7 +158,7 @@ You can also configure it using an environment variable:
 
 ```bash
 export RPC_BISCUIT_PUBLIC_KEY="ed25519/17b172749be74276f0ed35a5d0685752684a3c5722114bba447a2f301136db79"
-fiber-bin
+fnn
 ```
 
 If `biscuit_public_key` is not set, the RPC server will not require authentication. For security, Fiber will refuse to start on a public IP address if authentication is not enabled.
@@ -245,7 +227,7 @@ The file `crates/fiber-lib/src/fiber/tests/rpc.rs` contains integration-style te
 The file `crates/fiber-lib/src/rpc/biscuit.rs` contains unit tests that focus specifically on the token authorization logic. These are useful for seeing how different kinds of Datalog rules are handled.
 
 *   `test_biscuit_auth`: Basic tests for checking `read` and `write` permissions.
-*   `test_biscuit_auth_channel`: A more advanced example of granting permissions based on request parameters (in this case, a `channel_id`).
+*   `test_biscuit_auth_watchtower`: A more advanced example of granting permissions for watchtower methods with RPC context requirements.
 *   `test_biscuit_token_timeout`: Demonstrates how to create and verify a token with an expiration date.
 
 [Link to file: `crates/fiber-lib/src/rpc/biscuit.rs`](https://github.com/nervosnetwork/fiber/blob/develop/crates/fiber-lib/src/rpc/biscuit.rs)

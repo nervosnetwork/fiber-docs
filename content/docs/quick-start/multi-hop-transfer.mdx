@@ -1,6 +1,6 @@
 ---
 title: "Multi-hop Transfers"
-description: User manual on how to connect to the public Testnet nodes
+description: Guide to sending multi-hop payments through the Fiber Network
 date: 2026-04-09
 author: "sunchengzhu"
 authorUrl: "https://github.com/sunchengzhu"
@@ -16,6 +16,14 @@ import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
 ## TL;DR
 
 Connect your local node to Fiber's public relay nodes, open a channel, and send multi-hop payments through the Testnet. Your local node does not need a public IP.
+
+```
+┌───────┐        ┌───────┐        ┌───────┐
+│ nodeA │ ─────▶ │ node1 │ ─────▶ │ node2 │
+│ local │        │public │        │public │
+└───────┘        └───────┘        └───────┘
+  sender          relay            receiver
+```
 
 ## Public Testnet Node Addresses
 
@@ -72,7 +80,7 @@ node2: /ip4/18.163.221.211/tcp/8119/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC
    FIBER_SECRET_KEY_PASSWORD='123' RUST_LOG=info ./fnn -c testnet-fnn/nodeA/config.yml -d testnet-fnn/nodeA > testnet-fnn/nodeA/a.log 2>&1 &
    ```
 
-## CKB Channel with Public Node 1
+## CKB Multi-Hop Payment (nodeA → node1 → node2)
 
 <Callout type="info">
 CLI amounts are in shannons (1 CKB = 100,000,000). RPC amounts are hex strings (e.g. `"0x5f5e100"` = 100,000,000).
@@ -112,9 +120,9 @@ curl -s 'http://127.0.0.1:8227' \
   </Tab>
 </Tabs>
 
-### 2. Open a CKB Channel (500 CKB minimum)
+### 2. Open a CKB Channel
 
-_node1 requires at least 438 CKB funding amount._
+_node1's `auto_accept_min_ckb_funding_amount` is set to 400 CKB. Here we fund 500 CKB._
 
 <Tabs items={['CLI', 'RPC', 'CCC']}>
   <Tab value="CLI">
@@ -152,7 +160,7 @@ curl -s 'http://127.0.0.1:8227' \
 ```bash
 curl -s 'http://127.0.0.1:8227' \
   -H 'Content-Type: application/json' \
-  -d '{"id": 3, "jsonrpc": "2.0", "method": "list_channels", "params": [{"peer_pubkey": "<node1_pubkey>"}]}'
+  -d '{"id": 3, "jsonrpc": "2.0", "method": "list_channels", "params": [{"pubkey": "<node1_pubkey>"}]}'
 ```
   </Tab>
   <Tab value="CCC">
@@ -254,7 +262,7 @@ curl -s 'http://127.0.0.1:8227' \
   </Tab>
 </Tabs>
 
-## RUSD Channel with Public Node 1
+## RUSD Multi-Hop Payment (nodeA → node1 → node2)
 
 The steps are identical to the CKB channel above, with two differences:
 
@@ -265,7 +273,7 @@ The steps are identical to the CKB channel above, with two differences:
 ```bash
 ./fnn-cli channel open_channel \
   --pubkey <node1_pubkey> \
-  --funding-amount 20 \
+  --funding-amount 2000000000 \
   --public true \
   --funding-udt-type-script '{"code_hash":"0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a","hash_type":"type","args":"0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"}'
 ```
@@ -278,7 +286,7 @@ curl -s 'http://127.0.0.1:8227' \
     "id": 2, "jsonrpc": "2.0", "method": "open_channel",
     "params": [{
       "pubkey": "<node1_pubkey>",
-      "funding_amount": "0x2540be400",
+      "funding_amount": "0x77359400",
       "public": true,
       "funding_udt_type_script": {
         "code_hash": "0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a",
