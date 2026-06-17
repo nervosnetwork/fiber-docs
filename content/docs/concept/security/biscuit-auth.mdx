@@ -43,10 +43,7 @@ The current rules for each RPC methods:
 rule("send_btc", r#"allow if write("cch");"#);
 rule("receive_btc", r#"allow if write("cch");"#);
 rule("get_cch_order", r#"allow if read("cch");"#);
-
-// internal
 rule("subscribe_store_changes", r#"allow if internal("store_changes");"#);
-
 // channels
 rule("open_channel", r#"allow if write("channels");"#);
 rule("accept_channel", r#"allow if write("channels");"#);
