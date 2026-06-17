@@ -95,17 +95,17 @@ The `@nervosnetwork/fiber-js` API is the browser-facing integration layer. It do
 
 ## Runtime-Specific Operations
 
-The native and WASM runtimes have different operational surfaces. Native `fnn` exposes HTTP RPC and CLI-based node-maintenance tooling. `fiber-js` embeds the WASM node in browser workers, uses IndexedDB-backed storage through the WASM database worker, and presents a JS/TS API to application code. Both paths share `fiber-lib` underneath, including the store-migration entrypoint used when each runtime opens its store.
+The native and WASM runtimes have different operational surfaces. Native `fnn` exposes HTTP RPC and CLI-based node-maintenance tooling. `fiber-js` embeds the WASM node in browser workers, uses IndexedDB-backed storage through the WASM database worker, and presents a JS/TS API to application code. Both paths share `fiber-lib` underneath, including the store version check used when each runtime opens its store.
 
 ### fnn-cli
 
 [fnn-cli](https://github.com/nervosnetwork/fiber/tree/main/crates/fiber-cli) is the official command-line tool for managing a Fiber node. It supports both one-shot commands and an interactive REPL with tab completion.
 
-### Built-in Storage Migration
+### Storage Migration
 
-Storage migration is part of the shared Fiber node startup path in current releases. Native `fnn` runs the unified migration system from [`crates/fiber-store`](https://github.com/nervosnetwork/fiber/tree/main/crates/fiber-store) when it opens a filesystem-backed store. The WASM runtime also enters the same migration path when `fiber-wasm` opens its browser-backed store before node services start.
+Storage version checking is part of the shared Fiber node startup path. Native `fnn` and `fiber-wasm` both call the store opening path from [`crates/fiber-lib`](https://github.com/nervosnetwork/fiber/tree/main/crates/fiber-lib), which initializes the version for a new store and refuses to open an incompatible or older store that needs migration.
 
-The standalone `fnn-migrate` binary is a legacy tool kept under [`migrate_archive`](https://github.com/nervosnetwork/fiber/tree/main/migrate_archive). Use it only for databases older than the unified migration epoch, such as the v0.8.x upgrade path described by the Fiber repository. For current native stores, back up the data directory, start `fnn`, and let the built-in migration system run.
+The current native migration tool is the standalone `fnn-migrate` binary built from [`migrate`](https://github.com/nervosnetwork/fiber/tree/main/migrate). When a native filesystem-backed store needs migration, stop `fnn`, back up the Fiber data directory, run `fnn-migrate -d <fiber-data-dir>`, and then start the new `fnn` binary again. The node startup path checks whether migration is needed; it does not apply data migrations automatically.
 
 ## Cryptography & On-Chain Scripts
 

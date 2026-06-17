@@ -112,7 +112,6 @@ fiber:
 | `auto_accept_channel_ckb_funding_amount` | u64 | `9900000000` (99 CKB) | CKB amount to auto-accept. Set to `0` to disable auto-accept. |
 | `to_be_accepted_channels_number_limit` | usize | `20` | Max pending channels from one peer |
 | `to_be_accepted_channels_bytes_limit` | usize | `51200` (50 KiB) | Max storage bytes of pending channels from one peer |
-| `pending_channels_number_limit` | usize | `100` | Global max pending channel openings |
 | `funding_timeout_seconds` | u64 | `86400` (1 day) | Timeout for funding transaction confirmation |
 | `external_funding_timeout_seconds` | u64 | `300` (5 min) | Timeout waiting for externally signed funding tx |
 
@@ -134,28 +133,11 @@ fiber:
 | `announce_node_interval_seconds` | u64 | `3600` (1 hour) | NodeAnnouncement reannounce interval. `0` means never reannounce. |
 | `max_inbound_peers` | usize | `16` | Maximum inbound connections |
 | `min_outbound_peers` | usize | `8` | Minimum outbound connections to maintain |
-| `enable_peer_reconnect_backoff` | bool | `true` | Auto-reconnect for peers with active channels |
 | `sync_network_graph` | bool | `true` | Whether to sync network graph from peers |
 | `gossip_network_maintenance_interval_ms` | u64 | `60000` (1 min) | Interval for gossip network maintenance |
 | `gossip_store_maintenance_interval_ms` | u64 | `20000` (20 sec) | Interval for gossip store maintenance |
 | `gossip_network_num_targeted_active_syncing_peers` | usize | `3` | Number of peers to actively request missed gossip messages from |
 | `gossip_network_num_targeted_outbound_passive_syncing_peers` | usize | `3` | Number of outbound peers targeted for passive gossip syncing |
-
-### Gossip Policy
-
-`gossip_policy` is a config-file-only field. It is intentionally not exposed as a CLI flag or environment variable.
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `gossip_policy.ban.threshold` | u32 | `100` | Ban score threshold. `0` disables this limiter. |
-| `gossip_policy.ban.duration_ms` | u64 | `600000` (10 min) | Ban duration. `0` disables this limiter. |
-| `gossip_policy.outbound_global.rate_bytes_per_sec` | u64 | `1024000` | Global outbound gossip byte rate |
-| `gossip_policy.outbound_global.burst_bytes` | u64 | `2048000` | Global outbound gossip burst size |
-| `gossip_policy.outbound_peer.rate_bytes_per_sec` | u64 | `51200` | Per-peer outbound gossip byte rate |
-| `gossip_policy.outbound_peer.burst_bytes` | u64 | `102400` | Per-peer outbound gossip burst size |
-| `gossip_policy.outbound_delay_queue_capacity` | usize | `1024` | Max delayed outbound gossip payloads queued per peer |
-| `gossip_policy.inbound_channel_update.interval_ms` | u64 | `60000` | Inbound channel update rate-limit interval |
-| `gossip_policy.inbound_channel_update.burst` | u32 | `10` | Inbound channel update burst size |
 
 ### Watchtower
 
@@ -297,7 +279,6 @@ Only fields wired to `clap` can be overridden by environment variables. List val
 | `gossip_network_maintenance_interval_ms` | `FIBER_GOSSIP_NETWORK_MAINTENANCE_INTERVAL_MS` |
 | `max_inbound_peers` | `FIBER_MAX_INBOUND_PEERS` |
 | `min_outbound_peers` | `FIBER_MIN_OUTBOUND_PEERS` |
-| `enable_peer_reconnect_backoff` | `FIBER_ENABLE_PEER_RECONNECT_BACKOFF` |
 | `gossip_store_maintenance_interval_ms` | `FIBER_GOSSIP_STORE_MAINTENANCE_INTERVAL_MS` |
 | `gossip_network_num_targeted_active_syncing_peers` | `FIBER_GOSSIP_NETWORK_NUM_TARGETED_ACTIVE_SYNCING_PEERS` |
 | `gossip_network_num_targeted_outbound_passive_syncing_peers` | `FIBER_GOSSIP_NETWORK_NUM_TARGETED_OUTBOUND_PASSIVE_SYNCING_PEERS` |
@@ -308,7 +289,6 @@ Only fields wired to `clap` can be overridden by environment variables. List val
 | `disable_built_in_watchtower` | `FIBER_DISABLE_BUILT_IN_WATCHTOWER` |
 | `to_be_accepted_channels_number_limit` | `FIBER_TO_BE_ACCEPTED_CHANNELS_NUMBER_LIMIT` |
 | `to_be_accepted_channels_bytes_limit` | `FIBER_TO_BE_ACCEPTED_CHANNELS_BYTESS_LIMIT` |
-| `pending_channels_number_limit` | `FIBER_PENDING_CHANNELS_NUMBER_LIMIT` |
 | `funding_timeout_seconds` | `FIBER_FUNDING_TIMEOUT_SECONDS` |
 | `external_funding_timeout_seconds` | `FIBER_EXTERNAL_FUNDING_TIMEOUT_SECONDS` |
 | `reuse_port_for_websocket` | `FIBER_REUSE_PORT_FOR_WEBSOCKET` |
@@ -354,7 +334,7 @@ Only fields wired to `clap` can be overridden by environment variables. List val
 
 **Special variable**: `FIBER_SECRET_KEY_PASSWORD` — Required to decrypt the CKB private key at startup.
 
-No supported direct environment variable exists for native service directories, `fiber.proxy`, `fiber.onion`, `fiber.gossip_policy`, or `cch.ignore_startup_failure`.
+No supported direct environment variable exists for native service directories, `fiber.proxy`, `fiber.onion`, or `cch.ignore_startup_failure`.
 
 ---
 
