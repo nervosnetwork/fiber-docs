@@ -85,7 +85,7 @@ If the node cannot resolve the pubkey yet, wait for graph data to sync or connec
 
 Native Fiber nodes usually connect by pubkey after graph sync, or by a known TCP multiaddr.
 
-Browser and `fiber-wasm` clients should use a public node WebSocket or WebSocket Secure multiaddr when one is available:
+WASM nodes running in a browser through the `fiber-js` package should use a public node WebSocket or WebSocket Secure multiaddr when one is available:
 
 ```text
 /dns/<host>/tcp/443/wss/p2p/<peer_id>

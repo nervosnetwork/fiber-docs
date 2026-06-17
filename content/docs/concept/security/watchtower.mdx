@@ -26,7 +26,7 @@ The watchtower compares the commitment number in the on-chain transaction with t
 
 ## How to Run a Watchtower
 
-Fiber nodes can run in two forms: the native `fnn` node and the WASM node (`fiber-wasm` / `fiber-js`). Watchtower deployment depends on which form you use.
+Fiber nodes can run in two forms: the native `fnn` node and the WASM node provided by the `fiber-js` package. Watchtower deployment depends on which form you use.
 
 - **Native `fnn` nodes** can use the built-in watchtower, which runs inside the node process.
 - **WASM nodes** should use a standalone watchtower service and forward watchtower events to it through `standalone_watchtower_rpc_url`.
