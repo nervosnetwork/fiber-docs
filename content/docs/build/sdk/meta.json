@@ -2,6 +2,7 @@
   "title": "SDK",
   "pages": [
     "fiber-js",
-    "wasm-node"
+    "wasm-node",
+    "wasm-in-browser-external"
   ]
 }
