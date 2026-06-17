@@ -138,7 +138,10 @@ Each method is protected by a Datalog rule that checks for a specific permission
 - `read("<resource>")` — grants read-only access to that resource.
 - `write("<resource>")` — grants write access to that resource only; it does **not** imply read access.
 
-Resources map roughly to modules: `node`, `peers`, `channels`, `payments`, `invoices`, `graph`, `cch`, `watchtower`, `chain`, `messages`, `pprof`.
+Resources map roughly to modules, with two exceptions for the `dev` module:
+
+- `node`, `peers`, `channels`, `payments`, `invoices`, `graph`, `cch`, `watchtower`, `pprof` — each maps to the module of the same name.
+- `chain`, `messages` — used only by low-level `dev` module methods (`submit_commitment_transaction` and `commitment_signed` respectively); there are no standalone `chain` or `messages` API-reference pages.
 
 For example, to call `send_payment`, the token must contain `write("payments")`. To call `node_info`, the token needs `read("node")`.
 
@@ -279,6 +282,8 @@ In addition to request/response HTTP calls, the `pubsub` module exposes a WebSoc
 - **Subscribe:** `subscribe_store_changes`
 - **Unsubscribe:** `unsubscribe_store_changes`
 - **Notification topic:** `store_changes`
+
+When authentication is enabled, `subscribe_store_changes` requires `read("cch")` in the Biscuit token (the same resource used by the CCH module). This reflects the fact that the subscription is primarily intended for Cross-Chain Hub integration rather than general client use.
 
 This is primarily used by external services (such as a standalone Cross-Chain Hub instance) to receive real-time store change events from the Fiber node without polling.
 
