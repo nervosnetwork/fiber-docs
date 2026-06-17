@@ -4,6 +4,248 @@ description: Run Fiber Network node using WebAssembly
 date: 2026-06-17
 ---
 
-# WASM Node
+import { Callout } from 'fumadocs-ui/components/callout';
 
-Coming soon.
+`fiber-js` is the JavaScript/TypeScript integration library for Fiber Network. It is mainly designed for browser-based web applications, browser wallets, and small games, and can also be used in mobile runtime environments with modern browser capabilities.
+
+The native Fiber client (`fnn`) mainly runs in desktop and server environments such as Linux, Windows, and macOS. `fiber-js` is built on Fiber WASM and targets web runtime environments.
+
+With `fiber-js`, a web application can start a Fiber node locally in the browser, connect to peers, open channels, create invoices, send payments, and query node state. This model is different from running a Fiber node on a server and remotely controlling it from the frontend.
+
+In API coverage, `fiber-js` provides common node capabilities close to Fiber RPC. `fnn`, as the native node implementation, is still more complete and better suited for long-running nodes, full operations, and advanced node scenarios.
+
+Because it runs in the browser, the lifecycle of a `fiber-js` node is affected by the page, browser process, and operating system background policies. Scenarios that require a node to stay online reliably for long periods should usually prefer `fnn`.
+
+## Getting Started
+
+### Setup
+
+Install the npm package:
+
+```sh
+npm install @nervosnetwork/fiber-js
+# or
+pnpm add @nervosnetwork/fiber-js
+```
+
+Then import from `@nervosnetwork/fiber-js`:
+
+```ts
+import { Fiber, randomSecretKey } from "@nervosnetwork/fiber-js";
+```
+
+`@nervosnetwork/fiber-js` is a browser wrapper over `fiber-wasm`. It starts two Web Workers: one runs the Fiber WASM node, and the other handles IndexedDB storage. It also creates `SharedArrayBuffer` instances and passes them to the workers so that WASM and the storage layer can exchange data. Therefore, do not create a `Fiber` instance on a non-isolated page, because `new Fiber()` creates `SharedArrayBuffer` immediately.
+
+Before using it, make sure your project environment meets these requirements:
+
+- Use an ESM build pipeline, such as Vite, Next.js, Webpack 5, or an equivalent tool.
+- Serve WASM files with the correct `application/wasm` MIME type in deployment.
+- Configure CORS and SSL/TLS appropriately, as described later in this document.
+
+### Basic Usage
+
+The minimum startup flow is: create a `Fiber` instance, prepare a YAML config, provide the Fiber node key and optional CKB secret key, call `start()`, and then verify node state with `nodeInfo()` or `listPeers()`.
+
+The example below is adapted from the upstream [`fiber-js/README.md`](https://github.com/nervosnetwork/fiber/blob/develop/fiber-js/README.md) and [`fiber-js/src/index.ts`](https://github.com/nervosnetwork/fiber/blob/develop/fiber-js/src/index.ts). `Fiber`, `randomSecretKey()`, `start()`, `nodeInfo()`, and `listPeers()` are all public exports from `@nervosnetwork/fiber-js`. This is not a complete demo that runs out of the box on this site. Before running it, publish the YAML config for the target network at `/fiber-config/testnet.yml`, or change `configPath` to your own static asset path, and satisfy the browser isolation, WASM MIME, CORS, and WSS peer requirements described later.
+
+```ts
+import { Fiber, randomSecretKey } from "@nervosnetwork/fiber-js";
+
+const fiber = new Fiber();
+
+const network = "testnet";
+const configPath = `/fiber-config/${network}.yml`;
+const databasePrefix = `${network}-demo`;
+const config = await fetch(configPath).then((response) => {
+  if (!response.ok) {
+    throw new Error(`Failed to load Fiber config: ${configPath}`);
+  }
+
+  return response.text();
+});
+
+const fiberKeyPair = randomSecretKey();
+const ckbSecretKey = randomSecretKey();
+
+await fiber.start(
+  config,
+  fiberKeyPair,
+  ckbSecretKey,
+  undefined,
+  "info",
+  databasePrefix,
+);
+
+console.log(await fiber.nodeInfo());
+console.log(await fiber.listPeers());
+```
+
+<Callout type="warning" title="Key management">
+This example uses a plaintext CKB key. Make sure it is handled securely and never exposed in production code, logs, or client-side bundles.
+</Callout>
+
+### Configuration
+
+The `config` argument of `start(config, ...)` uses a YAML configuration close to `fnn`. The default config files can be obtained from the [`config`](https://github.com/nervosnetwork/fiber/tree/develop/config) directory in the Fiber source code and selected for the target network:
+
+- testnet: [`config/testnet/config.yml`](https://github.com/nervosnetwork/fiber/blob/develop/config/testnet/config.yml)
+- mainnet: [`config/mainnet/config.yml`](https://github.com/nervosnetwork/fiber/blob/develop/config/mainnet/config.yml)
+
+Use `fnn --help` to get detailed config argument information. The fiber config file and CLI arguments mostly come from the same config definitions.
+
+<p className="text-sm text-fd-muted-foreground">
+For deeper logic or implementation details behind a config option, see the config definitions in the Fiber source code: <a href="https://github.com/nervosnetwork/fiber/blob/develop/crates/fiber-lib/src/config.rs">config.rs</a> aggregates the <code>fiber</code>, <code>rpc</code>, <code>ckb</code>, and other config sections, while concrete fields are defined in <a href="https://github.com/nervosnetwork/fiber/blob/develop/crates/fiber-lib/src/fiber/config.rs">fiber/config.rs</a>, <a href="https://github.com/nervosnetwork/fiber/blob/develop/crates/fiber-lib/src/rpc/config.rs">rpc/config.rs</a>, and <a href="https://github.com/nervosnetwork/fiber/blob/develop/crates/fiber-lib/src/ckb/config.rs">ckb/config.rs</a>.
+</p>
+
+When connecting to CKB testnet or mainnet, use the config for the corresponding network. Production environments must use the mainnet config.
+
+Unlike a native node, the browser WASM runtime does not expose TCP or HTTP listeners, so there is usually no need to adjust `fiber.listening_addr` or `rpc.listening_addr` for browser use. These YAML fields are not used to open externally reachable ports in the browser. Browser nodes typically initiate connections to `/ws/` or `/wss/` peers, and applications usually control the node through the `fiber-js` API rather than an exposed HTTP RPC service.
+
+### Key Management
+
+The key-related arguments of `fiber.start()` have different responsibilities:
+
+- `fiberKeyPair`: the Fiber node identity key, 32 bytes long. It determines the node pubkey and is the core of peer identification, channel state, and network identity. The same node should use the same key every time it starts.
+- `ckbSecretKey`: optional CKB secret key, 32 bytes long. It lets the node directly sign on-chain transactions such as funding, commitment, and shutdown transactions. This is suitable for native nodes, controlled runtime environments, or browser scenarios that truly need the Fiber node to manage on-chain funds directly. When `undefined` is passed, WASM generates an internal CKB key. This is not the same as giving the user's wallet to the Fiber node.
+- `randomSecretKey()`: generates a 32-byte key using browser-secure randomness. It is suitable for first-time initialization or tests. In production, the generated key must be persisted and should not be regenerated on every startup.
+
+Browser integrations usually need the page or application to own `fiberKeyPair` and persist it locally. Every later startup of the same Fiber node must pass the same key. If browser data is cleared, the profile is reset, or migration fails, the local key may be lost. The application needs fallback logic for recovery, node rebuilds, or channel state migration.
+
+Whether to pass `ckbSecretKey` depends on the product model. Browser applications are usually better off using an external wallet such as JoyID to custody funds, instead of giving the user's wallet private key to the Fiber WASM node. The application can inject funds through external funding when opening a channel and return funds to the external wallet after closing the channel. If there is a special need, the application can manage the CKB key itself, but it must also handle local encryption, backup, recovery, and fund security.
+
+## External Funding
+
+External funding is suitable for browser wallets, hardware wallets, or any scenario where the CKB secret key should not be given to the Fiber WASM node. The flow is:
+
+1. Call `connectPeer()` first.
+2. Call `openChannelWithExternalFunding()` with the peer `pubkey`, `funding_amount`, `shutdown_script`, `funding_lock_script`, and the `funding_lock_script_cell_deps` required by a custom lock.
+3. The Fiber node and peer negotiate channel parameters and produce the final `unsigned_funding_tx`.
+4. The wallet signs this transaction.
+5. Submit the signed transaction with `submitSignedFundingTx()`.
+
+```ts
+const toRpcHex = (value: bigint): `0x${string}` =>
+  `0x${value.toString(16)}` as `0x${string}`;
+const ckb = (amount: bigint): `0x${string}` => toRpcHex(amount * 100_000_000n);
+
+const result = await fiber.openChannelWithExternalFunding({
+  pubkey: peerPubkey,
+  funding_amount: ckb(499n),
+  public: true,
+  shutdown_script: walletLockScript,
+  funding_lock_script: walletLockScript,
+  funding_lock_script_cell_deps: walletLockCellDeps,
+});
+
+const signedFundingTx = await wallet.signTransaction(result.unsigned_funding_tx);
+
+await fiber.submitSignedFundingTx({
+  channel_id: result.channel_id,
+  signed_funding_tx: signedFundingTx,
+});
+```
+
+The key restriction is that the signer may only fill witnesses or signature fields. It must not change `inputs`, `outputs`, `outputs_data`, `cell_deps`, capacity, lock/type scripts, or output order. Once the wallet reorders the transaction structure, adds inputs, or changes the change output, the channel funding that the peer already negotiated becomes invalid.
+
+If the browser page cannot complete signing directly, for example because the target wallet or signing page does not provide a usable CORS interface, the signing process can be split into a redirect flow. First call `openChannelWithExternalFunding()` on the current page and save the returned `channel_id` and `unsigned_funding_tx`. Then redirect to the wallet page to finish signing. After signing, return to the original page and call `submitSignedFundingTx()` with the same `channel_id` and the signed transaction. As long as the signing page does not change the transaction structure and returns before the external funding timeout, this cross-page signing and resume-submit flow is valid.
+
+The default external funding timeout is 5 minutes and is controlled by `fiber.external_funding_timeout_seconds`. For mobile wallet redirects, slow user confirmation, or longer signing flows, increase this value and show the remaining time clearly in the UI.
+
+## API Model
+
+Methods on the `Fiber` class are mostly camelCase wrappers around Fiber RPC:
+
+| `fiber-js` method | RPC command |
+|---|---|
+| `nodeInfo()` | `node_info` |
+| `connectPeer(params)` | `connect_peer` |
+| `listPeers()` | `list_peers` |
+| `openChannel(params)` | `open_channel` |
+| `openChannelWithExternalFunding(params)` | `open_channel_with_external_funding` |
+| `submitSignedFundingTx(params)` | `submit_signed_funding_tx` |
+| `listChannels(params)` | `list_channels` |
+| `newInvoice(params)` | `new_invoice` |
+| `sendPayment(params)` | `send_payment` |
+| `getPayment(params)` | `get_payment` |
+
+This is not the complete method list. `acceptChannel()`, `shutdownChannel()`, `updateChannel()`, `graphNodes()`, `graphChannels()`, `parseInvoice()`, `getInvoice()`, `cancelInvoice()`, `buildRouter()`, and `sendPaymentWithRouter()` are also exported from `fiber-js/src/index.ts`.
+
+You can also call lower-level commands directly:
+
+```ts
+const peers = await fiber.invokeCommand("list_peers", []);
+const channels = await fiber.invokeCommand("list_channels", [{ include_closed: true }]);
+```
+
+Internally, command calls are serialized through a mutex to avoid multiple WASM async command calls overwriting each other's input and output buffers. Therefore, do not assume that issuing many concurrent RPC calls on the same `Fiber` instance will improve throughput. For UI code, handle queues, timeouts, and loading states at the application layer.
+
+## Storage and Lifecycle
+
+`fiber-js` stores state in IndexedDB, including peer store, channel state, network graph, and payment/invoice state. `databasePrefix` isolates data for different node instances:
+
+```ts
+await fiber.start(config, fiberKeyPair, ckbSecretKey, undefined, "info", "testnet:wallet-0");
+```
+
+Design the prefix around these dimensions:
+
+- network: `testnet`, `mainnet`, or a custom chain id.
+- wallet/account: the current wallet account or derivation path.
+- app namespace: prevents conflicts between multiple applications under the same origin.
+
+Lifecycle notes:
+
+- After a page refresh, if `fiberKeyPair` and `databasePrefix` stay the same, the node reuses state from IndexedDB.
+- `stop()` only terminates workers. It does not delete IndexedDB data.
+- When switching accounts, switching networks, or logging out, call `await fiber.stop()` before starting a new instance.
+- Do not open the same `databasePrefix` from two pages or two instances at the same time. This can cause state races.
+- When the browser enters the background, the mobile operating system enables power saving, or the page is closed, the Fiber node may be paused. Use an always-online `fnn` for high-availability receiving, route forwarding, or watchtower capabilities.
+- The default input/output buffer size is 50 MiB. On memory-constrained mobile devices, you can reduce it with `new Fiber(inputBufferSize, outputBufferSize)`, but setting it too low can make large responses or complex transaction transfers fail.
+
+## Browser Security Requirements
+
+- SSL/TLS: except for local development on `localhost`, the page must be loaded over HTTPS. When an HTTPS page connects to a Fiber peer, it must also use `/wss/`, and the peer certificate must be trusted by the browser. `/ws/` should only be used in local development.
+- CORS and browser isolation: CKB RPC, wallet signing interfaces, the WASM bundle, and cross-origin resources referenced by the page all need CORS or isolation response headers according to browser requirements. CORS only determines whether a request can be sent and whether the response can be read. Whether the page can use `SharedArrayBuffer` also depends on whether it reaches the `crossOriginIsolated` state.
+
+Use separate entry pages to guarantee page isolation. The `fiber-wallet` example implements this by trying a DIP entry from the main entry first and falling back to a COOP/COEP entry if the conditions are not met. Browser handling can be split by capability:
+
+- Chromium-based browsers such as Chrome, Edge, and Android Chrome can try [Document Isolation Policy (DIP)](https://chromestatus.com/feature/5141940204208128) first. DIP can put the page into `crossOriginIsolated` while reducing the cost of adapting third-party resources for COOP/COEP. CKB RPC and wallet signing interfaces must still explicitly allow the current page origin. DIP does not bypass CORS checks for fetch/XHR.
+- Browsers that do not support DIP can fall back to COOP/COEP, such as Firefox or some desktop browser environments. In this mode, all cross-origin scripts, fonts, images, WASM files, and worker resources loaded by the isolated page must satisfy CORS or `Cross-Origin-Resource-Policy` requirements, otherwise the page will not enter the `crossOriginIsolated` state.
+- Safari, iOS WebView, or other environments that cannot reliably satisfy isolation and CORS requirements should not call wallet signing interfaces directly inside the Fiber page. Use the redirect signing flow described in External Funding: the current page saves `channel_id` and `unsigned_funding_tx`, redirects to the wallet page for signing, and then returns to the original page to call `submitSignedFundingTx()`.
+
+Recommended DIP entry headers for Chromium-based browsers:
+
+```txt
+Document-Isolation-Policy: isolate-and-credentialless
+Cross-Origin-Resource-Policy: cross-origin
+```
+
+Recommended COOP/COEP fallback entry headers:
+
+```txt
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+Cross-Origin-Resource-Policy: cross-origin
+```
+
+The HTML entry that actually loads the application bundle must set these response headers. The local dev server, preview server, and production deployment should remain consistent. Whether using DIP or COOP/COEP, check `crossOriginIsolated` before initializing `Fiber`; if it is not satisfied, do not create a `Fiber` instance.
+
+Browser nodes cannot accept inbound TCP connections like native `fnn` nodes. Under the WASM target, Fiber has no real `listening_addr` it can listen on. The `listening_addr` field in YAML mainly exists to reuse the native config structure. Browser integrations usually should not announce a local listening address:
+
+```yaml
+fiber:
+  listening_addr: "/ip4/127.0.0.1/tcp/8228"
+  announce_listening_addr: false
+```
+
+Bootnode or peer addresses that only contain `/tcp/` are better suited for native nodes. Browser nodes usually need the remote peer to provide a `/ws/` or `/wss/` address. Before creating a channel, call `connectPeer()` with an explicit WebSocket peer address instead of relying on the browser node being dialed from the public network.
+
+Node.js environments are only suitable for testing or special integration scenarios. Because this wrapper depends on Workers, IndexedDB-style storage, and the browser security model, production server-side nodes should still prefer `fnn`.
+
+## Where to Look Next
+
+- API shape: [`fiber-js/src/index.ts`](https://github.com/nervosnetwork/fiber/blob/develop/fiber-js/src/index.ts) and [`fiber-js/src/types`](https://github.com/nervosnetwork/fiber/tree/develop/fiber-js/src/types) are the direct sources for `fiber-js` methods and parameter types.
+- Runtime details: [`crates/fiber-wasm/src/lib.rs`](https://github.com/nervosnetwork/fiber/blob/develop/crates/fiber-wasm/src/lib.rs) shows how WASM starts the Fiber actor, loads config, and initializes the store.
+- WSS peer deployment: [`docs/fiber-node-wss.md`](https://github.com/nervosnetwork/fiber/blob/develop/docs/fiber-node-wss.md) explains how a native node provides a browser-connectable WSS address.
+- External funding: [External Funding](/docs/concept/channels/external-funding) explains the flow semantics. [`fiber-js/README.md`](https://github.com/nervosnetwork/fiber/blob/develop/fiber-js/README.md) records the current constraints of `openChannelWithExternalFunding()` and `submitSignedFundingTx()`.
+- RPC details: [API Reference](/docs/build/api-reference) can be used to verify field names, state names, and error meanings.
