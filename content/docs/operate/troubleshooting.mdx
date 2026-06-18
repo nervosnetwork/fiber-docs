@@ -1,7 +1,7 @@
 ---
 title: Troubleshooting
 description: Common errors and solutions when running a Fiber node
-date: 2026-05-25
+date: 2026-06-15
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -40,6 +40,64 @@ This guide covers common errors you may encounter when running a Fiber node, alo
 - Wait for the payment to automatically fail and retry.
 - Try a different route using `build_router` and `send_payment_with_router`.
 
+### Fee Too High
+
+**Symptom**: `send_payment` fails with status `Failed` and a fee-related error.
+
+**Possible causes**:
+- The cumulative relay fees along the route exceed your `max_fee_amount` or `max_fee_rate` budget.
+- The route is longer than expected, accumulating more fees per hop.
+
+**Solutions**:
+- Increase `max_fee_amount` or `max_fee_rate` in your `send_payment` call.
+- Use `dry_run: true` to preview the route and estimated fees before committing funds.
+- Try a shorter route by specifying explicit hops with `build_router`.
+
+See [Payment Lifecycle](/docs/concept/payments/payment-lifecycle) for details on how the fee budget works.
+
+### Partial Payment Delivered
+
+**Symptom**: A multi-path payment (MPP) shows `Inflight` with no progress — some parts have succeeded while others are stuck or failed.
+
+**Possible causes**:
+- Some routes have sufficient liquidity while others do not.
+- One or more attempts failed with retryable errors, and the retry limit has been reached.
+
+**Solutions**:
+- Check `failed_error` on the payment to identify which attempt failed.
+- Wait for the system's automatic retry mechanism to find alternate paths.
+- If the payment times out, retry with a higher `max_parts` value to increase route diversity.
+
+### Invoice Amount Mismatch
+
+**Symptom**: `send_payment` fails with `IncorrectOrUnknownPaymentDetails` or `Failed`.
+
+**Possible causes**:
+- The invoice amount does not match what the sender expected to pay.
+- The invoice has expired (current time exceeds `timestamp + expiry`).
+- The payment hash does not correspond to any known invoice on the recipient's node.
+
+**Solutions**:
+- Verify the invoice amount and expiry using `parse_invoice` before paying.
+- If the invoice has expired, request a new one from the recipient with a longer `expiry`.
+- Confirm the payment hash matches the invoice you intend to pay.
+
+### Payment Error Codes Reference
+
+When a payment fails, the `failed_error` field contains a decoded error code from the failing hop. The most common codes are:
+
+| Error Code | Meaning | Typical Action |
+|------------|---------|---------------|
+| `TemporaryChannelFailure` | Channel liquidity exhausted | Retry — the system automatically finds an alternate path |
+| `TemporaryNodeFailure` | Node temporarily unavailable | Retry after a brief delay |
+| `FeeInsufficient` | Forwarded amount does not cover the relay node's fee | Increase `max_fee_amount` or recalculate amounts |
+| `ExpiryTooSoon` | Expiry window too narrow for remaining hops | Increase `tlc_expiry_delta` |
+| `IncorrectOrUnknownPaymentDetails` | Invoice mismatch at the recipient | Check invoice amount, hash, and expiry |
+| `PermanentChannelFailure` | Channel closed or unavailable | The system removes it from the graph and retries |
+| `RequiredNodeFeatureMissing` | A node does not support a required feature (e.g., trampoline routing) | Use a different route or trampoline node |
+
+See [Multi-Hop Payments](/docs/concept/routing/multi-hop) for a full explanation of error handling and retry behavior.
+
 ## Channel Errors
 
 ### Channel Stuck in Awaiting State
@@ -67,6 +125,108 @@ This guide covers common errors you may encounter when running a Fiber node, alo
 - Connect to the peer first using `connect_peer`.
 - Verify your CKB balance is sufficient.
 - Check the peer's `auto_accept` configuration.
+
+### One-Way Channel Cannot Be Public
+
+**Symptom**: `open_channel` with both `one_way: true` and `public: true` fails with `"An one-way channel cannot be public"`.
+
+**Cause**: Unidirectional channels are always private. The node enforces this restriction because one-way channels cannot route third-party payments, so advertising them in the network graph would be misleading.
+
+**Solution**:
+- Remove the `public: true` flag. One-way channels must be private.
+- If you need a public channel that can route payments in both directions, use a standard bidirectional channel instead.
+
+### Reverse Payment Fails on One-Way Channel
+
+**Symptom**: `send_payment` from the acceptor back to the initiator on a one-way channel fails with `Failed to build route`.
+
+**Cause**: In a unidirectional channel, funds can only flow from initiator to acceptor. The routing engine cannot find a valid path for a reverse-direction payment.
+
+**Solutions**:
+- Open a separate channel in the reverse direction if the acceptor needs to pay the initiator.
+- Use a bidirectional channel if you expect payments to flow in both directions.
+
+See [Unidirectional Channel](/docs/concept/channels/unidirectional-channel) for the full specification and use-case trade-offs.
+
+## Invoice Errors
+
+### Settling Too Early
+
+**Symptom**: `settle_invoice` returns `InvoiceStillOpen`.
+
+**Cause**: The invoice is still in the `Open` state — no incoming TLC has arrived yet. You can only settle a hold invoice once a payment has reached your node and the invoice transitions to `Received`.
+
+**Solutions**:
+- Wait for the sender's payment to propagate through the network and reach your node.
+- Verify the sender has actually called `send_payment` and check the payment status on their side.
+- Use `get_invoice` to monitor the invoice status; settle once it shows `Received`.
+
+### Settling After Expiry
+
+**Symptom**: `settle_invoice` returns `InvoiceAlreadyExpired`.
+
+**Cause**: The invoice's expiry time (`timestamp + expiry`) has passed. Expired invoices cannot be settled even if the preimage is valid.
+
+**Solutions**:
+- Create a new invoice with a longer `expiry` value and have the sender pay again.
+- When creating hold invoices for time-sensitive operations (e.g., atomic swaps), set a generous expiry to account for network propagation delays.
+
+### Wrong Preimage
+
+**Symptom**: `settle_invoice` returns `HashMismatch`.
+
+**Cause**: The preimage you provided does not hash to the invoice's `payment_hash`. This typically happens when the preimage was generated separately and the wrong one was used, or when it was corrupted during storage.
+
+**Solutions**:
+- Double-check that you are using the exact preimage that was used to compute the `payment_hash`.
+- If generating preimages programmatically, verify the hash immediately after creation: `hash_algorithm(preimage) == payment_hash` (where `hash_algorithm` is `ckb_hash` by default, unless `sha256` is specified in the invoice).
+
+### Preimage Lost Before Settlement
+
+**Symptom**: A hold invoice is in `Received` state but you cannot settle it because the preimage is lost.
+
+**Cause**: The preimage was not stored securely after the invoice was created, and is no longer recoverable.
+
+**Solution**:
+- Wait for the invoice to expire. Once the expiry time passes, the held TLCs are automatically released and funds return to the sender.
+- To prevent this in the future, always store the preimage in a secure location before creating the invoice.
+
+See [Hold Invoice](/docs/concept/payments/hold-invoice) for the complete hold invoice lifecycle and trust model.
+
+### Cannot Cancel Invoice
+
+**Symptom**: `cancel_invoice` fails or is rejected.
+
+**Cause**: The invoice is already in the `Paid` or `Cancelled` state. Only invoices in `Open`, `Received`, or `Expired` state can be cancelled.
+
+**Solution**:
+- Check the current invoice status with `get_invoice`. If it is `Paid`, the payment has already been settled and cannot be reversed. If it is `Cancelled`, no further action is needed.
+
+## Trampoline Routing Errors
+
+### Trampoline Feature Not Supported
+
+**Symptom**: A trampoline payment fails with `RequiredNodeFeatureMissing`.
+
+**Cause**: The trampoline node specified in `trampoline_hops` does not support trampoline routing (feature bit 5, `TRAMPOLINE_ROUTING` is not enabled).
+
+**Solutions**:
+- Use a different trampoline node that advertises trampoline routing support.
+- Check the node's features using `graph_nodes` or contact the node operator.
+- By default, Fiber nodes advertise trampoline routing as a required feature — if the node is running an older version, it may not support it.
+
+### Trampoline Sub-Route Fee Insufficient
+
+**Symptom**: A trampoline payment fails with `FeeInsufficient` originating from a trampoline node.
+
+**Cause**: The `build_max_fee_amount` allocated to the trampoline hop is too small to cover the relay fees on the sub-route between two trampoline nodes. This often happens when the sender underestimates the fee budget or when relay fees on the sub-route are higher than expected.
+
+**Solutions**:
+- Retry with a higher `max_fee_amount` to give trampoline nodes a larger fee budget.
+- Try different trampoline hops that may have shorter or cheaper sub-routes.
+- Use `dry_run: true` to estimate the total fee before sending.
+
+See [Trampoline Routing](/docs/concept/routing/trampoline-routing) for a detailed explanation of the two-level fee structure and error handling.
 
 ## Connection Errors
 
@@ -112,3 +272,12 @@ This guide covers common errors you may encounter when running a Fiber node, alo
 **Solution**:
 - Update all RPC calls to use `pubkey` instead of `peer_id`.
 - Refer to the [v0.8.0 migration guide](https://github.com/nervosnetwork/fiber/blob/main/docs/notes/v0.8.0-migration-guide.md) for a complete list of changes.
+
+## Related Topics
+
+- [Payment Lifecycle](/docs/concept/payments/payment-lifecycle) — payment states, attempts, and the TLC state machine
+- [Invoice](/docs/concept/payments/invoice-guide) — creating, paying, and managing invoices
+- [Hold Invoice](/docs/concept/payments/hold-invoice) — deferred settlement and common hold invoice issues
+- [Multi-Hop Payments](/docs/concept/routing/multi-hop) — routing, error handling, and retry behavior
+- [Trampoline Routing](/docs/concept/routing/trampoline-routing) — delegated pathfinding for lightweight clients
+- [Unidirectional Channel](/docs/concept/channels/unidirectional-channel) — one-way channel constraints and limitations
