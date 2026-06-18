@@ -25,10 +25,7 @@ const GLOSSARY_TERMS: Record<string, string> = {
   watchtower: "watchtower",
   "Gossip Protocol": "gossip-protocol",
   "gossip protocol": "gossip-protocol",
-  Invoice: "invoice",
-  invoice: "invoice",
-  "Hold Invoice": "hold-invoice",
-  "hold invoice": "hold-invoice",
+  
   Asset: "asset",
   Node: "node",
   "Fiber Network": "fiber-network",

@@ -3,7 +3,7 @@
   "pages": [
     "toolchain",
     "api-reference",
-    "fiber-js",
+    "sdk",
     "simple-game"
   ]
 }

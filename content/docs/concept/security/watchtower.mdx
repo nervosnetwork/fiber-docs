@@ -1,66 +1,67 @@
 ---
 title: Watchtower
-description: How Watchtower protects your channel funds from fraud while you're offline
-date: 2026-05-25
+description: How Fiber watchtower monitors channels and protects your funds from fraud
+date: 2026-06-11
 ---
 
-In a payment channel network, your channel partner could attempt to broadcast an outdated commitment transaction while you are offline, stealing funds that rightfully belong to you. The **Watchtower** is a security mechanism that monitors your channels and automatically responds to fraudulent on-chain activity, even when your node is not running.
+## What Is a Watchtower?
 
-## How Watchtower Works
+If a Fiber node is offline for some time, the counterparty may try to force-close the channel with an outdated state. If that state is not challenged in time, the counterparty could claim funds that should belong to you.
 
-Watchtower is responsible for monitoring the state of off-chain payment channels and ensuring the security of channels and funds. Its core functions are:
+A watchtower is a service that helps protect against this risk. When a commitment transaction is submitted on-chain, the watchtower checks whether it uses an outdated revoked state. If it does, the watchtower can submit a [penalty transaction](#penalty-transactions) so the outdated state cannot be used to claim funds. Otherwise, the channel can follow the normal settlement path.
 
-1. **Channel Monitoring**: Real-time monitoring of the payment channel state, including opening, updating, and closing channels.
-2. **Anomaly Detection**: Detecting abnormal activities in channels, such as malicious users attempting to close channels with old states or double-spending attacks.
-3. **Proactive Response**: When anomalies are detected, promptly broadcasting penalty transactions to the blockchain to prevent fund losses due to malicious behavior.
+## What the Watchtower Does
 
-### Penalty Mechanism
+At a high level, the watchtower has three jobs:
 
-Fiber's watchtower ensures that old commitment transactions are not used in an on-chain transaction by comparing the `commitment_number`. If a violation is detected (i.e., a peer submits an outdated commitment transaction), the watchtower constructs a **revocation transaction** and submits it on-chain to penalize the offender. Otherwise, it constructs and sends a **settlement transaction**.
+- **Monitor channels**: track watched channels as they are opened, updated, and closed.
+- **Detect outdated states**: check whether an on-chain close uses an older revoked channel state.
+- **Respond on-chain**: either allow normal settlement or submit a penalty transaction for an outdated state.
 
-### Event-Driven Architecture
+## Penalty Transactions
 
-Fiber's watchtower implementation uses the Actor Model. The WatchtowerActor listens for key events in the Fiber node:
+A penalty transaction is the on-chain response to an outdated revoked channel state. In Fiber, this response is implemented as a revocation transaction.
 
-- When a new channel is created, it receives a `RemoteTxComplete` event, and the watchtower inserts a corresponding record into the database to start monitoring this channel.
-- When the channel is closed through mutual agreement, it receives a `ChannelClosed` event, and the watchtower removes the corresponding record from the database.
-- During TLC interactions in the channel, the watchtower receives `RemoteCommitmentSigned` and `RevokeAndAckReceived` events, updating the `revocation_data` and `settlement_data` stored in the database respectively. These fields are used later to create revocation and settlement transactions.
+The watchtower compares the commitment number in the on-chain transaction with the revocation data stored for the channel. If the transaction uses an older revoked state, the watchtower constructs and submits a revocation transaction. If the on-chain close is valid, the watchtower follows the normal settlement path instead.
 
-## Configuration
+## How to Run a Watchtower
 
-Watchtower can be configured in your node's config file with the following options:
+Fiber nodes can run in two forms: the native `fnn` node and the WASM node provided by the `fiber-js` package. Watchtower deployment depends on which form you use.
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `watchtower_check_interval_seconds` | u64 | `60` | Interval to check watchtower. `0` = never check. |
-| `disable_built_in_watchtower` | bool | `false` | Disable built-in watchtower actor |
-| `standalone_watchtower_rpc_url` | string | — | URL of standalone watchtower RPC server |
-| `standalone_watchtower_token` | string | — | RPC token for standalone watchtower |
+- **Native `fnn` nodes** can use the built-in watchtower, which runs inside the node process.
+- **WASM nodes** should use a standalone watchtower service and forward watchtower events to it through `standalone_watchtower_rpc_url`.
 
-### Built-in vs Standalone Watchtower
+### Built-in Watchtower
 
-Fiber provides two deployment modes for Watchtower:
+The built-in watchtower is available for native `fnn` nodes. It is enabled when `disable_built_in_watchtower` is set to `false`.
 
-- **Built-in Watchtower**: Enabled by default, the watchtower runs as part of your Fiber node. This is suitable for nodes that stay online most of the time.
-- **Standalone Watchtower**: A separate watchtower service that monitors your channels remotely. Configure `standalone_watchtower_rpc_url` and `standalone_watchtower_token` to connect to a standalone watchtower. This is useful if you want a dedicated always-online service to watch your channels.
+```yaml
+watchtower_check_interval_seconds: 60
+disable_built_in_watchtower: false
+```
 
-## Watchtower RPC API
+`watchtower_check_interval_seconds` controls how often the built-in watchtower checks on-chain data. The default is `60` seconds.
 
-For programmatic access to watchtower functions, Fiber provides the following RPC methods:
+### Standalone Watchtower
 
-| Method | Description |
-|--------|-------------|
-| `create_watch_channel` | Create a new watched channel |
-| `remove_watch_channel` | Remove a watched channel |
-| `update_revocation` | Update revocation data for a channel |
-| `update_pending_remote_settlement` | Update pending remote settlement |
-| `update_local_settlement` | Update local settlement |
-| `create_preimage` | Create a payment preimage |
-| `remove_preimage` | Remove a payment preimage |
+A standalone watchtower runs as a separate RPC service and can receive watchtower updates from one or more Fiber nodes.
 
 See [Watchtower API Reference](/docs/build/api-reference/watchtower) for detailed parameter and return type specifications.
 
-## Further Reading
+Because a standalone watchtower receives channel watch data, choose an operator according to the deployment's trust requirements.
 
-- [Fiber Architecture - Watchtower](/docs/res/high-level#preventing-channels-from-fraud-via-watchtower) for source code-level implementation details
-- [Light Paper - Watchtower Service](/docs/res/light-paper#watchtower-service) for the design rationale
+Configure the Fiber node to send watchtower updates to the standalone service:
+
+```yaml
+disable_built_in_watchtower: true
+standalone_watchtower_rpc_url: "http://127.0.0.1:8227"
+standalone_watchtower_token: "<watchtower_rpc_token>"
+```
+
+`standalone_watchtower_token` is only needed when the standalone watchtower RPC service requires authentication. If the built-in watchtower is disabled, `standalone_watchtower_rpc_url` must be configured.
+
+## References
+
+- [Fiber WatchtowerActor source](https://github.com/nervosnetwork/fiber/blob/develop/crates/fiber-lib/src/watchtower/actor.rs)
+- [Fiber watchtower store source](https://github.com/nervosnetwork/fiber/blob/develop/crates/fiber-lib/src/watchtower/store.rs)
+- [Watchtower APIs](/docs/build/api-reference/watchtower)

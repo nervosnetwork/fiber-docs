@@ -13,7 +13,7 @@
     "---Build---",
     "build/toolchain",
     "build/api-reference",
-    "build/fiber-js",
+    "build/sdk",
     "build/simple-game",
     "---Node Operations---",
     "operate/config-reference",
@@ -33,6 +33,7 @@
     "res/payment-channel",
     "res/p2p-message",
     "res/gossip-protocol",
-    "res/cross-chain-htlc"
+    "res/cross-chain-htlc",
+    "res/fiber-js-browser-extension"
   ]
 }
