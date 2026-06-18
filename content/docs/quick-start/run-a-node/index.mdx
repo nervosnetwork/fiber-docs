@@ -1,28 +1,139 @@
 ---
-title: "Run a Fiber Node"
-description: "Choose how you want to run a Fiber node — native binary or WASM"
-date: 2026-04-09
+title: "Overview"
+description: "What it means to run a Fiber node, the available node forms, and how to pick the right deployment for your use case"
+date: 2026-06-13
 ---
 
-There are two ways to run a Fiber node. Choose the one that fits your use case:
+import { Callout } from 'fumadocs-ui/components/callout';
 
-## Native Node
+A **Fiber node** is a running instance of the [Fiber Network Node (FNN)](https://github.com/nervosnetwork/fiber) — the reference implementation of the Fiber Network Protocol (FNP). In practical terms, it is the software that connects you to the Fiber peer-to-peer payment network, manages payment channels, routes multi-hop payments, and signs the on-chain transactions that anchor channel state to CKB.
 
-The native Fiber Network Node binary. Best for production deployments, server environments, and anyone who wants full control.
+If you want to **send or receive** payments over Fiber, build a wallet that speaks the protocol, or **earn routing fees** by forwarding payments for others, you need a node.
 
-- Runs on Linux, macOS, Windows
-- Interacts via CLI (`fnn-cli`) or JSON-RPC
-- Suitable for routing nodes and production use
+<Callout type="info">
+FNN is still under active development. Before upgrading between versions, close your channels or migrate storage carefully — protocol and storage formats can change between releases.
+</Callout>
 
-[Get started with Native Node →](/docs/quick-start/run-a-node-rust)
+## What a Fiber Node Does
 
-## WASM Node
+Running a node gives you a local view of the Fiber network and the ability to:
 
-A full Fiber node compiled to WebAssembly. Runs directly in the browser or Node.js — no server needed.
+- **Maintain payment channels** — open, update, and close channels with other nodes.
+- **Send and receive payments** — both direct peer payments and multi-hop routed payments.
+- **Swap assets** — move value across CKB-native assets (CKB and whitelisted UDTs such as USDI on Mainnet and RUSD on Testnet) and across networks (e.g., between Lightning and Fiber via cross-chain constructs).
+- **Route payments** — forward payments for others and collect routing fees if you run a well-connected public node.
+- **Gossip with the network** — discover peers, channels, and fee policies through the P2P protocol.
 
-- Embed in any JavaScript/TypeScript app
-- No backend server required
-- Ideal for browser wallets, web games, and client-side dApps
+All of this happens through a JSON-RPC interface (and an optional CLI wrapper). The node itself is responsible for channel state management, `HTLC`/`PTLC`-style locking, and publishing the correct on-chain settlement transaction when a channel closes.
 
-[Get started with WASM Node →](/docs/quick-start/run-a-node-fiberjs)
+## Node Forms
 
+Fiber ships in two forms. The right one depends on where you want to run it and who controls the runtime.
+
+### Native Node (`fnn`)
+
+The native Rust binary is the full production node. It runs as a standalone process on a server or local machine, stores channel state locally (RocksDB or SQLite), and exposes JSON-RPC on `127.0.0.1:8227` by default.
+
+| Aspect | Details |
+|--------|---------|
+| **Runtime** | Native binary (Linux, macOS, Windows) |
+| **Best for** | Routing nodes, production services, server deployments |
+| **Storage** | Local RocksDB/SQLite database |
+| **Network exposure** | Public IP recommended for routing; private nodes can connect through public relay nodes |
+| **Interaction** | `fnn-cli` or raw JSON-RPC |
+
+Use the native node when you need full control, persistent storage, and the ability to accept inbound channel requests from the public internet.
+
+→ [Run a Native Node](/docs/quick-start/run-a-node/rust)
+
+### WASM Node (`fiber-js`)
+
+`fiber-js` compiles the same node logic to WebAssembly so it can run inside a browser or a `Node.js` process. It stores data in IndexedDB (via a WASM worker) and is designed for client-side applications that do not want to operate a backend server.
+
+| Aspect | Details |
+|--------|---------|
+| **Runtime** | Browser or `Node.js` |
+| **Best for** | Browser wallets, web games, client-side dApps |
+| **Storage** | IndexedDB |
+| **Network exposure** | No public IP required; can connect through relay nodes |
+| **Interaction** | JavaScript/TypeScript API (`fiber-js` package) |
+
+Use the WASM node when you want users to bring their own node inside a web app, without asking them to install or host server software.
+
+→ [Run a WASM Node](/docs/quick-start/run-a-node/fiberjs)
+
+## Deployment Scenarios
+
+### Local / Testnet Node
+
+The fastest way to experiment. You run `fnn` locally against Fiber Testnet, fund the address from a testnet faucet, and open channels with the public Testnet relay nodes. No public IP is required because you initiate outbound connections to the public nodes.
+
+Typical flow:
+
+1. Download or build the `fnn` binary.
+2. Generate or export a CKB private key.
+3. Copy `config/testnet/config.yml` and set `FIBER_SECRET_KEY_PASSWORD`.
+4. Start the node and connect to a public Testnet node.
+5. Open a channel and try [Basic Transfer](/docs/quick-start/basic-transfer).
+
+### Production Public Node
+
+A public node has a reachable P2P address (default port `8228`) and is advertised in the network graph. Other nodes can connect to it and open channels. This is the form you want if you intend to:
+
+- Accept inbound channels from users.
+- Route multi-hop payments and earn fees.
+- Provide liquidity as a service.
+
+You will need:
+
+- A stable server with a public IP.
+- A trusted CKB RPC endpoint (especially important on Mainnet).
+- Sufficient CKB/UDT liquidity to fund and maintain channels.
+- (Optional) A TLS proxy if you also want browser/WASM clients to reach you over WSS.
+
+→ See [WSS Configuration](https://github.com/nervosnetwork/fiber/blob/v0.9.0-rc3/docs/fiber-node-wss.md) for browser-facing deployments.
+
+### Private Node Behind Relay
+
+Not every node has to be public. A private node can open outbound channels to public relay nodes and then send or receive payments through those relays. This is the easiest way to participate without exposing a public IP or running server infrastructure.
+
+This pattern is covered in the [Public Nodes User Manual](https://github.com/nervosnetwork/fiber/blob/v0.9.0-rc3/docs/public-nodes.md) and is the default mental model for the WASM node.
+
+### Browser-Embedded Node
+
+With `fiber-js`, a Fiber node can live inside a web page. Application code creates a `Fiber` instance and starts it with `fiber.start(config, fiberKeyPair, ckbSecretKey, ...)`; the node can then connect to Testnet bootnodes over WebSocket. This is ideal for wallets, games, and demos where installation friction must be minimal.
+
+→ [Run a WASM Node](/docs/quick-start/run-a-node/fiberjs)
+
+## Mainnet vs. Testnet
+
+Fiber supports both Mainnet and Testnet deployments. The network is selected in `config.yml` via the `fiber.chain` field.
+
+| Network | Purpose | CKB RPC Default | Notes |
+|---------|---------|-----------------|-------|
+| **Testnet** | Development and experimentation | `https://testnet.ckbapp.dev/` | Free testnet CKB and RUSD available from faucets |
+| **Mainnet** | Production value transfer | Your own trusted CKB node or a trusted RPC provider | Public nodes exist, but always verify liquidity and policies |
+
+Testnet is the recommended place to start. Once you are comfortable with channel management, payment flows, and backup procedures, move the same setup to Mainnet.
+
+## Before You Start
+
+At a minimum, you need a **CKB private key**. You can generate one with [`ckb-cli`](https://github.com/nervosnetwork/ckb-cli) or export it from a CKB wallet.
+
+The detailed prerequisites — CKB RPC endpoints, `config.yml`, how much CKB to reserve, and whether a one-way channel lets the other side join without depositing CKB — are covered in the native and WASM guides linked below.
+
+<Callout type="warning">
+Keep your node data directory, especially `fiber/store` and the `ckb/key` file, backed up and secure. Losing channel state can mean losing funds.
+</Callout>
+
+## Choose Your Path
+
+| I want to... | Recommended node |
+|--------------|------------------|
+| Run a routing node and earn fees | [Native Node](/docs/quick-start/run-a-node/rust) |
+| Build a server-side payment service | [Native Node](/docs/quick-start/run-a-node/rust) |
+| Add Fiber to a browser wallet or web game | [WASM Node](/docs/quick-start/run-a-node/fiberjs) |
+| Try Fiber without hosting infrastructure | [WASM Node](/docs/quick-start/run-a-node/fiberjs) or Native Node behind public relays |
+| Learn the protocol locally | [Native Node on Testnet](/docs/quick-start/run-a-node/rust) |
+
+After you have a node running, continue with [Basic Transfer](/docs/quick-start/basic-transfer) to send your first payment.
