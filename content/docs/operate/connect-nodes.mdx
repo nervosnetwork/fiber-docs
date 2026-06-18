@@ -1,11 +1,100 @@
 ---
 title: Connect Public Nodes
-description: How to connect your Fiber node to public network nodes
-date: 2026-06-09
+description: Connect your Fiber node to public Mainnet or Testnet nodes
+date: 2026-06-11
+dependencies:
+  - name: Fiber Node
+    minVersion: "0.8.0"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.8.0"
 ---
 
-Connect your Fiber node to public relay nodes on the Testnet or Mainnet.
+## What Are Public Nodes?
 
-## Coming Soon
+Public nodes are reachable Fiber nodes operated for Mainnet or Testnet connectivity. You can connect to them as peers so your node can join the public Fiber network, discover graph data, and prepare for channel operations.
 
-This guide is under construction. Please refer to the [Multi-hop Transfers](/docs/quick-start/multi-hop-transfer) guide for current instructions on connecting to public nodes.
+Connecting to a public node only creates a peer connection. It does not open a channel or send payments by itself.
+
+## Public Node Information
+
+### Mainnet
+
+| Node | Pubkey |
+|------|--------|
+| `node1` | `03a8d7da8d0934363dbc17f52c872e8d833016415266eabb3527439c5dd17adc6b` |
+| `node2` | `033a69e5be369dab43aefa96fa729d83c571ccb066f312136c6ab2d354fcc028f9` |
+
+### Testnet
+
+| Node | Pubkey |
+|------|--------|
+| `node1` | `02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71` |
+| `node2` | `0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc` |
+
+## How to Connect
+
+Use `fnn-cli peer connect_peer` with the public node pubkey:
+
+```bash
+fnn-cli peer connect_peer --pubkey <public_node_pubkey>
+```
+
+For example, to connect to Testnet `node1`:
+
+```bash
+fnn-cli peer connect_peer \
+  --pubkey 02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71
+```
+
+You can also call the `connect_peer` RPC directly:
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "connect_peer",
+  "params": [
+    {
+      "pubkey": "<public_node_pubkey>"
+    }
+  ]
+}
+```
+
+After connecting, check the peer list:
+
+```bash
+fnn-cli peer list_peers
+```
+
+Example response:
+
+```json
+{
+  "peers": [
+    {
+      "pubkey": "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
+      "address": "/ip4/<public-node-ip>/tcp/<port>"
+    }
+  ]
+}
+```
+
+If the node cannot resolve the pubkey yet, wait for graph data to sync or connect with a known multiaddr when one is available.
+
+### WebSocket Connections
+
+Native Fiber nodes usually connect by pubkey after graph sync, or by a known TCP multiaddr.
+
+WASM nodes running in a browser through the `fiber-js` package should use a public node WebSocket or WebSocket Secure multiaddr when one is available:
+
+```text
+/dns/<host>/tcp/443/wss/p2p/<peer_id>
+```
+
+When connecting by pubkey, `connect_peer` can also filter resolved addresses with `addr_type`. Native builds default to `tcp`, while wasm builds default to `ws` and `wss`.
+
+## References
+
+- [`connect_peer`](/docs/build/api-reference/peer#method-connect_peer)
+- [`list_peers`](/docs/build/api-reference/peer#method-list_peers)
+- [Network Resources](/docs/quick-start/network-resources)

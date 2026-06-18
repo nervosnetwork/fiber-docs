@@ -1,61 +1,44 @@
 ---
 title: External Funding
-description: Open a payment channel using funds from an external wallet instead of the channel parties
-date: 2026-05-25
+description: Open a payment channel using a funding transaction signed by an external wallet
+date: 2026-06-11
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
-<Callout type="info">
-  This page is a work in progress. The content below provides an overview of the feature. Detailed step-by-step instructions will be added soon.
-</Callout>
+## What Is External Funding?
 
-## TL;DR
+External funding lets a Fiber node open a channel while an external wallet signs the funding transaction. The node negotiates the channel and builds the funding transaction, but the wallet provides the signatures for the CKB Cells it contributes.
 
-Call `open_channel_with_external_funding` to get an unsigned transaction, sign it with your external wallet, then submit via `submit_signed_funding_tx`. Do not modify the transaction structure after it is returned.
-
-External funding allows you to open a payment channel using funds from an **external wallet** (e.g., a third-party CKB wallet) rather than requiring the channel parties themselves to provide the funding. This is useful when you want to delegate the funding transaction to a separate wallet application.
+Use this flow when the funding Cells are controlled by a wallet or Lock Script outside the Fiber node.
 
 ## How It Works
 
-1. Call `open_channel_with_external_funding` to negotiate the channel parameters. This returns an `unsigned_funding_tx`.
-2. The external wallet signs the CKB cells it contributed for funding.
-3. Submit the signed transaction via `submit_signed_funding_tx`.
+In an app integration, Fiber acts as the channel negotiator while the wallet remains the owner of the funding Cells. The flow is:
 
-## Important Constraints
+1. The app calls `open_channel_with_external_funding` to ask the Fiber node to prepare an externally funded channel.
+2. Fiber negotiates the channel and returns `channel_id` plus `unsigned_funding_tx`.
+3. The app passes that exact transaction to the external wallet for signing.
+4. The wallet signs the inputs it controls and returns the signed witnesses.
+5. The app submits the signed transaction back to Fiber with `submit_signed_funding_tx`.
+
+After the unsigned transaction is returned, the transaction structure is frozen. The app or wallet should only fill the corresponding `witnesses`; it should not rebuild the transaction or modify its structure.
 
 <Callout type="warning">
-  Do not rebuild the transaction or modify `inputs`, `outputs`, `outputs_data`, or `cell_deps` after it is returned. The transaction structure is frozen at the point of creation.
+  Do not rebuild the transaction or modify `inputs`, `outputs`, `outputs_data`,
+  or `cell_deps` after `unsigned_funding_tx` is returned.
 </Callout>
 
 ## Signing the Funding Transaction
 
-### For Rust Developers
+For **Rust developers** using secp256k1-sighash locks, Fiber includes a development-only `sign_external_funding_tx` implementation that shows the expected signing process. It resolves previous outputs, groups matching lock scripts, signs each script group, and writes the signature into `WitnessArgs.lock`.
 
-If you are using secp256k1-sighash locks, refer to the development-only `sign_external_funding_tx` implementation for how to sign the transaction. This helper only covers secp256k1 signing — it resolves previous outputs, groups matching lock scripts, signs each script group, and writes the signature into `WitnessArgs.lock`.
+This helper only covers secp256k1 signing and should be treated as a development reference, not a production wallet integration.
 
-### For JavaScript Developers
+For **JavaScript developers**, see the pinned [`fiber-wallet`](https://github.com/joii2020/fiber-wallet/blob/77decbbe17ef39f1e443015bae41e74e6dd3960d/apps/src/wallet/manager.ts#L553-L584) example using `@ckb-ccc/ccc`. The example includes JSON-RPC to CCC transaction conversion, copying signed witnesses back to the original transaction, standard CCC signers, OmniLock witness preparation, and JoyID redirect signing.
 
-Refer to the `fiber-wallet` example using `@ckb-ccc/ccc`. The main signing flow is `signFundingTx`, with `toCccTransaction` for JSON-RPC to CCC conversion and `withFundingTxWitnesses` for copying signed witnesses back to the original transaction.
+## Related APIs
 
-The example supports:
-- Standard CCC signers
-- OmniLock witness preparation
-- JoyID redirect signing
-
-## RPC Example
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "open_channel_with_external_funding",
-  "params": [
-    {
-      "pubkey": "<peer_pubkey>",
-      "funding_amount": "0x77359400",
-      "funding_type_script": null
-    }
-  ],
-  "id": 1
-}
-```
+- [`open_channel_with_external_funding`](/docs/build/api-reference/channel#method-open_channel_with_external_funding) negotiates the channel and returns the unsigned funding transaction.
+- [`submit_signed_funding_tx`](/docs/build/api-reference/channel#method-submit_signed_funding_tx) submits the signed funding transaction.
+- [`sign_external_funding_tx`](/docs/build/api-reference/dev#method-sign_external_funding_tx) is a development-only helper for secp256k1-sighash signing.

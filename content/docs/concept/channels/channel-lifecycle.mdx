@@ -1,122 +1,120 @@
 ---
 title: Channel Lifecycle
-description: Understand the complete lifecycle of a Fiber payment channel — from opening to closing
-date: 2026-05-25
+description: Understand the ChannelState values used during a Fiber payment channel lifecycle
+date: 2026-06-11
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
-## TL;DR
+## Overview
 
-A channel goes through `AwaitingLockin` → `ChannelReady` → `Closing` → `Closed`. Each side must reserve 99 CKB. Use `list_channels` to check the state, and `shutdown_channel` to close.
+A Fiber channel undergoes several states: [`NegotiatingFunding`](#negotiatingfunding), [`CollaboratingFundingTx`](#collaboratingfundingtx), [`SigningCommitment`](#signingcommitment), [`AwaitingTxSignatures`](#awaitingtxsignatures), [`AwaitingChannelReady`](#awaitingchannelready), [`ChannelReady`](#channelready), [`ShuttingDown`](#shuttingdown), and [`Closed`](#closed). RPC responses report the current state through the `ChannelState` enum.
 
-A Fiber payment channel goes through several states from creation to closure. Understanding these states is essential for node operators and developers building on Fiber.
+The following sections show the complete Fiber channel lifecycle in its actual state order.
 
-## Channel States
+## NegotiatingFunding
 
-```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│  Awaiting    │────▶│  Channel     │────▶│   Closing    │
-│   Lockin     │     │    Ready     │     │              │
-└──────────────┘     └──────┬───────┘     └──────┬───────┘
-                           │                     │
-                           ▼                     ▼
-                    ┌──────────────┐     ┌──────────────┐
-                    │   Normal     │     │    Closed    │
-                    │  Operation   │     │              │
-                    └──────────────┘     └──────────────┘
-```
+`NegotiatingFunding` means the peers are agreeing on the parameters required before funding, such as funding amount, fee rates, TLC limits, and related channel settings.
 
-### AwaitingLockin
+| Flag | Description |
+|------|-------------|
+| `OUR_INIT_SENT` | The local node has sent its channel-opening init message. |
+| `THEIR_INIT_SENT` | The remote peer has sent its channel-opening init message. |
+| `INIT_SENT` | Both local and remote channel-opening init messages have been sent. |
+| `AWAITING_EXTERNAL_FUNDING` | The node is waiting for the user to sign and submit an externally funded transaction. |
 
-The channel has been proposed and the funding transaction is being confirmed on-chain. Both parties are exchanging `OpenChannel` / `AcceptChannel` messages and signing the funding transaction.
+## CollaboratingFundingTx
 
-**What happens in this state**:
-1. The initiator sends `OpenChannel` with channel parameters (funding amount, fee rates, TLC limits)
-2. The accepter responds with `AcceptChannel`
-3. Both parties exchange `commitment_signed` messages (two rounds)
-4. Both parties exchange `tx_signatures` to finalize the funding transaction
-5. The funding transaction is broadcast to the CKB network
-6. Both parties exchange `channel_ready` once the funding tx is confirmed
+`CollaboratingFundingTx` means the peers are building the funding transaction together.
 
-**RPC to initiate**: `open_channel`
+| Flag | Description |
+|------|-------------|
+| `AWAITING_REMOTE_TX_COLLABORATION_MSG` | The node is waiting for the peer's transaction-collaboration message. |
+| `PREPARING_LOCAL_TX_COLLABORATION_MSG` | The node is preparing its own transaction-collaboration message. |
+| `OUR_TX_COMPLETE_SENT` | The local node has sent `tx_complete`. |
+| `THEIR_TX_COMPLETE_SENT` | The remote peer has sent `tx_complete`. |
+| `COLLABORATION_COMPLETED` | Both sides have sent `tx_complete`. |
 
-**How long**: Depends on CKB block confirmation time (typically a few seconds on testnet)
+## SigningCommitment
 
-**Common issues**:
-- If the funding transaction fails to confirm, the channel will time out after `funding_timeout_seconds` (default: 24 hours)
-- If the peer is offline, the channel will stay in `AwaitingLockin` indefinitely until the peer comes back online
+`SigningCommitment` means the funding transaction structure is ready and the peers are exchanging `CommitmentSigned` messages.
 
-### ChannelReady (Open)
+| Flag | Description |
+|------|-------------|
+| `OUR_COMMITMENT_SIGNED_SENT` | The local node has sent `CommitmentSigned`. |
+| `THEIR_COMMITMENT_SIGNED_SENT` | The remote peer has sent `CommitmentSigned`. |
+| `COMMITMENT_SIGNED_SENT` | Both sides have sent `CommitmentSigned`. |
 
-The funding transaction is confirmed and the channel is fully operational. Both parties can now make off-chain payments.
+## AwaitingTxSignatures
 
-**What you can do in this state**:
-- **Add TLCs** (`AddTlc`): Lock funds in a time-locked contract for a payment
-- **Remove TLCs** (`RemoveTlc`): Release funds from a TLC (on success with preimage, or on failure with error code)
-- **Update channel parameters** (`update_channel`): Change fee rates or TLC limits
-- **Send payments** (`send_payment`): Initiate a payment through the channel
+`AwaitingTxSignatures` means the peers have exchanged commitment signatures and are now collecting funding transaction signatures through `TxSignatures` messages.
 
-**State updates**: Every balance change requires a round of `CommitmentSigned` / `RevokeAndAck` between both parties. This two-step process ensures that old states can be revoked — if a party tries to submit an outdated commitment transaction, the other party can punish them using the revocation key.
+| Flag | Description |
+|------|-------------|
+| `OUR_TX_SIGNATURES_SENT` | The local node has sent funding transaction signatures. |
+| `THEIR_TX_SIGNATURES_SENT` | The remote peer has sent funding transaction signatures. |
+| `TX_SIGNATURES_SENT` | Both sides have sent funding transaction signatures. |
 
-### Closing
+## AwaitingChannelReady
 
-One or both parties have initiated channel closure. The final state is being negotiated and the closing transaction will be broadcast on-chain.
+`AwaitingChannelReady` means the funding transaction has been signed or broadcast, and the channel is waiting for on-chain confirmation and `ChannelReady` messages from both peers.
 
-**How closing works**:
-1. One party sends a `Shutdown` message
-2. The other party responds with `Shutdown`
-3. Both parties negotiate the closing transaction fee via `closing_signed` messages
-4. Once fee is agreed, the closing transaction is broadcast on-chain
 
-**RPC to initiate**: `shutdown_channel`
+| Flag | Description |
+|------|-------------|
+| `OUR_CHANNEL_READY` | The local node has sent `ChannelReady`. |
+| `THEIR_CHANNEL_READY` | The remote peer has sent `ChannelReady`. |
+| `CHANNEL_READY` | Both sides have sent `ChannelReady`. |
 
-**Cooperative vs. Uncooperative close**:
-- **Cooperative close** (normal): Both parties agree on the final balance and fee, then broadcast the closing transaction. Fast and cheap.
-- **Uncooperative close** (force close): One party broadcasts the latest commitment transaction on-chain without the other's cooperation. The other party must wait for the `to_self_delay` to expire before claiming their funds. This is slower and more expensive.
+## ChannelReady
 
-### Closed
+`ChannelReady` means the channel is active and can send or receive payments. This state has no `state_flags`.
 
-The channel has been fully settled on-chain. All funds have been distributed according to the final channel state.
+<Callout type="warning">
+  `ChannelReady` does not guarantee payment reliability. A payment may still
+  fail if there is not enough liquidity on the correct side, policy
+  limits are not met, too many TLCs are already in flight, or no route can be
+  found.
+</Callout>
 
-**What happens**: The closing transaction is confirmed, and each party's funds are available in their CKB wallet. The channel is removed from the active channel list.
+## ShuttingDown
 
-## Channel Reserve
+`ShuttingDown` means the channel is closing.
 
-When a channel is open, each party must maintain a **reserve** of 99 CKB:
-- 98 CKB for the commitment lock occupied capacity
-- 1 CKB for the shutdown transaction fee
+Channels can close cooperatively, when both peers agree on the close, or
+uncooperatively, when one side force closes the channel. For a cooperative
+close, provide `close_script` and `fee_rate`. For a force close, set `force`
+to `true`; for example, `fnn-cli channel shutdown_channel --force true`. In
+that case, Fiber uses the default close script and fee rate from channel
+opening.
 
-This reserve ensures there are sufficient funds for on-chain settlement when the channel closes. It is **not available** for off-chain payments.
+| Flag | Description |
+|------|-------------|
+| `OUR_SHUTDOWN_SENT` | The local node has sent `Shutdown`. |
+| `THEIR_SHUTDOWN_SENT` | The remote peer has sent `Shutdown`. |
+| `AWAITING_PENDING_TLCS` | Both sides have sent `Shutdown`, and pending TLCs still need to clear. |
+| `DROPPING_PENDING` | The node is dropping pending updates while closing. |
+| `WAITING_COMMITMENT_CONFIRMATION` | The node is waiting for commitment confirmation during shutdown. |
 
-**Example**: If you fund 499 CKB in a channel:
-- Your available balance for payments: 499 - 99 = **400 CKB**
+## Closed
 
-## Channel Parameters
+`Closed` means the channel has reached a terminal state and can no longer be used for payments.
 
-When opening a channel, the following parameters are negotiated:
+| Flag | Description |
+|------|-------------|
+| `COOPERATIVE` | The channel closed cooperatively. |
+| `UNCOOPERATIVE_LOCAL` | The local node closed the channel uncooperatively. |
+| `UNCOOPERATIVE_REMOTE` | The remote peer closed the channel uncooperatively. |
+| `ABANDONED` | The channel was abandoned. |
+| `FUNDING_ABORTED` | The channel opening failed before funding completed. |
+| `WAITING_ONCHAIN_SETTLEMENT` | The channel is already in `Closed`, but the on-chain settlement is still pending. |
 
-| Parameter | Description |
-|-----------|-------------|
-| `funding_amount` | Amount each party contributes (in shannons) |
-| `funding_fee_rate` | Fee rate for the funding transaction (shannons/kB) |
-| `commitment_fee_rate` | Fee rate for commitment transactions (shannons/kB) |
-| `max_tlc_value_in_flight` | Maximum total value of pending TLCs |
-| `max_tlc_number_in_flight` | Maximum number of pending TLCs |
-| `min_tlc_value` | Minimum TLC value |
-| `to_self_delay` | Delay before a party can claim funds after force close (in epochs) |
-| `tlc_expiry_delta` | Time window for forwarding a TLC (in milliseconds) |
-
-## Monitoring Channel State
+## Checking Channel State
 
 ### Using fnn-cli
 
 ```bash
-# List all channels with their states
 fnn-cli channel list_channels
-
-# Check a specific channel
-fnn-cli channel list_channels --channel-id 0x...
 ```
 
 ### Using RPC
@@ -125,25 +123,13 @@ fnn-cli channel list_channels --channel-id 0x...
 {
   "jsonrpc": "2.0",
   "method": "list_channels",
-  "params": [],
+  "params": [{}],
   "id": 1
 }
 ```
 
-### Channel State Names
-
-The `state_name` field in the response uses `SCREAMING_SNAKE_CASE`:
-
-| State Name | Description |
-|------------|-------------|
-| `AWAITING_LOCKIN` | Channel is being established, funding tx pending |
-| `CHANNEL_READY` | Channel is open and operational |
-| `CLOSING` | Channel is being closed |
-| `CLOSED` | Channel has been fully settled on-chain |
-
 ## Related Topics
 
-- [Payment Lifecycle](/docs/guide/payments/payment-lifecycle) — how payments work within an open channel
-- [P2P Message Protocol](/docs/res/p2p-message) — the protocol-level message details for each transition
-- [Troubleshooting](/docs/guide/node-operator/troubleshooting) — common channel-related issues
-- [Channel Rebalancing](/docs/guide/channels/channel-rebalancing) — shift liquidity between channels
+- [P2P Message Protocol](/docs/res/p2p-message)
+- [External Funding](/docs/concept/channels/external-funding)
+- [Channel API Reference](/docs/build/api-reference/channel)
