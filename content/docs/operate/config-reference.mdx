@@ -112,6 +112,7 @@ fiber:
 | `auto_accept_channel_ckb_funding_amount` | u64 | `9900000000` (99 CKB) | CKB amount to auto-accept. Set to `0` to disable auto-accept. |
 | `to_be_accepted_channels_number_limit` | usize | `20` | Max pending channels from one peer |
 | `to_be_accepted_channels_bytes_limit` | usize | `51200` (50 KiB) | Max storage bytes of pending channels from one peer |
+| `pending_channels_number_limit` | usize | `100` | Max pending channel openings globally |
 | `funding_timeout_seconds` | u64 | `86400` (1 day) | Timeout for funding transaction confirmation |
 | `external_funding_timeout_seconds` | u64 | `300` (5 min) | Timeout waiting for externally signed funding tx |
 
@@ -133,11 +134,13 @@ fiber:
 | `announce_node_interval_seconds` | u64 | `3600` (1 hour) | NodeAnnouncement reannounce interval. `0` means never reannounce. |
 | `max_inbound_peers` | usize | `16` | Maximum inbound connections |
 | `min_outbound_peers` | usize | `8` | Minimum outbound connections to maintain |
+| `enable_peer_reconnect_backoff` | bool | `true` | Whether to schedule reconnect backoff for peers with active channels after disconnects |
 | `sync_network_graph` | bool | `true` | Whether to sync network graph from peers |
 | `gossip_network_maintenance_interval_ms` | u64 | `60000` (1 min) | Interval for gossip network maintenance |
 | `gossip_store_maintenance_interval_ms` | u64 | `20000` (20 sec) | Interval for gossip store maintenance |
 | `gossip_network_num_targeted_active_syncing_peers` | usize | `3` | Number of peers to actively request missed gossip messages from |
 | `gossip_network_num_targeted_outbound_passive_syncing_peers` | usize | `3` | Number of outbound peers targeted for passive gossip syncing |
+| `gossip_policy` | object | built-in policy | Advanced config-file-only gossip rate-limit and ban policy. It is not exposed as CLI flags or environment variables. |
 
 ### Watchtower
 
@@ -242,6 +245,7 @@ Each UDT `cell_deps` entry must contain exactly one of:
 | `order_expiry_delta_seconds` | u64 | `129600` (36h) | Cross-chain order expiry time |
 | `base_fee_sats` | u64 | `0` | Base fee per order (satoshis) |
 | `fee_rate_per_million_sats` | u64 | `1` | Proportional fee per million satoshis |
+| `max_outgoing_fee_percentage` | u64 | `100` | Max percentage of the collected CCH fee that may be used as outgoing Fiber routing fee budget. Must be `1..=100`. |
 | `btc_final_tlc_expiry_delta_blocks` | u64 | `360` | Final TLC relative expiry in BTC blocks |
 | `ckb_final_tlc_expiry_delta_seconds` | u64 | `216000` (60h) | Final TLC relative expiry for CKB Fiber payments |
 | `min_outgoing_invoice_expiry_delta_seconds` | u64 | `21600` (6h) | Minimum acceptable relative expiry for outgoing invoices |
@@ -279,6 +283,7 @@ Only fields wired to `clap` can be overridden by environment variables. List val
 | `gossip_network_maintenance_interval_ms` | `FIBER_GOSSIP_NETWORK_MAINTENANCE_INTERVAL_MS` |
 | `max_inbound_peers` | `FIBER_MAX_INBOUND_PEERS` |
 | `min_outbound_peers` | `FIBER_MIN_OUTBOUND_PEERS` |
+| `enable_peer_reconnect_backoff` | `FIBER_ENABLE_PEER_RECONNECT_BACKOFF` |
 | `gossip_store_maintenance_interval_ms` | `FIBER_GOSSIP_STORE_MAINTENANCE_INTERVAL_MS` |
 | `gossip_network_num_targeted_active_syncing_peers` | `FIBER_GOSSIP_NETWORK_NUM_TARGETED_ACTIVE_SYNCING_PEERS` |
 | `gossip_network_num_targeted_outbound_passive_syncing_peers` | `FIBER_GOSSIP_NETWORK_NUM_TARGETED_OUTBOUND_PASSIVE_SYNCING_PEERS` |
@@ -289,6 +294,7 @@ Only fields wired to `clap` can be overridden by environment variables. List val
 | `disable_built_in_watchtower` | `FIBER_DISABLE_BUILT_IN_WATCHTOWER` |
 | `to_be_accepted_channels_number_limit` | `FIBER_TO_BE_ACCEPTED_CHANNELS_NUMBER_LIMIT` |
 | `to_be_accepted_channels_bytes_limit` | `FIBER_TO_BE_ACCEPTED_CHANNELS_BYTESS_LIMIT` |
+| `pending_channels_number_limit` | `FIBER_PENDING_CHANNELS_NUMBER_LIMIT` |
 | `funding_timeout_seconds` | `FIBER_FUNDING_TIMEOUT_SECONDS` |
 | `external_funding_timeout_seconds` | `FIBER_EXTERNAL_FUNDING_TIMEOUT_SECONDS` |
 | `reuse_port_for_websocket` | `FIBER_REUSE_PORT_FOR_WEBSOCKET` |
@@ -326,6 +332,7 @@ Only fields wired to `clap` can be overridden by environment variables. List val
 | `order_expiry_delta_seconds` | `CCH_ORDER_EXPIRY_DELTA_SECONDS` |
 | `base_fee_sats` | `CCH_BASE_FEE_SATS` |
 | `fee_rate_per_million_sats` | `CCH_FEE_RATE_PER_MILLION_SATS` |
+| `max_outgoing_fee_percentage` | `CCH_MAX_OUTGOING_FEE_PERCENTAGE` |
 | `btc_final_tlc_expiry_delta_blocks` | `CCH_BTC_FINAL_TLC_EXPIRY_DELTA_BLOCKS` |
 | `ckb_final_tlc_expiry_delta_seconds` | `CCH_CKB_FINAL_TLC_EXPIRY_DELTA_SECONDS` |
 | `min_outgoing_invoice_expiry_delta_seconds` | `CCH_MIN_OUTGOING_INVOICE_EXPIRY_DELTA_SECONDS` |
@@ -334,7 +341,7 @@ Only fields wired to `clap` can be overridden by environment variables. List val
 
 **Special variable**: `FIBER_SECRET_KEY_PASSWORD` — Required to decrypt the CKB private key at startup.
 
-No supported direct environment variable exists for native service directories, `fiber.proxy`, `fiber.onion`, or `cch.ignore_startup_failure`.
+No supported direct environment variable exists for native service directories, `fiber.proxy`, `fiber.onion`, `fiber.gossip_policy`, or `cch.ignore_startup_failure`.
 
 ---
 

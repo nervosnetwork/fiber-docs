@@ -23,9 +23,9 @@ Because it runs in the browser, the lifecycle of a `fiber-js` node is affected b
 Install the npm package:
 
 ```sh
-npm install @nervosnetwork/fiber-js@0.8.1
+npm install @nervosnetwork/fiber-js
 # or
-pnpm add @nervosnetwork/fiber-js@0.8.1
+pnpm add @nervosnetwork/fiber-js
 ```
 
 Then import from `@nervosnetwork/fiber-js`:
@@ -42,13 +42,13 @@ Before using it, make sure your project environment meets these requirements:
 - Serve WASM files with the correct `application/wasm` MIME type in deployment.
 - Configure CORS, SSL/TLS, and browser isolation appropriately, as described later in this document.
 
-The examples on this page pin `@nervosnetwork/fiber-js@0.8.1` intentionally. The npm dist-tag can move ahead of the public network; at the time of writing it points to `0.9.0-rc3`, while the public nodes used by these examples are still on the `0.8.1` line. When connecting to those nodes, avoid relying on an unqualified install target unless you have checked the node release you are targeting, since small RPC or protocol differences can otherwise surface during peer, channel, or payment flows.
+The install commands above intentionally use the package's default npm dist-tag. When connecting to public nodes or self-hosted peers, keep `fiber-js`, `fnn`, and the peer node release line aligned, since small RPC or protocol differences can otherwise surface during peer, channel, or payment flows.
 
 ### Basic Usage
 
 The minimum startup flow is: create a `Fiber` instance, prepare a YAML config, provide the Fiber node key and optional CKB secret key, call `start()`, and then verify node state with `nodeInfo()` or `listPeers()`.
 
-The example below is adapted from the upstream [`fiber-js/README.md`](https://github.com/nervosnetwork/fiber/blob/main/fiber-js/README.md) and [`fiber-js/src/index.ts`](https://github.com/nervosnetwork/fiber/blob/main/fiber-js/src/index.ts). `Fiber`, `randomSecretKey()`, `start()`, `nodeInfo()`, and `listPeers()` are all public exports from `@nervosnetwork/fiber-js@0.8.1`. This is not a complete demo that runs out of the box on this site. Before running it, publish the YAML config for the target network at `/fiber-config/testnet.yml`, or change `configPath` to your own static asset path, and satisfy the browser isolation, CORS, CSP, and WSS peer requirements described later.
+The example below is adapted from the upstream [`fiber-js/README.md`](https://github.com/nervosnetwork/fiber/blob/main/fiber-js/README.md) and [`fiber-js/src/index.ts`](https://github.com/nervosnetwork/fiber/blob/main/fiber-js/src/index.ts). `Fiber`, `randomSecretKey()`, `start()`, `nodeInfo()`, and `listPeers()` are all public exports from the current `@nervosnetwork/fiber-js` package. This is not a complete demo that runs out of the box on this site. Before running it, publish the YAML config for the target network at `/fiber-config/testnet.yml`, or change `configPath` to your own static asset path, and satisfy the browser isolation, CORS, CSP, and WSS peer requirements described later.
 
 ```ts
 import { Fiber, randomSecretKey } from "@nervosnetwork/fiber-js";
@@ -165,12 +165,24 @@ Methods on the `Fiber` class are mostly camelCase wrappers around Fiber RPC:
 | `openChannel(params)` | `open_channel` |
 | `openChannelWithExternalFunding(params)` | `open_channel_with_external_funding` |
 | `submitSignedFundingTx(params)` | `submit_signed_funding_tx` |
+| `acceptChannel(params)` | `accept_channel` |
+| `abandonChannel(params)` | `abandon_channel` |
 | `listChannels(params)` | `list_channels` |
+| `shutdownChannel(params)` | `shutdown_channel` |
+| `updateChannel(params)` | `update_channel` |
 | `newInvoice(params)` | `new_invoice` |
+| `parseInvoice(params)` | `parse_invoice` |
+| `getInvoice(params)` | `get_invoice` |
+| `cancelInvoice(params)` | `cancel_invoice` |
 | `sendPayment(params)` | `send_payment` |
 | `getPayment(params)` | `get_payment` |
+| `buildRouter(params)` | `build_router` |
+| `sendPaymentWithRouter(params)` | `send_payment_with_router` |
+| `disconnectPeer(params)` | `disconnect_peer` |
+| `graphNodes(params)` | `graph_nodes` |
+| `graphChannels(params)` | `graph_channels` |
 
-The `Fiber` class in `@nervosnetwork/fiber-js@0.8.1` also exports `acceptChannel()`, `abandonChannel()`, `shutdownChannel()`, `updateChannel()`, `disconnectPeer()`, `graphNodes()`, `graphChannels()`, `parseInvoice()`, `getInvoice()`, `cancelInvoice()`, `buildRouter()`, and `sendPaymentWithRouter()`.
+For `connectPeer({ pubkey })`, Fiber can choose an address from graph or peer-store data. Browser/WASM builds prefer `ws`/`wss` addresses by default; native builds prefer `tcp`. You can pass `addr_type: "wss"` or an explicit WebSocket multiaddr when the peer advertises multiple transports.
 
 You can also call lower-level commands directly:
 
@@ -240,7 +252,7 @@ fiber:
   announce_listening_addr: false
 ```
 
-Bootnode or peer addresses that only contain `/tcp/` are better suited for native nodes. Browser nodes usually need the remote peer to provide a `/ws/` or `/wss/` address. Before creating a channel, call `connectPeer()` with an explicit WebSocket peer address instead of relying on the browser node being dialed from the public network.
+Bootnode or peer addresses that only contain `/tcp/` are better suited for native nodes. Browser nodes usually need the remote peer to provide a `/ws/` or `/wss/` address. Before creating a channel, call `connectPeer()` with an explicit WebSocket peer address, or call `connectPeer({ pubkey, addr_type: "wss" })` after the peer's WSS address has propagated through gossip. Do not rely on the browser node being dialed from the public network.
 
 Node.js environments are only suitable for testing or special integration scenarios. Because this wrapper depends on Workers, IndexedDB-style storage, and the browser security model, production server-side nodes should still prefer `fnn`.
 

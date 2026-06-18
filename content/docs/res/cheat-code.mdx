@@ -36,6 +36,7 @@ Use [Run a Fiber Node](/docs/quick-start/run-a-node) for installation and startu
 | Node | List available commands | Any shell | `fnn-cli --help` |
 | Node | View node info | Node being inspected | `fnn-cli info` |
 | Peer | Connect to a peer (by pubkey) | Node initiating the connection | `fnn-cli peer connect_peer --pubkey <pubkey>` |
+| Peer | Connect to a WSS peer (by pubkey) | Browser/WASM-facing or WSS-capable node | `fnn-cli peer connect_peer --pubkey <pubkey> --addr-type wss` |
 | Peer | Connect to a peer (by address) | Node initiating the connection | `fnn-cli peer connect_peer --address "/ip4/<ip>/tcp/<port>"` |
 | Peer | List connected peers | Node being inspected | `fnn-cli peer list_peers` |
 | Peer | Disconnect a peer | Node dropping the connection | `fnn-cli peer disconnect_peer --pubkey <pubkey>` |
@@ -47,6 +48,7 @@ Use [Run a Fiber Node](/docs/quick-start/run-a-node) for installation and startu
 | Channel | Open a CKB channel | Channel initiator / funder | `fnn-cli channel open_channel --pubkey <pubkey> --funding-amount <shannons>` |
 | Channel | Open a UDT channel | Channel initiator / funder | `fnn-cli channel open_channel --pubkey <pubkey> --funding-amount <base_units> --funding-udt-type-script '<json>'` |
 | Channel | List all channels | Node whose local channel state you want | `fnn-cli channel list_channels` |
+| Channel | List pending opens only | Node whose local pending channel state you want | `fnn-cli channel list_channels --only-pending true` |
 | Channel | Close a channel | Either channel participant; caller initiates close | `fnn-cli channel shutdown_channel --channel-id <id> --force true` |
 | Channel | Update channel config | Node whose local forwarding config you want to change | `fnn-cli channel update_channel --channel-id <id> --tlc-minimum-value <base_units>` |
 
@@ -75,7 +77,7 @@ The default RPC endpoint is `http://127.0.0.1:8227`. All calls use JSON-RPC 2.0.
 | Method | Run on | Description | Key Params |
 |--------|--------|-------------|------------|
 | `node_info` | Node being inspected | Get node identity & config | — |
-| `connect_peer` | Node initiating the connection | Connect to a remote peer | `pubkey`, `address` |
+| `connect_peer` | Node initiating the connection | Connect to a remote peer | `pubkey`, `address`, `save`, `addr_type` |
 | `disconnect_peer` | Node dropping the connection | Disconnect from a peer | `pubkey` |
 | `list_peers` | Node being inspected | List connected peers | — |
 
@@ -83,8 +85,8 @@ The default RPC endpoint is `http://127.0.0.1:8227`. All calls use JSON-RPC 2.0.
 
 | Method | Run on | Description | Key Params |
 |--------|--------|-------------|------------|
-| `open_channel` | Channel initiator / funder | Open a new channel | `pubkey`, `funding_amount`, `funding_fee_rate`, `funding_udt_type_script` |
-| `open_channel_with_external_funding` | Initiator whose external wallet controls `funding_lock_script` | Negotiate a channel funded by an external wallet | `pubkey`, `funding_amount`, `shutdown_script`, `funding_lock_script` |
+| `open_channel` | Channel initiator / funder | Open a new channel | `pubkey`, `funding_amount`, `public`, `one_way`, `funding_fee_rate`, `funding_udt_type_script` |
+| `open_channel_with_external_funding` | Initiator whose external wallet controls `funding_lock_script` | Negotiate a channel funded by an external wallet | `pubkey`, `funding_amount`, `shutdown_script`, `funding_lock_script`, `funding_lock_script_cell_deps` |
 | `submit_signed_funding_tx` | Same node that called `open_channel_with_external_funding` | Submit the externally signed funding transaction | `channel_id`, `signed_funding_tx` |
 | `accept_channel` | Acceptor / node that received the pending open request | Manually accept a pending channel | `temporary_channel_id`, `funding_amount` |
 | `list_channels` | Node whose local channel state you want | List channels; balances are local perspective | `pubkey`, `include_closed`, `only_pending` |
@@ -175,6 +177,8 @@ fee = ⌈(amount × tlc_fee_proportional_millionths) / 1,000,000⌉
 | `commitment_delay_epoch` | Commitment delay / to-self delay | 1 epoch (~4 hours) |
 | `max_tlc_value_in_flight` | Max total TLC value in flight | `u128::MAX` by default; set at channel open, not updatable |
 | `max_tlc_number_in_flight` | Max number of TLCs in flight | 125 |
+| `pending_channels_number_limit` | Global max pending channel openings | 100 |
+| `to_be_accepted_channels_number_limit` | Max pending channel openings from one peer | 20 |
 | `open_channel_auto_accept_min_ckb_funding_amount` | Min CKB funding for auto-accept | Built-in default: 10000000000 (100 CKB); public nodes commonly require 499 CKB funding |
 | `auto_accept_channel_ckb_funding_amount` | Auto-accept contribution | Built-in default: 9900000000 (99 CKB); public nodes commonly contribute 25000000000 (250 CKB) |
 
