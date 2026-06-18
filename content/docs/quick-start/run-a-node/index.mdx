@@ -46,9 +46,9 @@ Use the native node when you need full control, persistent storage, and the abil
 
 → [Run a Native Node](/docs/quick-start/run-a-node/rust)
 
-### WASM Node (`fiber-wasm` / `fiber-js`)
+### WASM Node (`fiber-js`)
 
-`fiber-wasm` compiles the same node logic to WebAssembly so it can run inside a browser or a `Node.js` process. It stores data in IndexedDB (via a WASM worker) and is designed for client-side applications that do not want to operate a backend server.
+`fiber-js` compiles the same node logic to WebAssembly so it can run inside a browser or a `Node.js` process. It stores data in IndexedDB (via a WASM worker) and is designed for client-side applications that do not want to operate a backend server.
 
 | Aspect | Details |
 |--------|---------|
@@ -56,7 +56,7 @@ Use the native node when you need full control, persistent storage, and the abil
 | **Best for** | Browser wallets, web games, client-side dApps |
 | **Storage** | IndexedDB |
 | **Network exposure** | No public IP required; can connect through relay nodes |
-| **Interaction** | JavaScript/TypeScript API (`fiber-wasm` package) |
+| **Interaction** | JavaScript/TypeScript API (`fiber-js` package) |
 
 Use the WASM node when you want users to bring their own node inside a web app, without asking them to install or host server software.
 
@@ -101,7 +101,7 @@ This pattern is covered in the [Public Nodes User Manual](https://github.com/ner
 
 ### Browser-Embedded Node
 
-With `fiber-wasm`, a Fiber node can live inside a web page. Application code creates a `Fiber` instance and starts it with `fiber.start(config, fiberKeyPair, ckbSecretKey, ...)`; the node can then connect to Testnet bootnodes over WebSocket. This is ideal for wallets, games, and demos where installation friction must be minimal.
+With `fiber-js`, a Fiber node can live inside a web page. Application code creates a `Fiber` instance and starts it with `fiber.start(config, fiberKeyPair, ckbSecretKey, ...)`; the node can then connect to Testnet bootnodes over WebSocket. This is ideal for wallets, games, and demos where installation friction must be minimal.
 
 → [Run a WASM Node](/docs/quick-start/run-a-node/fiberjs)
 
