@@ -6,8 +6,8 @@ Fiber Network Node (FNN) is the reference Rust implementation. fiber-js provides
 
 ## Introduction
 
-- [What is Fiber Network?](https://www.fiber.world/docs): Fiber network is a peer-to-peer payment/swap network (like Lightning Network). 
-- [How Fiber Network Works?](https://www.fiber.world/docs/how-it-works): Fiber Network extends Nervos CKB by enabling participants to transfer assets through off-chain payment channels. Instead
+- [What is Fiber Network?](https://www.fiber.world/docs): Fiber Network is a peer-to-peer payment and swap network built on Nervos CKB. Similar to the Lightning Network, it uses 
+- [How Fiber Network Works](https://www.fiber.world/docs/how-it-works): Fiber Network uses payment channels to move frequent transfers off-chain while using CKB for settlement and enforcement.
 
 ## Quick Start
 

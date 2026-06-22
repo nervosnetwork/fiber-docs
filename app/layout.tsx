@@ -4,8 +4,6 @@ import { Inter, Atkinson_Hyperlegible } from 'next/font/google';
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
 import SearchDialogWrapper from '@/components/search-dialog-wrapper';
-import { AIChatProvider } from '@/components/ai-chat-provider';
-import { AIChatPanel } from '@/components/ai-chat-panel';
 
 const inter = Inter({
   variable: '--font-inter',
@@ -45,21 +43,18 @@ export default function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${atkinsonHyperlegible.variable} dark bg-[#0a0a0a]`} suppressHydrationWarning>
       <body className="flex flex-col min-h-screen bg-[#0a0a0a]">
-        <AIChatProvider>
-          <RootProvider
-            theme={{
-              defaultTheme: 'dark',
-              attribute: 'class',
-              enableSystem: false,
-            }}
-            search={{
-              SearchDialog: SearchDialogWrapper,
-            }}
-          >
-            {children}
-            <AIChatPanel />
-          </RootProvider>
-        </AIChatProvider>
+        <RootProvider
+          theme={{
+            defaultTheme: 'dark',
+            attribute: 'class',
+            enableSystem: false,
+          }}
+          search={{
+            SearchDialog: SearchDialogWrapper,
+          }}
+        >
+          {children}
+        </RootProvider>
       </body>
     </html>
   );

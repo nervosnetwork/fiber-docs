@@ -1,0 +1,13 @@
+{
+  "title": "RPC API Reference",
+  "pages": [
+    "index",
+    "node",
+    "channels",
+    "payments",
+    "network",
+    "cross-chain",
+    "dev-tooling",
+    "types"
+  ]
+}

@@ -1,0 +1,23 @@
+---
+title: Module `Prof`
+description: Performance profiling RPC methods
+date: 2026-05-25
+---
+
+## Module `Prof`
+
+RPC module for profiling
+ This module require build with pprof feature and debug symbol.
+
+
+### Method `pprof`
+
+Collects a temporary CPU profile and writes a flamegraph SVG to disk.
+
+#### Params
+
+* `duration_secs` - `Option<u64>`, Duration to profile in seconds. Defaults 10s.
+
+#### Returns
+
+* `path` - `String`, Path of the generated flamegraph SVG.

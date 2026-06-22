@@ -6,7 +6,7 @@ import {
   metaSchema,
 } from "fumadocs-mdx/config";
 import { z } from "zod";
-import remarkGlossaryLinks from "./lib/remark-glossary-links";
+// import remarkGlossaryLinks from "./lib/remark-glossary-links";
 
 // Define the dependency schema to match the VersionBadgeProps structure
 const dependencySchema = z.object({
@@ -59,6 +59,6 @@ export const pulsePosts = defineCollections({
 
 export default defineConfig({
   mdxOptions: {
-    remarkPlugins: [remarkGlossaryLinks],
+    // remarkPlugins: [remarkGlossaryLinks],
   },
 });
