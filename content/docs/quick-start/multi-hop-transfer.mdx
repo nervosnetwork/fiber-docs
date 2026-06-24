@@ -6,8 +6,8 @@ author: "sunchengzhu"
 authorUrl: "https://github.com/sunchengzhu"
 dependencies:
   - name: Fiber Node
-    minVersion: "0.8.0"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.8.0"
+    minVersion: "0.9.0-rc4"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0-rc4"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -15,7 +15,7 @@ import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
 
 ## TL;DR
 
-Connect your local node to Fiber's public relay nodes, open a channel, and send multi-hop payments through the Testnet. Your local node does not need a public IP.
+Connect your local node to Fiber's public relay nodes, open a channel, and send multi-hop payments through the Testnet. Fiber supports two routing modes: **gossip routing** (source routing, the sender builds the full path) and **trampoline routing** (the sender delegates path-finding to a relay node). Your local node does not need a public IP.
 
 ```
 ┌───────┐        ┌───────┐        ┌───────┐
@@ -25,12 +25,21 @@ Connect your local node to Fiber's public relay nodes, open a channel, and send 
   sender          relay            receiver
 ```
 
-## Public Testnet Node Addresses
+## Public Node Addresses
 
-```
-node1: /ip4/18.162.235.225/tcp/8119/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo
-node2: /ip4/18.163.221.211/tcp/8119/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC4F3p89
-```
+### Mainnet
+
+| Node | Pubkey |
+|------|--------|
+| node1 | `03a8d7da8d0934363dbc17f52c872e8d833016415266eabb3527439c5dd17adc6b` |
+| node2 | `033a69e5be369dab43aefa96fa729d83c571ccb066f312136c6ab2d354fcc028f9` |
+
+### Testnet
+
+| Node | Pubkey |
+|------|--------|
+| node1 | `02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71` |
+| node2 | `0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc` |
 
 ## Local Node Setup
 
@@ -43,7 +52,7 @@ node2: /ip4/18.163.221.211/tcp/8119/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC
 
    <Callout type="info" title="macOS Security">
    ```bash
-   xattr -d com.apple.quarantine fnn fnn-cli fnn-migrate
+   xattr -d com.apple.quarantine fnn fnn-cli
    ```
    </Callout>
 
@@ -70,9 +79,8 @@ node2: /ip4/18.163.221.211/tcp/8119/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC
    ```
    </Callout>
 
-4. Fund nodeA's address with **10,000 CKB** and **20 RUSD**:
+4. Fund nodeA's address with **10,000 CKB**:
    - CKB: [https://faucet.nervos.org](https://faucet.nervos.org)
-   - RUSD: [https://testnet0815.stablepp.xyz/faucet](https://testnet0815.stablepp.xyz/faucet) (claim via [JoyID](https://testnet.joyid.dev/), then transfer to nodeA's address)
 
 5. Start nodeA:
 
@@ -102,7 +110,7 @@ Then connect:
   <Tab value="CLI">
 ```bash
 cd testnet-fnn/nodeA && ./fnn-cli peer connect_peer \
-  --address "/ip4/18.162.235.225/tcp/8119/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo"
+  --pubkey 02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71
 ```
   </Tab>
   <Tab value="RPC">
@@ -111,12 +119,16 @@ curl -s 'http://127.0.0.1:8227' \
   -H 'Content-Type: application/json' \
   -d '{
     "id": 1, "jsonrpc": "2.0", "method": "connect_peer",
-    "params": [{"pubkey": "<node1_pubkey>", "address": "/ip4/18.162.235.225/tcp/8119/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo"}]
+    "params": [{"pubkey": "<node1_pubkey>"}]
   }'
 ```
   </Tab>
   <Tab value="CCC">
-    <Callout type="info">CCC support coming soon.</Callout>
+```typescript
+await sdk.connectPeer({
+  address: "/ip4/18.162.235.225/tcp/8119/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo",
+});
+```
   </Tab>
 </Tabs>
 
@@ -144,7 +156,15 @@ curl -s 'http://127.0.0.1:8227' \
 ```
   </Tab>
   <Tab value="CCC">
-    <Callout type="info">CCC support coming soon.</Callout>
+```typescript
+// funding_amount: 0xba43b7400 = 500 CKB in shannons
+const tempChannelId = await sdk.openChannel({
+  pubkey: "<node1_pubkey>",
+  fundingAmount: "0xba43b7400",
+  public: true,
+});
+console.log("Temporary channel ID:", tempChannelId);
+```
   </Tab>
 </Tabs>
 
@@ -164,12 +184,17 @@ curl -s 'http://127.0.0.1:8227' \
 ```
   </Tab>
   <Tab value="CCC">
-    <Callout type="info">CCC support coming soon.</Callout>
+```typescript
+const channels = await sdk.listChannels({ pubkey: "<node1_pubkey>" });
+for (const ch of channels) {
+  console.log(`${ch.channelId} — ${ch.state.stateName}`);
+}
+```
   </Tab>
 </Tabs>
 
 <Callout type="warning">
-After `ChannelReady`, wait a few minutes before sending payments — the gossip protocol needs time to sync routing info.
+After `ChannelReady`, wait a few minutes before sending payments — the gossip protocol needs time to sync channel announcements and routing info across the network.
 </Callout>
 
 ### 4. Create an Invoice on node2
@@ -205,11 +230,34 @@ curl -s 'http://18.163.221.211:8227' \
 ```
   </Tab>
   <Tab value="CCC">
-    <Callout type="info">CCC support coming soon.</Callout>
+```typescript
+// Create invoice on node2 (endpoint: http://18.163.221.211:8227)
+const node2 = new FiberSDK({ endpoint: "http://18.163.221.211:8227" });
+const paymentPreimage = "0x" + "01".repeat(32);
+const { invoiceAddress } = await node2.newInvoice({
+  amount: "0x5f5e100",
+  currency: "Fibt",
+  description: "test invoice",
+  expiry: "0xe10",
+  paymentPreimage,
+  hashAlgorithm: "sha256",
+});
+console.log("Invoice:", invoiceAddress);
+```
   </Tab>
 </Tabs>
 
 ### 5. Send Payment (nodeA → node1 → node2)
+
+Fiber supports two routing modes for multi-hop payments:
+
+#### Option A: Gossip Routing (Source Routing)
+
+The sender discovers routes via the gossip protocol and constructs the full payment path locally. No additional parameters are needed — the node automatically finds the best route to the destination.
+
+<Callout type="info">
+After `ChannelReady`, wait a few minutes for gossip to propagate channel announcements across the network before attempting gossip-routed payments.
+</Callout>
 
 <Tabs items={['CLI', 'RPC', 'CCC']}>
   <Tab value="CLI">
@@ -225,7 +273,41 @@ curl -s 'http://127.0.0.1:8227' \
 ```
   </Tab>
   <Tab value="CCC">
-    <Callout type="info">CCC support coming soon.</Callout>
+```typescript
+const result = await sdk.sendPayment({ invoice: "<invoice_address>" });
+console.log("Payment hash:", result.paymentHash);
+console.log("Status:", result.status);
+```
+  </Tab>
+</Tabs>
+
+#### Option B: Trampoline Routing
+
+The sender delegates route-finding to a relay node. This is useful when the sender doesn't have full network topology (e.g. a mobile wallet). Specify `trampoline_hops` with the relay node's pubkey.
+
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
+```bash
+./fnn-cli payment send_payment --invoice "<invoice_address>" \
+  --trampoline-hops <node1_pubkey>
+```
+  </Tab>
+  <Tab value="RPC">
+```bash
+curl -s 'http://127.0.0.1:8227' \
+  -H 'Content-Type: application/json' \
+  -d '{"id": 6, "jsonrpc": "2.0", "method": "send_payment", "params": [{"invoice": "<invoice_address>", "trampoline_hops": ["<node1_pubkey>"]}]}'
+```
+  </Tab>
+  <Tab value="CCC">
+```typescript
+const result = await sdk.sendPayment({
+  invoice: "<invoice_address>",
+  trampolineHops: ["<node1_pubkey>"],
+});
+console.log("Payment hash:", result.paymentHash);
+console.log("Status:", result.status);
+```
   </Tab>
 </Tabs>
 
@@ -258,88 +340,17 @@ curl -s 'http://127.0.0.1:8227' \
 ```
   </Tab>
   <Tab value="CCC">
-    <Callout type="info">CCC support coming soon.</Callout>
+```typescript
+await sdk.shutdownChannel({
+  channelId: "<channel_id>",
+  closeScript: {
+    codeHash: "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+    hashType: "type",
+    args: "<your_lock_arg>",
+  },
+  feeRate: "0x3FC",
+});
+console.log("Channel closed.");
+```
   </Tab>
 </Tabs>
-
-## RUSD Multi-Hop Payment (nodeA → node1 → node2)
-
-The steps are identical to the CKB channel above, with two differences:
-
-1. **Open channel** — add `funding_udt_type_script`:
-
-<Tabs items={['CLI', 'RPC', 'CCC']}>
-  <Tab value="CLI">
-```bash
-./fnn-cli channel open_channel \
-  --pubkey <node1_pubkey> \
-  --funding-amount 2000000000 \
-  --public true \
-  --funding-udt-type-script '{"code_hash":"0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a","hash_type":"type","args":"0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"}'
-```
-  </Tab>
-  <Tab value="RPC">
-```bash
-curl -s 'http://127.0.0.1:8227' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "id": 2, "jsonrpc": "2.0", "method": "open_channel",
-    "params": [{
-      "pubkey": "<node1_pubkey>",
-      "funding_amount": "0x77359400",
-      "public": true,
-      "funding_udt_type_script": {
-        "code_hash": "0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a",
-        "hash_type": "type",
-        "args": "0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"
-      }
-    }]
-  }'
-```
-  </Tab>
-  <Tab value="CCC">
-    <Callout type="info">CCC support coming soon.</Callout>
-  </Tab>
-</Tabs>
-
-2. **Create invoice** — add `udt_type_script`:
-
-<Tabs items={['CLI', 'RPC', 'CCC']}>
-  <Tab value="CLI">
-```bash
-./fnn-cli --url http://18.163.221.211:8227 invoice new_invoice \
-  --amount 100000000 \
-  --currency Fibt \
-  --description "test RUSD invoice" \
-  --expiry 3600 \
-  --udt-type-script '{"code_hash":"0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a","hash_type":"type","args":"0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"}'
-```
-  </Tab>
-  <Tab value="RPC">
-```bash
-curl -s 'http://18.163.221.211:8227' \
-  -H 'Content-Type: application/json' \
-  -d "{
-    \"id\": 4, \"jsonrpc\": \"2.0\", \"method\": \"new_invoice\",
-    \"params\": [{
-      \"amount\": \"0x5f5e100\",
-      \"currency\": \"Fibt\",
-      \"description\": \"test RUSD invoice\",
-      \"expiry\": \"0xe10\",
-      \"payment_preimage\": \"$payment_preimage\",
-      \"hash_algorithm\": \"sha256\",
-      \"udt_type_script\": {
-        \"code_hash\": \"0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a\",
-        \"hash_type\": \"type\",
-        \"args\": \"0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b\"
-      }
-    }]
-  }"
-```
-  </Tab>
-  <Tab value="CCC">
-    <Callout type="info">CCC support coming soon.</Callout>
-  </Tab>
-</Tabs>
-
-_node1 requires at least 20 RUSD funding amount. The `send_payment` call is identical to the CKB flow above._

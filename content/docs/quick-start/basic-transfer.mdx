@@ -1,11 +1,11 @@
 ---
 title: Basic Transfer Example
 description: Learn how to set up and execute transfers between two nodes
-date: 2026-06-17
+date: 2026-06-23
 dependencies:
   - name: Fiber Node
-    minVersion: "0.8.0"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.8.0"
+    minVersion: "0.9.0-rc4"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0-rc4"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -213,7 +213,16 @@ curl -s -X POST -H "Content-Type: application/json" \
 ```
   </Tab>
   <Tab value="CCC">
-    <Callout type="info">CCC support coming soon.</Callout>
+```typescript
+// Get Node 2's info
+const node2 = new FiberSDK({ endpoint: "http://127.0.0.1:8237" });
+const info = await node2.getNodeInfo();
+console.log("Node 2 pubkey:", info.pubkey);
+
+// Connect from Node 1
+const sdk = new FiberSDK({ endpoint: "http://127.0.0.1:8227" });
+await sdk.connectPeer({ address: "/ip4/127.0.0.1/tcp/8238" });
+```
   </Tab>
 </Tabs>
 
@@ -240,11 +249,19 @@ curl -s -X POST -H "Content-Type: application/json" \
 ```
   </Tab>
   <Tab value="CCC">
-    <Callout type="info">CCC support coming soon.</Callout>
+```typescript
+// funding_amount: 0xba43b7400 = 500 CKB in shannons
+const tempChannelId = await sdk.openChannel({
+  pubkey: "<node2_pubkey>",
+  fundingAmount: "0xba43b7400",
+  public: true,
+});
+console.log("Temporary channel ID:", tempChannelId);
+```
   </Tab>
 </Tabs>
 
-Check channel status — wait until `state_name` becomes `CHANNEL_READY`:
+Check channel status — wait until `state_name` becomes `ChannelReady`:
 
 <Tabs items={['CLI', 'RPC', 'CCC']}>
   <Tab value="CLI">
@@ -260,7 +277,12 @@ curl -s -X POST -H "Content-Type: application/json" \
 ```
   </Tab>
   <Tab value="CCC">
-    <Callout type="info">CCC support coming soon.</Callout>
+```typescript
+const channels = await sdk.listChannels();
+for (const ch of channels) {
+  console.log(`${ch.channelId} — ${ch.state.stateName} — local: ${ch.localBalance}`);
+}
+```
   </Tab>
 </Tabs>
 
@@ -298,7 +320,18 @@ curl -s -X POST -H "Content-Type: application/json" \
 ```
   </Tab>
   <Tab value="CCC">
-    <Callout type="info">CCC support coming soon.</Callout>
+```typescript
+// amount: 0x2540be400 = 100 CKB in shannons
+const paymentPreimage = "0x" + "01".repeat(32);
+const { invoiceAddress } = await node2.newInvoice({
+  amount: "0x2540be400",
+  currency: "Fibt",
+  description: "test invoice",
+  expiry: "0xe10",
+  paymentPreimage,
+});
+console.log("Invoice:", invoiceAddress);
+```
   </Tab>
 </Tabs>
 
@@ -320,7 +353,11 @@ curl -s -X POST -H "Content-Type: application/json" \
 ```
   </Tab>
   <Tab value="CCC">
-    <Callout type="info">CCC support coming soon.</Callout>
+```typescript
+const result = await sdk.sendPayment({ invoice: invoiceAddress });
+console.log("Payment hash:", result.paymentHash);
+console.log("Status:", result.status);
+```
   </Tab>
 </Tabs>
 
@@ -346,7 +383,19 @@ curl -s -X POST -H "Content-Type: application/json" \
 ```
   </Tab>
   <Tab value="CCC">
-    <Callout type="info">CCC support coming soon.</Callout>
+```typescript
+// Node 1
+const node1Channels = await sdk.listChannels();
+for (const ch of node1Channels) {
+  console.log(`local: ${ch.localBalance}, remote: ${ch.remoteBalance}`);
+}
+
+// Node 2
+const node2Channels = await node2.listChannels();
+for (const ch of node2Channels) {
+  console.log(`local: ${ch.localBalance}, remote: ${ch.remoteBalance}`);
+}
+```
   </Tab>
 </Tabs>
 
@@ -380,7 +429,13 @@ curl -s -X POST -H "Content-Type: application/json" \
 ```
   </Tab>
   <Tab value="CCC">
-    <Callout type="info">CCC support coming soon.</Callout>
+```typescript
+await sdk.shutdownChannel({
+  channelId: "<channel_id>",
+  force: true,
+});
+console.log("Channel closed.");
+```
   </Tab>
 </Tabs>
 
