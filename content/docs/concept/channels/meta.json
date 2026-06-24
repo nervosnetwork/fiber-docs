@@ -1,0 +1,9 @@
+{
+  "title": "Channels",
+  "pages": [
+    "channel-lifecycle",
+    "unidirectional-channel",
+    "external-funding",
+    "channel-rebalancing"
+  ]
+}

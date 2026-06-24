@@ -1,0 +1,135 @@
+---
+title: Channel Lifecycle
+description: Understand the ChannelState values used during a Fiber payment channel lifecycle
+date: 2026-06-11
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+## Overview
+
+A Fiber channel undergoes several states: [`NegotiatingFunding`](#negotiatingfunding), [`CollaboratingFundingTx`](#collaboratingfundingtx), [`SigningCommitment`](#signingcommitment), [`AwaitingTxSignatures`](#awaitingtxsignatures), [`AwaitingChannelReady`](#awaitingchannelready), [`ChannelReady`](#channelready), [`ShuttingDown`](#shuttingdown), and [`Closed`](#closed). RPC responses report the current state through the `ChannelState` enum.
+
+The following sections show the complete Fiber channel lifecycle in its actual state order.
+
+## NegotiatingFunding
+
+`NegotiatingFunding` means the peers are agreeing on the parameters required before funding, such as funding amount, fee rates, TLC limits, and related channel settings.
+
+| Flag | Description |
+|------|-------------|
+| `OUR_INIT_SENT` | The local node has sent its channel-opening init message. |
+| `THEIR_INIT_SENT` | The remote peer has sent its channel-opening init message. |
+| `INIT_SENT` | Both local and remote channel-opening init messages have been sent. |
+| `AWAITING_EXTERNAL_FUNDING` | The node is waiting for the user to sign and submit an externally funded transaction. |
+
+## CollaboratingFundingTx
+
+`CollaboratingFundingTx` means the peers are building the funding transaction together.
+
+| Flag | Description |
+|------|-------------|
+| `AWAITING_REMOTE_TX_COLLABORATION_MSG` | The node is waiting for the peer's transaction-collaboration message. |
+| `PREPARING_LOCAL_TX_COLLABORATION_MSG` | The node is preparing its own transaction-collaboration message. |
+| `OUR_TX_COMPLETE_SENT` | The local node has sent `tx_complete`. |
+| `THEIR_TX_COMPLETE_SENT` | The remote peer has sent `tx_complete`. |
+| `COLLABORATION_COMPLETED` | Both sides have sent `tx_complete`. |
+
+## SigningCommitment
+
+`SigningCommitment` means the funding transaction structure is ready and the peers are exchanging `CommitmentSigned` messages.
+
+| Flag | Description |
+|------|-------------|
+| `OUR_COMMITMENT_SIGNED_SENT` | The local node has sent `CommitmentSigned`. |
+| `THEIR_COMMITMENT_SIGNED_SENT` | The remote peer has sent `CommitmentSigned`. |
+| `COMMITMENT_SIGNED_SENT` | Both sides have sent `CommitmentSigned`. |
+
+## AwaitingTxSignatures
+
+`AwaitingTxSignatures` means the peers have exchanged commitment signatures and are now collecting funding transaction signatures through `TxSignatures` messages.
+
+| Flag | Description |
+|------|-------------|
+| `OUR_TX_SIGNATURES_SENT` | The local node has sent funding transaction signatures. |
+| `THEIR_TX_SIGNATURES_SENT` | The remote peer has sent funding transaction signatures. |
+| `TX_SIGNATURES_SENT` | Both sides have sent funding transaction signatures. |
+
+## AwaitingChannelReady
+
+`AwaitingChannelReady` means the funding transaction has been signed or broadcast, and the channel is waiting for on-chain confirmation and `ChannelReady` messages from both peers.
+
+
+| Flag | Description |
+|------|-------------|
+| `OUR_CHANNEL_READY` | The local node has sent `ChannelReady`. |
+| `THEIR_CHANNEL_READY` | The remote peer has sent `ChannelReady`. |
+| `CHANNEL_READY` | Both sides have sent `ChannelReady`. |
+
+## ChannelReady
+
+`ChannelReady` means the channel is active and can send or receive payments. This state has no `state_flags`.
+
+<Callout type="warning">
+  `ChannelReady` does not guarantee payment reliability. A payment may still
+  fail if there is not enough liquidity on the correct side, policy
+  limits are not met, too many TLCs are already in flight, or no route can be
+  found.
+</Callout>
+
+## ShuttingDown
+
+`ShuttingDown` means the channel is closing.
+
+Channels can close cooperatively, when both peers agree on the close, or
+uncooperatively, when one side force closes the channel. For a cooperative
+close, provide `close_script` and `fee_rate`. For a force close, set `force`
+to `true`; for example, `fnn-cli channel shutdown_channel --force true`. In
+that case, Fiber uses the default close script and fee rate from channel
+opening.
+
+| Flag | Description |
+|------|-------------|
+| `OUR_SHUTDOWN_SENT` | The local node has sent `Shutdown`. |
+| `THEIR_SHUTDOWN_SENT` | The remote peer has sent `Shutdown`. |
+| `AWAITING_PENDING_TLCS` | Both sides have sent `Shutdown`, and pending TLCs still need to clear. |
+| `DROPPING_PENDING` | The node is dropping pending updates while closing. |
+| `WAITING_COMMITMENT_CONFIRMATION` | The node is waiting for commitment confirmation during shutdown. |
+
+## Closed
+
+`Closed` means the channel has reached a terminal state and can no longer be used for payments.
+
+| Flag | Description |
+|------|-------------|
+| `COOPERATIVE` | The channel closed cooperatively. |
+| `UNCOOPERATIVE_LOCAL` | The local node closed the channel uncooperatively. |
+| `UNCOOPERATIVE_REMOTE` | The remote peer closed the channel uncooperatively. |
+| `ABANDONED` | The channel was abandoned. |
+| `FUNDING_ABORTED` | The channel opening failed before funding completed. |
+| `WAITING_ONCHAIN_SETTLEMENT` | The channel is already in `Closed`, but the on-chain settlement is still pending. |
+
+## Checking Channel State
+
+### Using fnn-cli
+
+```bash
+fnn-cli channel list_channels
+```
+
+### Using RPC
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "list_channels",
+  "params": [{}],
+  "id": 1
+}
+```
+
+## Related Topics
+
+- [P2P Message Protocol](/docs/res/p2p-message)
+- [External Funding](/docs/concept/channels/external-funding)
+- [Channel API Reference](/docs/api-reference/channel)

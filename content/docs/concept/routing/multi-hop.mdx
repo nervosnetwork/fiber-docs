@@ -1,0 +1,359 @@
+---
+title: Multi-Hop Payments
+description: How Fiber routes payments through intermediate nodes using time-locked contracts and onion encryption
+date: 2026-06-15
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+## TL;DR
+
+Multi-hop payments let you send assets to anyone in the Fiber network without opening a direct channel. The sender computes a route through intermediate nodes, wraps the routing instructions in layers of onion encryption, and locks each hop with a time-locked contract (TLC). Intermediate nodes forward the payment automatically and earn a small fee. The recipient reveals a preimage to settle, and funds cascade back through the route.
+
+## Why Multi-Hop?
+
+In a payment channel network, two users can only transact directly if they share an open channel. Requiring a direct channel between every pair of users would be impractical — the number of channels would grow quadratically with the number of participants, and each channel requires on-chain funding.
+
+Multi-hop payments solve this by routing value through a chain of existing channels. If Alice has a channel with Bob, and Bob has a channel with Carol, Alice can pay Carol by "hopping" through Bob — without ever opening a channel with Carol directly. Bob acts as a relay node, forwarding the payment in exchange for a small fee. The same principle extends to arbitrarily long paths across the network.
+
+This design means that a well-connected network with relatively few channels can support payments between any two participants. As long as a path of funded channels exists from sender to receiver, the payment can be delivered.
+
+## The Payment Flow
+
+A multi-hop payment in Fiber proceeds through four phases: pathfinding, onion construction, hop-by-hop forwarding, and settlement.
+
+### Pathfinding
+
+Before sending a payment, the sender must discover a viable route through the network. Fiber nodes maintain a local view of the network graph — built from gossip messages that advertise channels, node addresses, and fee policies. The routing module uses a modified Dijkstra algorithm that searches from the target back to the source, evaluating each edge with a probability-based cost function inspired by LND's bimodal probability model.
+
+The cost function considers both the fee charged by each relay node and the estimated probability that the channel has sufficient liquidity to carry the payment. This produces routes that balance low cost against high success probability. The sender can influence route selection by specifying parameters such as `max_fee_amount` (the maximum total fee budget) and `max_parts` (for multi-path splitting).
+
+When no single path has enough liquidity for the full amount, Fiber can split the payment across multiple routes using atomic multi-path payments (AMP). Each part travels independently, and the payment only succeeds when all parts are delivered.
+
+### Onion Construction
+
+Once a route is selected, the sender builds a Sphinx onion packet — a fixed-size (6500-byte) encrypted structure with one layer per hop. Each layer contains the `PaymentHopData` for that hop: the amount to forward, the TLC expiry timestamp, the funding transaction hash of the outgoing channel, and the public key of the next node. The final hop includes the payment preimage (for keysend payments) or custom records.
+
+The onion is constructed from the inside out. The sender generates a session key and performs an ECDH exchange with each hop's public key to derive a shared secret. Each layer is encrypted with a stream cipher keyed by the corresponding shared secret, and a MAC (HMAC) is appended for integrity verification. The result is a nested structure: the first hop can decrypt only the outermost layer, revealing its instructions and the encrypted blob for the next hop. No intermediate node can see beyond its own layer.
+
+```
+[Layer 1: Alice → Bob]  →  [Layer 2: Bob → Carol]  →  [Layer 3: Carol → Dave (final)]
+```
+
+This construction provides two guarantees: each node learns only its predecessor and successor (not the full route), and the sender is the only party who knows the complete path.
+
+### Hop-by-Hop Forwarding
+
+With the onion packet ready, the sender creates a TLC (Time-Locked Contract) on the channel to the first hop and sends the `AddTlc` message along with the onion packet. The TLC locks the payment amount plus all forwarding fees, with an expiry deadline that gives every intermediate node enough time to either settle or fail the payment.
+
+When an intermediate node receives an incoming `AddTlc`, it processes the commitment transaction, then peels one layer of the onion packet using its private key. The decrypted layer reveals:
+
+- The amount to forward to the next hop
+- The expiry deadline for the outgoing TLC
+- The channel (identified by funding transaction hash) to use for forwarding
+- The encrypted onion packet for the next hop
+
+The node then creates a new TLC on its outgoing channel, forwarding a slightly smaller amount (the difference is its forwarding fee) with a shorter expiry. This process repeats at each hop until the onion reaches the final recipient.
+
+<Callout type="info">
+  The expiry decreases at each hop by the node's configured `tlc_expiry_delta`. This time buffer ensures that if a downstream node fails to respond, the upstream node has enough time to remove the TLC before its own deadline expires.
+</Callout>
+
+### Settlement
+
+The final recipient validates the incoming payment against an outstanding invoice: checking the amount, the payment hash, and the expiry. If everything matches, the recipient stores the preimage and sends a `RemoveTlcFulfill` message back to the previous hop. The preimage is the cryptographic proof of payment — anyone who holds it can claim the locked funds.
+
+Settlement propagates backward through the route. Each intermediate node receives the `RemoveTlcFulfill`, removes its incoming TLC, and forwards the fulfillment to its own predecessor. By the time the preimage reaches the sender, every TLC along the route has been settled, and every relay node has effectively earned its forwarding fee by having shifted liquidity from its outgoing channel to its incoming channel.
+
+```
+Alice ──TLC(1002)──▶ Bob ──TLC(1001)──▶ Carol ──TLC(1000)──▶ Dave
+                                                              │
+Alice ◀──Fulfill──── Bob ◀──Fulfill──── Carol ◀──Fulfill─────┘
+                    (+1 fee)           (+1 fee)            (recipient)
+```
+
+## Time-Locked Contracts (TLC)
+
+Every hop in a multi-hop payment is secured by a TLC — Fiber's implementation of hash time-locked contracts. A TLC encodes two conditions:
+
+**Hashlock**: The funds can only be claimed by presenting the preimage that hashes to the payment hash included in the invoice. This ensures that only the intended recipient (who generated the preimage) can unlock the payment.
+
+**Timelock**: If the preimage is not presented before the expiry deadline, the funds automatically revert to the sender. This prevents intermediate nodes from indefinitely locking up liquidity.
+
+The combination of hashlock and timelock creates a trustless chain: each node can safely forward funds because it holds a TLC that can only be settled with the same preimage. No node in the chain needs to trust any other node — the contract enforces correct behavior. If any node fails to forward or settle, the timelock ensures that all TLCs eventually expire and funds return to their original owners.
+
+Fiber currently uses hash-based TLCs, with plans to migrate to Point Time-Locked Contracts (PTLC) in the future. PTLCs replace the hash with a curve point, removing the repeated-hash linkage across hops and improving payment privacy.
+
+## Routing Fees
+
+Relay nodes earn fees for forwarding payments. The fee is calculated using a simple proportional formula:
+
+```
+fee = ceil((amount_to_forward x tlc_fee_proportional_millionths) / 1,000,000)
+```
+
+Each node configures its own fee rate via `tlc_fee_proportional_millionths` in `config.yml`. A value of `1000` corresponds to a 0.1% fee. The sender's routing algorithm accounts for fees at each hop when computing the total cost and building the onion packet — each hop's amount includes the cumulative fees for all downstream hops.
+
+<Callout type="info">
+  **Example**: Alice sends 1000 CKB to Dave through Bob (0.1% fee) and Carol (0.1% fee). The total fee is approximately 2 CKB. Alice locks 1002 CKB on her channel with Bob. Bob forwards 1001 CKB to Carol (keeping 1 CKB). Carol forwards 1000 CKB to Dave (keeping 1 CKB). Dave receives exactly 1000 CKB.
+</Callout>
+
+The fee policy is announced to the network via gossip messages, so senders can factor relay fees into their pathfinding decisions. Nodes that set fees too high will see fewer payments routed through them; nodes that set fees too low may attract traffic but earn less per forward.
+
+## Privacy Through Onion Routing
+
+Onion routing is central to payment privacy in Fiber. Without it, every intermediate node would know the sender, the recipient, and the full route — leaking sensitive financial information to every relay in the path.
+
+The Sphinx onion construction ensures that each node can decrypt only its own layer. Bob knows that Alice sent him a payment and that he should forward it to Carol, but he does not know whether Carol is the final recipient or just another relay. Carol knows that Bob forwarded a payment to her and that she should forward it to Dave, but she does not know that Alice originated the payment.
+
+This design provides hop-by-hop privacy: no single node (except the sender) has a complete view of the route. The final recipient sees only the last hop, and cannot determine the origin.
+
+Additionally, Fiber uses constant-time error decoding: when a payment fails, the error packet traverses backward through the route using XOR cipher streams. The origin node always attempts exactly 27 decryption passes regardless of where the error occurred, preventing the erring node from inferring its position in the route through timing analysis.
+
+## Error Handling and Retry
+
+Not every payment succeeds on the first attempt. A channel may lack sufficient liquidity, a node may be temporarily offline, or an expiry may be too tight. When a hop cannot process a TLC, it generates a `TlcErrPacket` — an encrypted error message that propagates backward to the sender.
+
+Common error codes include `TemporaryChannelFailure` (the channel doesn't have enough balance right now), `TemporaryNodeFailure` (the node is temporarily unable to process), `FeeInsufficient` (the forwarded amount doesn't cover the node's fee), and `ExpiryTooSoon` (the TLC expiry doesn't leave enough time for the downstream route).
+
+When the sender receives an error, the `PaymentActor` decodes it, updates the local network graph with the failure information, and — if the error is retryable — automatically builds a new route that avoids the failed channel or node. Each `PaymentAttempt` has a configurable retry limit, and the `PaymentSession` tracks the aggregate progress across all attempts.
+
+| Error | Meaning | Typical Action |
+|-------|---------|---------------|
+| `TemporaryChannelFailure` | Channel liquidity exhausted | Retry via alternate path |
+| `TemporaryNodeFailure` | Node temporarily unavailable | Retry after brief delay |
+| `FeeInsufficient` | Forwarded amount below fee | Recalculate amounts |
+| `ExpiryTooSoon` | Expiry window too narrow | Increase expiry delta |
+| `IncorrectOrUnknownPaymentDetails` | Invoice mismatch at recipient | Check invoice and amount |
+| `PermanentChannelFailure` | Channel closed or unavailable | Remove from graph, retry |
+
+## Sending a Multi-Hop Payment
+
+The following example walks through a complete multi-hop payment: Alice (nodeA) pays Bob (nodeB) through two public relay nodes. The topology is:
+
+```
+nodeA ──▶ relay node1 ──▶ relay node2 ──▶ nodeB
+```
+
+### 1. Create an Invoice on the Recipient
+
+Bob creates an invoice on nodeB for 1 CKB:
+
+<Tabs items={['CLI', 'RPC']}>
+  <Tab value="CLI">
+
+```bash
+fnn-cli invoice new_invoice \
+  --amount 100000000 \
+  --currency Fibt \
+  --description "multi-hop payment" \
+  --expiry 3600
+```
+
+  </Tab>
+  <Tab value="RPC">
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "new_invoice",
+  "params": [{
+    "amount": "0x5f5e100",
+    "currency": "Fibt",
+    "description": "multi-hop payment",
+    "expiry": "0xe10",
+    "hash_algorithm": "sha256"
+  }],
+  "id": 1
+}
+```
+
+  </Tab>
+</Tabs>
+
+The response includes the encoded invoice string (starting with `fibt1...` on testnet).
+
+### 2. Send the Payment
+
+Alice pays the invoice from nodeA. Fiber automatically discovers a route through the relay nodes, constructs the onion packet, and locks the TLCs:
+
+<Tabs items={['CLI', 'RPC']}>
+  <Tab value="CLI">
+
+```bash
+fnn-cli payment send_payment --invoice "fibt1..."
+```
+
+  </Tab>
+  <Tab value="RPC">
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "send_payment",
+  "params": [{
+    "invoice": "fibt1...",
+    "max_fee_amount": "0x5f5e100"
+  }],
+  "id": 2
+}
+```
+
+  </Tab>
+</Tabs>
+
+The response includes the `payment_hash`, the route taken (`routers`), and the total `fee` charged by relay nodes. The `routers` field shows each hop as `node(amount, channel_outpoint)`, revealing the full path the sender computed.
+
+### 3. Preview a Route Without Sending
+
+Use `dry_run` to validate the route and estimate fees without actually sending:
+
+<Tabs items={['CLI', 'RPC']}>
+  <Tab value="CLI">
+
+```bash
+fnn-cli payment send_payment --invoice "fibt1..." --dry-run true
+```
+
+  </Tab>
+  <Tab value="RPC">
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "send_payment",
+  "params": [{
+    "invoice": "fibt1...",
+    "dry_run": true
+  }],
+  "id": 3
+}
+```
+
+  </Tab>
+</Tabs>
+
+This returns the same route and fee information without creating any TLCs, which is useful for checking whether a payment would succeed before committing funds.
+
+### 4. Monitor the Payment
+
+Check the payment status by its hash:
+
+<Tabs items={['CLI', 'RPC']}>
+  <Tab value="CLI">
+
+```bash
+fnn-cli payment get_payment --payment-hash 0x...
+```
+
+  </Tab>
+  <Tab value="RPC">
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "get_payment",
+  "params": ["0x..."],
+  "id": 4
+}
+```
+
+  </Tab>
+</Tabs>
+
+The `status` field progresses through `Created` → `Inflight` → `Success` or `Failed`. If the payment fails, `failed_error` contains the decoded error message from the erring hop, and the sender's routing module will automatically retry with a different path when the error is retryable.
+
+### Specifying Trampoline Hops
+
+When the sender has limited graph visibility (e.g., a lightweight wallet), trampoline hops delegate pathfinding to intermediate nodes:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "send_payment",
+  "params": [{
+    "invoice": "fibt1...",
+    "trampoline_hops": [
+      "<relay_node1_pubkey>",
+      "<relay_node2_pubkey>"
+    ],
+    "max_fee_amount": "0x5f5e100"
+  }],
+  "id": 5
+}
+```
+
+The sender only needs a route to the first trampoline node. The remaining path is encoded in an inner trampoline onion that each trampoline node peels and forwards. See [Trampoline Routing](/docs/concept/routing/trampoline-routing) for the full specification.
+
+## Running a Relay Node
+
+Relay nodes are the backbone of multi-hop routing. If you operate a well-connected Fiber node with public channels, other users' payments will automatically route through you, and you earn forwarding fees for each one.
+
+### Requirements
+
+A relay node needs a server with a publicly reachable IP address, sufficient CKB to fund channels, stable uptime (payments can only route through online nodes), and balanced liquidity on both sides of each channel.
+
+Each channel side must reserve 99 CKB (98 CKB for the commitment lock's on-chain [occupied capacity](https://github.com/nervosnetwork/fiber-scripts) + 1 CKB for the shutdown transaction fee) — this amount is locked for on-chain settlement and cannot be used for off-chain payments. The actual minimum funding amount depends on your `open_channel_auto_accept_min_ckb_funding_amount` setting (code default: 100 CKB). For example, the public Fiber relay nodes require at least 499 CKB (99 CKB reserve + 400 CKB usable).
+
+### Configuration
+
+The key settings in `config.yml` for relay operation are:
+
+```yaml
+fiber:
+  # Make your node publicly reachable
+  listening_addr: "/ip4/0.0.0.0/tcp/8228"
+  announce_listening_addr: true
+  announced_addrs:
+    - "/ip4/YOUR_PUBLIC_IP/tcp/8228"
+
+  # Automatically accept channel requests (example: public node thresholds)
+  open_channel_auto_accept_min_ckb_funding_amount: 49900000000  # 99 CKB reserve + 400 CKB usable
+  auto_accept_channel_ckb_funding_amount: 25000000000           # your contribution as acceptor
+
+  # Fee policy
+  tlc_fee_proportional_millionths: 1000   # 0.1% forwarding fee
+  tlc_expiry_delta: 86400000              # 1 day expiry window
+```
+
+<Callout type="warning">
+  Without a publicly reachable address, other nodes cannot connect to you. You must set `announced_addrs` to your public IP or use a relay/VPN service.
+</Callout>
+
+### Maintaining Liquidity
+
+The main operational challenge for relay nodes is **liquidity balance**. After forwarding many payments in one direction, a channel becomes one-sided: your local balance depletes, and you can no longer forward in that direction.
+
+```
+Channel with Node A:   local: 10 CKB   remote: 490 CKB  (cannot forward A → you)
+Channel with Node B:   local: 490 CKB  remote: 10 CKB   (cannot forward you → B)
+```
+
+The solution is [channel rebalancing](/docs/concept/channels/channel-rebalancing): using circular payments to shift liquidity between channels. You can rebalance automatically with `send_payment` and `allow_self_payment: true`, or manually by specifying an explicit route with `build_router` and `send_payment_with_router`.
+
+Monitor your channel balances regularly with `fnn-cli channel list_channels` and rebalance proactively before channels become one-sided.
+
+### Monitoring Forwarding Activity
+
+Check which payments have been forwarded through your node and track earned fees:
+
+```bash
+# List all payments (including forwarded ones)
+fnn-cli payment list_payments
+
+# Check a specific payment's status and fee
+fnn-cli payment get_payment --payment-hash 0x...
+
+# Verify your node is visible in the network graph
+fnn-cli graph graph_nodes
+```
+
+## Related Topics
+
+- [Trampoline Routing](/docs/concept/routing/trampoline-routing) — delegating pathfinding to trampoline nodes for lightweight clients
+- [Payment Lifecycle](/docs/concept/payments/payment-lifecycle) — the state machine behind every payment attempt
+- [Invoice](/docs/concept/payments/invoice-guide) — creating and paying invoices
+- [Channel Rebalancing](/docs/concept/channels/channel-rebalancing) — keeping relay liquidity balanced
+- [Cross-Chain HTLC](/docs/res/cross-chain-htlc) — atomic swaps between Fiber and the Bitcoin Lightning Network
+- [Gossip Protocol](/docs/res/gossip-protocol) — how nodes discover channels and build the network graph

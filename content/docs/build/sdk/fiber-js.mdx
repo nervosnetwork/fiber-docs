@@ -1,0 +1,377 @@
+---
+title: JavaScript SDK
+description: TypeScript/JavaScript SDK for Fiber Network — channels, invoices, payments, and more
+date: 2026-06-18
+dependencies:
+  - name: "@ckb-ccc/fiber"
+    minVersion: "0.1.0"
+    link: "https://www.npmjs.com/package/@ckb-ccc/fiber"
+  - name: Fiber Node
+    minVersion: "0.8.0"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.8.0"
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+## TL;DR
+
+The Fiber JavaScript SDK (`@ckb-ccc/fiber`) is a typed, camelCase client for Fiber payment channels. Every channel interaction is **two-party**: one side opens, the other accepts; one side invoices, the other pays; either side can close. This guide walks through each interaction from both perspectives using "Alice" and "Bob."
+
+## Overview
+
+`@ckb-ccc/fiber` is a high-level TypeScript/JavaScript SDK for building on the [Fiber Network](https://github.com/nervosnetwork/fiber) — Nervos CKB's payment channel network. It wraps the Fiber node JSON-RPC with a typed, camelCase API and is part of the [CCC](https://github.com/ckb-devrel/ccc) (Common Chains Connector) stack.
+
+Fiber payment channels are inherently **two-party**: one side opens a channel, the other accepts it; one side creates an invoice, the other pays it; either side can close the channel. This guide walks through every interaction from both perspectives, using "Alice" and "Bob" as the two parties.
+
+## Installation
+
+```bash
+npm install @ckb-ccc/fiber
+```
+
+<Callout type="info">
+  `@ckb-ccc/fiber` depends on `@ckb-ccc/core`. Both will be installed automatically.
+</Callout>
+
+## Quick Start
+
+Create a client pointing at your Fiber node's RPC endpoint and verify the connection:
+
+```typescript
+import { FiberSDK } from "@ckb-ccc/fiber";
+
+const sdk = new FiberSDK({
+  endpoint: "http://127.0.0.1:8227",
+  timeout: 5000, // optional, milliseconds
+});
+
+// Verify the connection
+const info = await sdk.getNodeInfo();
+console.log("Version:", info.version);
+console.log("Pubkey:", info.pubkey);
+console.log("Connected peers:", info.peersCount);
+```
+
+From here, the same `sdk` handles everything — see the [User Stories](#user-stories) below.
+
+## Architecture
+
+`FiberSDK` is the main class. It composes five API domains (Channel, Invoice, Payment, Info, Peer) into a single object. Most methods are available directly on the `sdk` instance, while a few are accessed through domain sub-objects:
+
+```typescript
+// Top-level (most methods)
+await sdk.openChannel({ ... });
+await sdk.newInvoice({ ... });
+await sdk.sendPayment({ ... });
+await sdk.shutdownChannel({ ... });
+
+// Domain sub-object (specific methods)
+await sdk.channel.acceptChannel({ ... });
+await sdk.invoice.settleInvoice({ ... });
+```
+
+<Callout type="info">
+  `acceptChannel` and `settleInvoice` are on sub-objects because they represent the counterparty's side of a two-party handshake — `sdk.channel.acceptChannel()` and `sdk.invoice.settleInvoice()`.
+</Callout>
+
+## Two-Party Interaction Model
+
+Every channel interaction involves two nodes. Throughout this guide, we label them **Alice** and **Bob** for clarity. Each side has its own `FiberSDK` instance pointing at its own node's RPC.
+
+In all examples below, assume these two nodes:
+
+- **Alice's node** — RPC at `http://127.0.0.1:8227`
+- **Bob's node** — RPC at `http://127.0.0.1:8237`
+
+```typescript
+// Alice's SDK — connects to her node
+const alice = new FiberSDK({ endpoint: "http://127.0.0.1:8227" });
+
+// Bob's SDK — connects to his node
+const bob = new FiberSDK({ endpoint: "http://127.0.0.1:8237" });
+```
+
+<Callout type="info">
+  In practice, Alice and Bob run on different machines (or processes). Each points their SDK at their own node's RPC endpoint. The code blocks below use `alice` and `bob` as shorthand for each party's SDK instance.
+</Callout>
+
+For reference, here are the peer identities we assume throughout the examples (your actual keys and addresses will differ):
+
+|           | Pubkey                                                                 | P2P Address                            |
+| --------- | ---------------------------------------------------------------------- | -------------------------------------- |
+| **Alice** | `0x02aa3beb0d770fe835db99bf894fb2d9afaf4df0d5ec1871fad731d4fc6c90faed` | `/ip4/127.0.0.1/tcp/8228/p2p/QmdW4...` |
+| **Bob**   | `0x03827ccddf3fdf59808fa6baea647d93bd6f6105309d3b20e1fc0d9e40495865cc` | `/ip4/127.0.0.1/tcp/8238/p2p/QmcF...`  |
+
+## User Stories
+
+### 1. Check My Node's Health
+
+**Goal:** Verify the SDK is connected and inspect your node's current state.
+
+This is a single-party check — it works identically for either Alice or Bob.
+
+```typescript
+// Get node metadata
+const info = await alice.getNodeInfo();
+console.log("Version:", info.version);
+console.log("Pubkey:", info.pubkey);
+console.log("Active channels:", info.channelCount);
+console.log("Pending channels:", info.pendingChannelCount);
+console.log("Connected peers:", info.peersCount);
+
+// List existing channels
+const channels = await alice.listChannels();
+for (const ch of channels) {
+  console.log(
+    `  ${ch.channelId} — ${ch.state.stateName} — local: ${ch.localBalance}`,
+  );
+}
+
+// List connected peers
+const peers = await alice.listPeers();
+for (const p of peers) {
+  console.log(`  ${p.pubkey} @ ${p.address}`);
+}
+```
+
+---
+
+### 2. Establish a Payment Channel
+
+**Goal:** Alice wants to open a channel with Bob so they can send payments to each other.
+
+**Flow:** Alice connects to Bob's node → Alice opens a channel → Bob accepts the incoming channel → both wait for it to reach `ChannelReady`.
+
+<Tabs items={["Alice (opens channel)", "Bob (accepts channel)"]}>
+
+<Tab value="Alice (opens channel)">
+
+```typescript
+// Alice: connect to Bob and open a channel
+
+// 1. Connect to Bob's node (using Bob's address from the table above)
+await alice.connectPeer({
+  address: "/ip4/127.0.0.1/tcp/8238/p2p/QmcF...",
+  save: true,
+});
+
+// 2. Open a channel funded with 500 CKB
+const tempChannelId = await alice.openChannel({
+  pubkey:
+    "0x03827ccddf3fdf59808fa6baea647d93bd6f6105309d3b20e1fc0d9e40495865cc",
+  fundingAmount: "0xba43b7400", // 500 CKB in shannons
+  public: true,
+});
+console.log("Temporary channel ID:", tempChannelId);
+
+// 3. Poll until the channel reaches ChannelReady
+let channelId;
+while (!channelId) {
+  await new Promise((r) => setTimeout(r, 2000));
+  const channels = await alice.listChannels();
+  const ch = channels.find((c) => c.channelId === tempChannelId);
+  if (ch?.state.stateName === "ChannelReady") {
+    channelId = ch.channelId;
+    console.log("Channel ready:", channelId);
+  } else if (ch) {
+    console.log(`  State: ${ch.state.stateName}`);
+  }
+}
+```
+
+</Tab>
+
+<Tab value="Bob (accepts channel)">
+
+```typescript
+// Bob: accept the incoming channel from Alice
+
+// The temporary channel ID comes from Alice (share it out-of-band)
+const tempChannelId = "0x..."; // from Alice's console above
+
+const channelId = await bob.channel.acceptChannel({
+  temporaryChannelId: tempChannelId,
+  fundingAmount: "0x0", // Bob contributes 0; only Alice funds this channel
+});
+console.log("Accepted channel:", channelId);
+```
+
+</Tab>
+
+</Tabs>
+
+<Callout type="info">
+  `openChannel` returns a **temporary channel ID**. Once both parties accept and the funding transaction confirms on-chain, the temporary ID is replaced by a permanent `channelId` and the channel state becomes `ChannelReady`.
+
+If you want to cancel before the channel is ready, either party can call `sdk.abandonChannel({ temporaryChannelId, reason: "..." })`.
+</Callout>
+
+---
+
+### 3. Receive a Payment
+
+**Goal:** Bob wants to receive a payment from Alice. He creates an invoice, Alice pays it, and Bob settles to finalize.
+
+**Flow:** Bob creates an invoice → Bob shares the `invoiceAddress` with Alice → Alice pays the invoice → Bob detects the payment → Bob settles with the preimage.
+
+<Tabs items={["Bob (creates invoice & settles)", "Alice (pays invoice)"]}>
+
+<Tab value="Bob (creates invoice & settles)">
+
+```typescript
+// Bob: create an invoice for Alice to pay
+
+// 1. Generate a preimage — keep this secret until payment arrives
+const paymentPreimage = "0x" + "01".repeat(32);
+
+// 2. Create the invoice
+const { invoiceAddress, invoice } = await bob.newInvoice({
+  amount: "0x5f5e100", // 1 CKB in shannons
+  currency: "Fibt",
+  paymentPreimage,
+  description: "Payment for services",
+  expiry: "0xe10", // 3600 seconds
+  finalExpiryDelta: "0x9283C0", // ~4 hours in ms
+});
+
+// Share this with Alice (out-of-band — QR, copy-paste, API, etc.)
+console.log("Invoice address (send to Alice):");
+console.log(invoiceAddress);
+
+// 3. Poll until the invoice is paid
+let status = await bob.getInvoice(invoice.data.paymentHash);
+while (status.status === "Open") {
+  await new Promise((r) => setTimeout(r, 1000));
+  status = await bob.getInvoice(invoice.data.paymentHash);
+  console.log(`  Payment status: ${status.status}`);
+}
+console.log("Invoice paid!");
+
+// 4. Settle — reveal the preimage to finalize the payment
+await bob.invoice.settleInvoice({
+  paymentHash: invoice.data.paymentHash,
+  paymentPreimage,
+});
+console.log("Invoice settled.");
+```
+
+</Tab>
+
+<Tab value="Alice (pays invoice)">
+
+```typescript
+// Alice: pay Bob's invoice
+
+// The invoice address Bob shared with her
+const invoiceAddress = "fibt100000000001p...";
+
+// Send the payment
+const result = await alice.sendPayment({ invoice: invoiceAddress });
+console.log("Payment hash:", result.paymentHash);
+console.log("Status:", result.status);
+console.log("Fee:", result.fee);
+
+// Check final status
+const final = await alice.getPayment(result.paymentHash);
+console.log("Final status:", final.status);
+```
+
+</Tab>
+
+</Tabs>
+
+<Callout type="info">
+  **How settlement works:** When Alice pays, the funds flow through the channel but are not yet final — Bob's node holds them pending the preimage. When Bob calls `settleInvoice`, he reveals the preimage, which unlocks the funds cryptographically. This is the core Lightning-style trustless exchange: Alice knows Bob can only claim the funds if he knows the preimage, and Bob knows Alice can only reclaim after the expiry.
+</Callout>
+
+---
+
+### 4. Send a Payment
+
+**Goal:** Alice receives an invoice address and wants to inspect it before paying, then verify the payment succeeded.
+
+This is the **payer's perspective** of the flow shown above. See [Receive a Payment](#receive-a-payment) for the full two-party exchange.
+
+```typescript
+// Alice: inspect an invoice, then pay it
+
+const invoiceAddress = "fibt100000000001p...";
+
+// 1. Inspect the invoice before paying
+const parsed = await alice.parseInvoice({ invoice: invoiceAddress });
+console.log("Amount:", parsed.amount);
+console.log("Currency:", parsed.currency);
+
+// Check description and other attributes
+for (const attr of parsed.data.attrs) {
+  if ("description" in attr) console.log("Description:", attr.description);
+}
+
+// 2. Send the payment
+const result = await alice.sendPayment({ invoice: invoiceAddress });
+console.log("Payment hash:", result.paymentHash);
+console.log("Status:", result.status);
+console.log("Fee:", result.fee);
+
+// 3. Verify final status
+if (result.status !== "Success") {
+  const final = await alice.getPayment(result.paymentHash);
+  if (final.status === "Failed") {
+    console.error("Payment failed:", final.failedError);
+  } else {
+    console.log("Status:", final.status);
+  }
+}
+```
+
+<Callout type="warning">
+  The `sendPayment` result may show `"Created"` or `"Inflight"` — the payment routes through the network asynchronously. Use `getPayment` to confirm it reaches `"Success"`.
+</Callout>
+
+---
+
+### 5. Close the Channel
+
+**Goal:** Alice (or Bob) wants to close the channel and settle the final balance on-chain.
+
+Either party can initiate a close. The channel must be in `ChannelReady` state.
+
+<Tabs items={["Cooperative close", "Force close"]}>
+
+<Tab value="Cooperative close">
+
+```typescript
+// Either Alice or Bob: close the channel cooperatively (both parties online)
+await alice.shutdownChannel({
+  channelId: "0x...", // the permanent channel ID from ChannelReady state
+  force: false, // cooperative close — fast, low fees
+});
+console.log("Channel closed cooperatively.");
+```
+
+</Tab>
+
+<Tab value="Force close">
+
+```typescript
+// Either Alice or Bob: force-close when the counterparty is unresponsive
+await alice.shutdownChannel({
+  channelId: "0x...",
+  force: true, // force close — funds locked for timelock period
+});
+console.log("Channel force-closed. Funds unlock after the timelock.");
+```
+
+</Tab>
+
+</Tabs>
+
+| Close Type                   | When to Use                  | Speed                     | Counterparty Needed? |
+| ---------------------------- | ---------------------------- | ------------------------- | -------------------- |
+| Cooperative (`force: false`) | Both parties are online      | Immediate                 | Yes                  |
+| Force (`force: true`)        | Counterparty is unresponsive | After timelock (~4 hours) | No                   |
+
+<Callout type="warning">
+  Force-closing imposes a timelock before you can spend your funds. Always try a cooperative close first — it's faster and cheaper.
+</Callout>

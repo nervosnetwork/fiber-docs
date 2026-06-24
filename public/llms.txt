@@ -1,0 +1,23 @@
+# Fiber Network Documentation
+
+> Fiber Network is a peer-to-peer payment/swap network built on Nervos CKB, similar to Lightning Network. It supports multi-asset payments, cross-chain swaps with Bitcoin Lightning, and instant micropayments. This documentation covers everything from running a node to integrating Fiber into your application.
+
+Fiber Network Node (FNN) is the reference Rust implementation. fiber-js provides a WASM node for browsers. The HTTP JSON-RPC interface allows programmatic access from any language.
+
+## Introduction
+
+- [What is Fiber Network?](https://www.fiber.world/docs): Fiber Network is a peer-to-peer payment and swap network built on Nervos CKB. Similar to the Lightning Network, it uses 
+- [How Fiber Network Works](https://www.fiber.world/docs/how-it-works): Fiber Network uses payment channels to move frequent transfers off-chain while using CKB for settlement and enforcement.
+
+## Quick Start
+
+- [Basic Transfer Example](https://www.fiber.world/docs/quick-start/basic-transfer): Learn how to set up and execute transfers between two nodes
+- [Transfer Stablecoins](https://www.fiber.world/docs/quick-start/transfer-stablecoin): Learn how to transfer stablecoins between nodes
+
+## Optional
+
+- [Fiber GitHub Repository](https://github.com/nervosnetwork/fiber): The main FNN source code
+- [Fiber RPC API Reference](https://github.com/nervosnetwork/fiber/blob/main/crates/fiber-lib/src/rpc/README.md): Complete auto-generated RPC documentation
+- [fiber-scripts](https://github.com/nervosnetwork/fiber-scripts): On-chain CKB scripts for payment channels
+- [fiber-sphinx](https://github.com/nervosnetwork/fiber-sphinx): Onion routing cryptography library
+- [Fiber Network Dashboard](https://dashboard.fiber.channel/nodes): Live network status

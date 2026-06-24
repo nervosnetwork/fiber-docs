@@ -1,0 +1,20 @@
+{
+  "title": "Concepts",
+  "pages": [
+    "---Channels---",
+    "channels/channel-lifecycle",
+    "channels/unidirectional-channel",
+    "channels/external-funding",
+    "channels/channel-rebalancing",
+    "---Payments---",
+    "payments/payment-lifecycle",
+    "payments/invoice-guide",
+    "payments/hold-invoice",
+    "---Routing---",
+    "routing/multi-hop",
+    "routing/trampoline-routing",
+    "---Security & Auth---",
+    "biscuit-auth",
+    "watchtower"
+  ]
+}

@@ -1,0 +1,28 @@
+---
+title: SDK
+description: SDKs for integrating with Fiber Network
+date: 2026-06-18
+---
+
+# SDK
+
+Fiber provides multiple SDKs to help developers integrate with the network. Choose the one that fits your stack and use case.
+
+## Available SDKs
+
+| SDK | Description | Environment | Status |
+|-----|-------------|-------------|--------|
+| [JavaScript SDK](/docs/build/sdk/fiber-js) | High-level TypeScript/JavaScript SDK with camelCase APIs and full type safety for channels, invoices, payments, and more | Node.js, Browser | Available |
+| [WASM Node](/docs/build/sdk/wasm-node) | Run a full Fiber node in WebAssembly | Browser | Coming soon |
+
+## Choosing an SDK
+
+- **JavaScript SDK (`@ckb-ccc/fiber`)** — Use this for building applications that talk to an existing Fiber node over HTTP. It provides a typed, camelCase wrapper around the Fiber JSON-RPC with methods for channels, invoices, payments, peers, and node info. Best choice for most dApp and server-side development.
+
+- **WASM Node** — Embeds a Fiber node directly in the browser via WebAssembly. Use when you need a fully in-browser node without a separate server process.
+
+## Related Topics
+
+- [Toolchain Overview](/docs/build/toolchain) — The full Fiber development ecosystem
+- [RPC API Reference](/docs/api-reference) — Raw JSON-RPC methods
+- [Run a Fiber Node](/docs/quick-start/run-a-node) — Set up a node to connect to

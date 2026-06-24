@@ -1,0 +1,109 @@
+---
+title: Channel Rebalancing
+description: Shift liquidity between Fiber channels with circular payments
+date: 2026-06-11
+---
+
+## What Is Channel Rebalancing?
+
+Channel rebalancing is a way to move liquidity between your existing channels without opening or closing a channel. Fiber sends a circular payment that leaves through one channel and returns through another, so your total balance stays the same except for routing fees. This helps move local balance to the channel where you need more outbound liquidity.
+
+## When to Rebalance
+
+Suppose a node has two channels:
+
+```text
+You --[Channel A]--> Peer A    (local: 90, remote: 10)
+You --[Channel B]--> Peer B    (local: 10, remote: 90)
+```
+
+Channel A has more local balance, while Channel B has more remote balance. If the node needs to send payments through Channel B, the low local balance on that channel may limit outbound payments. Rebalancing can shift liquidity from Channel A toward Channel B.
+
+A real-world case is a merchant that receives many customer payments through one public node, then later needs to send payouts through a different channel. Rebalancing can move liquidity into the payout channel without closing or reopening channels.
+
+## How Fiber Handles Rebalancing
+
+Fiber supports two rebalancing methods:
+
+- [**Automatic rebalancing**](#automatic-rebalancing): use this when you want Fiber to find the circular route for you. It is simpler, but you cannot control which channels are used.
+- [**Manual rebalancing**](#manual-rebalancing): use this when you want to target specific channels or hops. It gives more control, but you need to know the route.
+
+## Automatic Rebalancing
+
+Use `send_payment` with `target_pubkey` set to your own node pubkey, `keysend: true`, and `allow_self_payment: true`. Fiber will try to find a circular path automatically.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "send_payment",
+  "params": [
+    {
+      "target_pubkey": "<your_own_pubkey>",
+      "amount": "0x5F5E100",
+      "keysend": true,
+      "allow_self_payment": true
+    }
+  ],
+  "id": 1
+}
+```
+
+This method is easiest to use, but the routing algorithm chooses the path. `allow_self_payment` is not compatible with trampoline routing.
+
+## Manual Rebalancing
+
+Use `build_router` and `send_payment_with_router` when you want to control the exact circular route.
+
+First, build a route that starts from your node, passes through the peers you want to use, and returns to your own node:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "build_router",
+  "params": [
+    {
+      "amount": "0x5F5E100",
+      "hops_info": [
+        { "pubkey": "<peer_A_pubkey>" },
+        { "pubkey": "<peer_B_pubkey>" },
+        { "pubkey": "<your_own_pubkey>" }
+      ]
+    }
+  ],
+  "id": 1
+}
+```
+
+`build_router` returns `router_hops`, which includes the route, fees, and expiry deltas.
+
+Then send the payment with the returned router:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "send_payment_with_router",
+  "params": [
+    {
+      "router": "<router_hops from build_router>",
+      "keysend": true
+    }
+  ],
+  "id": 2
+}
+```
+
+To force a specific channel at a hop, include `channel_outpoint` in `hops_info`.
+
+## Tips
+
+- Use `dry_run: true` first to check whether the route can be built and how much fee it will cost.
+- Make sure the rebalance amount plus routing fees does not exceed your local balance in the outbound channel.
+- Use `max_fee_amount` with `send_payment` to cap the total routing fee.
+- Use `list_channels` after a successful rebalance to confirm the updated balances.
+
+## Related APIs
+
+- [`send_payment`](/docs/api-reference/payment#method-send_payment)
+- [`build_router`](/docs/api-reference/payment#method-build_router)
+- [`send_payment_with_router`](/docs/api-reference/payment#method-send_payment_with_router)
+- [`list_channels`](/docs/api-reference/channel#method-list_channels)

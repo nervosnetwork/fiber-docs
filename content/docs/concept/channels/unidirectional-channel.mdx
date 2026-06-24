@@ -1,0 +1,208 @@
+---
+title: Unidirectional Channel
+description: Open a one-way payment channel where funds can only flow from initiator to acceptor — ideal for streaming payments and merchant receiving
+date: 2026-06-17
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+## TL;DR
+
+Set `one_way: true` when opening a channel to restrict payment flow to one direction: from initiator to acceptor. One-way channels are always private and cannot route third-party payments. When the channel closes, any unspent funds are returned to the initiator.
+
+```bash
+fnn-cli channel open_channel --pubkey <peer_pubkey> --funding-amount 49900000000 --one-way
+```
+
+## What Is a Unidirectional Channel
+
+A **unidirectional channel** (also called a **one-way channel**) is a payment channel where funds can only flow in a single direction — from the channel initiator to the acceptor. Unlike a standard bidirectional channel, the acceptor cannot send payments back through the same channel.
+
+Think of it like a prepaid card: you load money onto it, and the merchant can only receive from it, never push money back. If you don't spend everything, you get the remainder back when you close the channel.
+
+Under the hood, the channel's TLC (Time-Locked Contract) logic restricts the initiator to be the only sender and the acceptor to be the only receiver.
+
+## How It Works
+
+In a unidirectional channel:
+
+1. The **initiator** opens the channel and provides all the funding
+2. The **acceptor** does not contribute any funds
+3. The initiator sends payments to the acceptor through off-chain TLC updates
+4. The acceptor **cannot** send payments back — any attempt to do so will fail at the routing level with a "Failed to build route" error
+5. When the channel closes, the final balance is settled on-chain
+
+The direction restriction is enforced at the routing level. The node will never find a valid path for a reverse payment, so such payments are rejected before they even leave the sender.
+
+<Callout type="warning">
+  One-way channels **cannot be public**. If you set both `public: true` and `one_way: true`, the node will reject the request with `"An one-way channel cannot be public"`. This also means one-way channels cannot participate in routing payments for other nodes.
+</Callout>
+
+## Comparison with Bidirectional Channels
+
+| Property | Unidirectional | Bidirectional |
+|---|---|---|
+| Funding | Only initiator funds | Both parties can fund |
+| Payment direction | Initiator → Acceptor only | Both directions |
+| Public visibility | Always private | Can be public or private |
+| Routing for others | Cannot route third-party payments | Can route payments if public |
+| Channel rebalancing | Not applicable | Supported via circular payments |
+| Typical use case | Streaming, merchant receiving | General P2P payments |
+| Channel reserve | ≥99 CKB (initiator side, default) | ≥99 CKB per side (default) |
+
+## Use Cases and Trade-offs
+
+### Good Fit
+
+**Streaming payments.** A subscriber pays a content provider continuously — for example, paying per second of video watched or per API call made. The subscriber (initiator) funds the channel and streams payments to the provider (acceptor). Since payments only go one way, a unidirectional channel is a natural fit and avoids the complexity of managing liquidity in both directions.
+
+**Merchant receiving.** A merchant opens a channel with a specific customer or partner so the customer can make repeated purchases without on-chain transactions each time. The customer is the initiator; the merchant is the acceptor.
+
+**IoT and machine-to-machine payments.** A device that continuously pays for a service (compute, data, bandwidth) benefits from the simplified model — the device opens a one-way channel and drips payments as the service is consumed.
+
+### When to Use Bidirectional Instead
+
+If you expect payments to flow in both directions — for example, two peers who may trade roles as payer and payee — use a standard bidirectional channel. A one-way channel cannot be "upgraded" to bidirectional after creation; you would need to close it and open a new one.
+
+### Limitations
+
+- **No reverse payments.** If the acceptor needs to pay the initiator, they must open a separate channel.
+- **No routing participation.** One-way channels are invisible to the network graph, so they cannot earn routing fees or help relay payments for others.
+- **No rebalancing.** Since only one side holds funds, there is no liquidity rebalancing to manage.
+
+## Opening a Unidirectional Channel
+
+Set `one_way: true` when calling `open_channel`. The parameter is optional and defaults to `false`.
+
+### Using fnn-cli
+
+```bash
+fnn-cli channel open_channel --pubkey <acceptor_pubkey> --funding-amount 49900000000 --one-way
+```
+
+### Using JSON-RPC
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "open_channel",
+  "params": [
+    {
+      "pubkey": "02abc...",
+      "funding_amount": "0xb9e459300",
+      "one_way": true
+    }
+  ],
+  "id": 1
+}
+```
+
+<Callout>
+  The `funding_amount` is in **shannons** (1 CKB = 10⁸ shannons). By default, 99 CKB is reserved for the channel reserve (98 CKB minimum cell capacity + 1 CKB default shutdown fee), so the available balance for payments is `funding_amount - 99_00000000` shannons. The `FIBER_AUTO_ACCEPT_CHANNEL_CKB_FUNDING_AMOUNT` environment variable controls the auto-accept funding contribution (the amount the acceptor automatically contributes when accepting a channel open request), not the channel reserve itself.
+</Callout>
+
+## Sending Payments
+
+Once the channel is in `ChannelReady` state, the initiator can send payments to the acceptor using `send_payment` as usual. No special parameters are needed — the routing engine automatically knows the channel is one-way and only allows forward-direction payments.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "send_payment",
+  "params": [
+    {
+      "target_pubkey": "<acceptor_pubkey>",
+      "amount": "0x5f5e100",
+      "keysend": true
+    }
+  ],
+  "id": 1
+}
+```
+
+If the acceptor tries to send a payment back through the same channel, the routing algorithm will fail because it cannot find a valid path:
+
+```
+Error: Failed to build route
+```
+
+## Closing and Fund Recovery
+
+<Callout type="info">
+  Although funds flow in only one direction during the channel's lifetime, closing a one-way channel works exactly the same as closing a bidirectional channel. Any unspent balance is returned to the initiator.
+</Callout>
+
+This is an important point that often causes confusion. A one-way channel restricts the **payment direction** during the channel's lifetime, but it does **not** mean the initiator forfeits unspent funds. When the channel closes — whether cooperatively or by force — the on-chain settlement distributes funds according to the current balance:
+
+- **Initiator's remaining balance** goes back to the initiator's CKB address
+- **Acceptor's received balance** goes to the acceptor's CKB address
+- The channel reserve (99 CKB by default) is released back to the initiator
+
+For example, if you open a one-way channel with 499 CKB and send 120 CKB worth of payments before closing:
+
+- You (initiator) receive back: 499 - 120 - fees = **~379 CKB** (minus transaction fees)
+- The acceptor receives: **120 CKB**
+
+Either party can initiate the close:
+
+```bash
+fnn-cli channel shutdown_channel --channel-id <channel_id>
+```
+
+Or via JSON-RPC:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "shutdown_channel",
+  "params": [
+    {
+      "channel_id": "0x..."
+    }
+  ],
+  "id": 1
+}
+```
+
+For details on the cooperative and force-close flows, see [Channel Lifecycle](/docs/concept/channels/channel-lifecycle).
+
+## Monitoring One-Way Channels
+
+When listing channels, the `is_one_way` field indicates whether a channel is unidirectional:
+
+```bash
+fnn-cli channel list_channels
+```
+
+Response:
+
+```json
+{
+  "channels": [
+    {
+      "channel_id": "0x...",
+      "pubkey": "02abc...",
+      "is_public": false,
+      "is_one_way": true,
+      "is_acceptor": false,
+      "state": { "state_name": "ChannelReady" },
+      "local_balance": "0x9c16f4300",
+      "remote_balance": "0x1dcd65000"
+    }
+  ]
+}
+```
+
+Combine `is_one_way` with `is_acceptor` to determine your role in the channel:
+
+| `is_one_way` | `is_acceptor` | Your role |
+|---|---|---|
+| `true` | `false` | You are the payer (TLC sender) |
+| `true` | `true` | You are the payee (TLC receiver) |
+| `false` | either | Standard bidirectional channel |
+
+## Related Topics
+
+- [Channel Lifecycle](/docs/concept/channels/channel-lifecycle) — full channel state transitions and closing flows
+- [Channel Rebalancing](/docs/concept/channels/channel-rebalancing) — liquidity management in bidirectional channels
+- [Payment Lifecycle](/docs/concept/payments/payment-lifecycle) — how TLC payments are processed

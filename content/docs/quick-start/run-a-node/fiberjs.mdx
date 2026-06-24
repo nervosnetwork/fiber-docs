@@ -1,0 +1,191 @@
+---
+title: "Run a WASM Node"
+description: "Run a Fiber node directly in your browser app"
+date: 2026-06-16
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+## TL;DR
+
+Use `@nervosnetwork/fiber-js` to run a Fiber node inside a browser app. Install the package, serve a Fiber YAML config, create a `Fiber` instance on a cross-origin isolated page, and call `start()`; application code should not depend on the internal `fiber-wasm` package directly.
+
+## What is fiber-js?
+
+`fiber-js` is a JavaScript/TypeScript wrapper around the Fiber WebAssembly (WASM) node. It runs in browser-based applications and provides common Fiber node operations without running a separate backend service.
+
+| | Native Node | WASM Node |
+|---|---|---|
+| **Runtime** | Native binary | Browser |
+| **Deployment** | Server or local machine | Embedded in web app |
+| **Public IP required** | Yes | No, use outbound `/ws/` or `/wss/` peers |
+| **Storage** | File system (SQLite/RocksDB) | IndexedDB (via WASM worker) |
+| **Use case** | Production node operators | Browser wallets, web games, client-side dApps |
+
+## Prerequisites
+
+You need a JavaScript development environment before using `fiber-js`:
+
+- [Node.js](https://nodejs.org/) with `npm`
+- A browser-oriented build tool or framework, such as Vite, Next.js, Webpack 5, or an equivalent ESM toolchain
+
+The examples below use `npm`. If your project already uses `pnpm`, use the equivalent `pnpm` command.
+
+## Installation
+
+```bash
+npm install @nervosnetwork/fiber-js
+# or
+pnpm add @nervosnetwork/fiber-js
+```
+
+Prepare a YAML config from the Fiber source tree. For local docs development with `fiber` checked out next to `fiber-docs`:
+
+```bash
+mkdir -p public/fiber-config
+cp ../fiber/config/testnet/config.yml public/fiber-config/testnet.yml
+```
+
+You can also download the config from the Fiber repository and serve it from any static path in your app.
+
+<Callout type="warn" title="Browser requirements">
+`new Fiber()` creates `SharedArrayBuffer` objects immediately. Only create a `Fiber` instance on a cross-origin isolated page, and make sure your deployment serves WASM and worker assets with the required CORS and isolation headers.
+</Callout>
+
+## Quick Start
+
+```ts
+import { Fiber, randomSecretKey } from "@nervosnetwork/fiber-js";
+
+if (!crossOriginIsolated) {
+  throw new Error("fiber-js requires a cross-origin isolated page.");
+}
+
+// 1. Create the Fiber WASM node wrapper.
+const fiber = new Fiber();
+
+// 2. Load the same YAML config format used by fnn.
+const network = "testnet";
+const configPath = `/fiber-config/${network}.yml`;
+const config = await fetch(configPath).then((response) => {
+  if (!response.ok) {
+    throw new Error(`Failed to load Fiber config: ${configPath}`);
+  }
+
+  return response.text();
+});
+
+// 3. Start the node. Persist these keys in real applications.
+const fiberKeyPair = randomSecretKey();
+const ckbSecretKey = randomSecretKey();
+const databasePrefix = `${network}:demo`;
+
+await fiber.start(
+  config,
+  fiberKeyPair,
+  ckbSecretKey,
+  undefined,
+  "info",
+  databasePrefix,
+);
+
+// 4. Query node state.
+const info = await fiber.nodeInfo();
+console.log("Node started:", info);
+console.log("Connected peers:", await fiber.listPeers());
+```
+
+> **Expected Output:** The node initializes, connects to configured `/ws/` or `/wss/` peers, and starts syncing. `nodeInfo()` returns your node's pubkey, version, and chain info.
+
+## Common Workflows
+
+### Open a Channel and Send a Payment
+
+Replace `peerPubkey` and `peerAddress` with values for the same target peer. `openChannel()` requires the CKB secret key passed to `start()` to control spendable CKB. Browser wallet integrations usually use `openChannelWithExternalFunding()` instead.
+
+```ts
+const toRpcHex = (value: bigint): `0x${string}` =>
+  `0x${value.toString(16)}` as `0x${string}`;
+const ckb = (amount: bigint): `0x${string}` => toRpcHex(amount * 100_000_000n);
+const randomHash = (): `0x${string}` => {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return `0x${Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("")}` as `0x${string}`;
+};
+
+const peerPubkey = "<peer_pubkey>";
+const peerAddress = "<peer_wss_multiaddr>";
+
+// Connect to a browser-reachable peer.
+await fiber.connectPeer({
+  address: peerAddress,
+  save: true,
+});
+
+// Open a channel. The amount is a CKB RPC hex string in shannons.
+await fiber.openChannel({
+  pubkey: peerPubkey,
+  funding_amount: ckb(499n),
+  public: true,
+});
+
+// Create an invoice on the receiving node.
+const invoice = await fiber.newInvoice({
+  amount: ckb(1n),
+  currency: "Fibt",
+  description: "Test payment",
+  payment_preimage: randomHash(),
+});
+
+// Send the payment.
+await fiber.sendPayment({ invoice: invoice.invoice_address });
+```
+
+### Keysend (No Invoice)
+
+```ts
+await fiber.sendPayment({
+  target_pubkey: "<recipient_pubkey>",
+  amount: ckb(1n),
+  keysend: true,
+});
+```
+
+## Error Handling
+
+```ts
+try {
+  const result = await fiber.sendPayment({ invoice: "fibt1..." });
+} catch (err) {
+  console.error("Payment failed:", err);
+}
+```
+
+Common errors:
+- **`fiber-js requires a cross-origin isolated page`**: serve the page with isolation headers before calling `new Fiber()`.
+- **Fiber is not started**: `await fiber.start(...)` before invoking node methods.
+- **Connection failures**: browser nodes usually need remote `/ws/` or `/wss/` peer addresses, not plain `/tcp/` addresses.
+- **Configuration errors**: check that the loaded YAML config matches the target network and includes browser-reachable bootnodes.
+
+## API Reference
+
+`@nervosnetwork/fiber-js` exports the `Fiber` class. Its methods are camelCase wrappers around Fiber RPC commands, and async methods return promises that reject on command errors.
+
+| Area | Key Methods |
+|--------|--------------|
+| **Lifecycle** | `start`, `stop`, `invokeCommand` |
+| **Channel** | `openChannel`, `openChannelWithExternalFunding`, `submitSignedFundingTx`, `listChannels`, `shutdownChannel`, `updateChannel` |
+| **Payment** | `sendPayment`, `getPayment`, `buildRouter`, `sendPaymentWithRouter` |
+| **Invoice** | `newInvoice`, `parseInvoice`, `getInvoice`, `cancelInvoice` |
+| **Peer** | `connectPeer`, `disconnectPeer`, `listPeers` |
+| **Graph** | `graphNodes`, `graphChannels` |
+| **Node** | `nodeInfo` |
+
+For the full API reference see [Build -> fiber-js](/docs/build/fiber-js).
+
+## Next Steps
+
+- [Basic Transfer](/docs/quick-start/basic-transfer) — learn the channel and payment flow
+- [JavaScript Overview](/docs/build/fiber-js) — browser runtime, security headers, and API details
+- [Build a Game with Fiber](/docs/build/simple-game) — end-to-end example with Fiber payments

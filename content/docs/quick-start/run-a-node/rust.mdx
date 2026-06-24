@@ -1,0 +1,193 @@
+---
+title: "Run a Native Node"
+description: "Run a native Fiber Network Node (FNN) binary on your local machine or server"
+date: 2026-06-09
+dependencies:
+  - name: Fiber Node
+    minVersion: "0.9.0-rc4"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0-rc4"
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+## TL;DR
+
+Download the FNN binary, set up a private key, configure `config.yml`, and start the node. In 5 minutes you'll have a Fiber node running on Testnet.
+
+## Prerequisites
+
+- [Git](https://git-scm.com/) (if building from source)
+- [Rust](https://www.rust-lang.org/) and [Cargo](https://doc.rust-lang.org/cargo/) (if building from source)
+- Basic understanding of command line operations
+- [ckb-cli](https://github.com/nervosnetwork/ckb-cli) tool for key management
+
+## Building and Setting Up Your Node
+
+### 1. Obtain the FNN Binary
+
+You can either download a pre-built binary from the [Fiber GitHub Releases](https://github.com/nervosnetwork/fiber/releases) page or build it from source:
+
+```sh
+git clone https://github.com/nervosnetwork/fiber.git
+cd fiber
+cargo build --release
+```
+
+This document used the [v0.8.0 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.8.0) throughout the guide.
+
+<Callout type="info" title="macOS Security">
+If you're using macOS, the downloaded binary may be blocked by Gatekeeper. To resolve this, remove the quarantine attribute:
+```sh
+xattr -d com.apple.quarantine fnn fnn-migrate fnn-cli
+```
+</Callout>
+
+### 2. Create Node Directory
+
+Create a dedicated directory for your node and copy the necessary files:
+
+```sh
+mkdir /folder-to/my-fnn
+# If using released binary, replace target/release/fnn with the path to your downloaded binary
+cp target/release/fnn /folder-to/my-fnn
+# Copy additional tools (v0.8.0+)
+cp target/release/fnn-migrate /folder-to/my-fnn
+cp target/release/fnn-cli /folder-to/my-fnn
+cp config/testnet/config.yml /folder-to/my-fnn
+cd /folder-to/my-fnn
+```
+
+### 3. Set Up Node Keys
+
+FNN includes built-in wallet functionality for signing funding transactions. You'll need to create or import a private key:
+
+create a new ckb account and get the `lock_arg` of the new account
+
+```sh
+ckb-cli account new
+
+# example output
+# address
+#   mainnet: ckb1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsqtp83cu4pk8nysm9dngxezw546dyr5w8esx7rlyt
+#   testnet: ckt1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsqtp83cu4pk8nysm9dngxezw546dyr5w8esgvgswn
+# lock_arg: 0x613c71ca86c79921b2b6683644ea574d20e8e3e6
+# lock_hash: 0x1c506178212949e961f5949c916f70f5ba0f3b89b14ce2608f02201a41eb3ef7
+```
+
+Then export the existing key
+
+```sh
+mkdir ckb
+# Export an existing key using ckb-cli
+ckb-cli account export --lock-arg <lock_arg> --extended-privkey-path ./ckb/exported-key
+# Extract just the private key (FNN only needs this part)
+head -n 1 ./ckb/exported-key > ./ckb/key
+```
+
+### 4. Start the Node
+
+Launch your node with logging enabled:
+
+(You need to set a `FIBER_SECRET_KEY_PASSWORD` environment variable in the startup command to encrypt your wallet private key file. I used 123 here for demo purposes, but I recommend using a strong password.)
+
+```sh
+FIBER_SECRET_KEY_PASSWORD='123' RUST_LOG=info ./fnn -c config.yml -d .
+```
+
+> **Expected Output:** You should see log lines indicating the node is starting, connecting to bootnodes, and syncing with the Testnet. The RPC server will be available at `http://127.0.0.1:8227`.
+
+## Interacting with Your Node
+
+Once your node is running, you can interact with it using the RPC interface or the CLI tool.
+
+### Using the CLI Tool (v0.8.0+)
+
+v0.8.0 introduces `fnn-cli`, a command-line interface that provides a convenient way to manage your node without writing raw JSON-RPC requests:
+
+```sh
+# View node information
+./fnn-cli info
+
+# List connected peers
+./fnn-cli peer list_peers
+
+# List open channels
+./fnn-cli channel list_channels
+
+# List available commands
+./fnn-cli --help
+```
+
+> **Expected Output:** `./fnn-cli info` should return your node's pubkey, alias, and chain info. If you see a connection error, ensure the node is running and `NO_PROXY` is set for local addresses.
+
+The CLI connects to the node's RPC endpoint (default: `http://127.0.0.1:8227`).
+
+<Callout type="info" title="HTTP Proxy Issues">
+If you encounter a `503 Service Unavailable` error, check if your system has an HTTP proxy configured. The CLI may attempt to route requests through the proxy, which can fail for local addresses.
+
+**Solution:** Set `NO_PROXY` to exclude local addresses:
+```sh
+export NO_PROXY=127.0.0.1,localhost
+./fnn-cli info
+```
+</Callout>
+
+### Using JSON-RPC Directly
+
+You can also interact with the node using any HTTP client:
+
+```sh
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"node_info"}' \
+  http://127.0.0.1:8227/
+```
+
+## Version Compatibility and Upgrades
+
+FNN is under active development, and protocol/storage format changes may occur between versions. Here's how to handle upgrades:
+
+<Callout type="warn" title="v0.8.0 Breaking Changes">
+v0.8.0 introduces several RPC changes that may affect existing integrations:
+
+| Change | v0.7.1 | v0.8.0 |
+|--------|--------|--------|
+| Node identifier | `peer_id` (base58) | `pubkey` (hex-encoded secp256k1) |
+| `node_info` response field | `node_id` | `pubkey` |
+| JSON enum format | PascalCase | snake_case (e.g., `CkbHash` → `ckb_hash`) |
+| `ChannelState` format | Regular | SCREAMING_SNAKE_CASE with pipe separator |
+
+Affected RPC methods: `open_channel`, `list_channels`, `disconnect_peer`, `connect_peer`, `node_info`.
+
+New RPC methods in v0.8.0:
+- `open_channel_with_external_funding` - For hardware wallet/external signing
+- `submit_signed_funding_tx` - Submit externally signed transactions
+- `list_payments` - Query payment sessions
+</Callout>
+
+### Safe Upgrade Process
+
+1. Close all active channels before upgrading
+2. Stop the node and clean the storage:
+
+```sh
+rm -rf /folder-to/my-fnn/fiber/store
+```
+
+3. Replace the FNN binary and restart
+
+### Storage Migration (Optional)
+
+If you want to preserve channel states during an upgrade:
+
+```sh
+# Back up first
+cp -r /folder-to/my-fnn/fiber/store /folder-to/my-fnn/fiber/store.backup
+
+# Run migration
+./fnn-migrate -d /folder-to/my-fnn
+```
+
+## Next Steps
+
+- [Basic Transfer](/docs/quick-start/basic-transfer) — send your first payment
+- [Config Reference](/docs/guide/node-operator/config-reference) — full configuration options

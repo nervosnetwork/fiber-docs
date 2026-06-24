@@ -1,0 +1,38 @@
+---
+title: Module `Info`
+description: Node information RPC methods
+date: 2026-05-25
+---
+
+## Module `Info`
+
+The RPC module for node information.
+
+
+### Method `node_info`
+
+Get the node information.
+
+#### Params
+* None
+
+#### Returns
+
+* `version` - `String`, The version of the node software.
+* `commit_hash` - `String`, The commit hash of the node software.
+* `pubkey` - [Pubkey](#type-pubkey), The identity public key of this node (secp256k1 compressed, hex without 0x prefix).
+* `features` - `Vec<String>`, The features supported by the node.
+* `node_name` - `Option<String>`, The optional name of the node.
+* `addresses` - `Vec<String>`, A list of multi-addresses associated with the node (as strings).
+* `chain_hash` - [Hash256](#type-hash256), The hash of the blockchain that the node is connected to.
+* `open_channel_auto_accept_min_ckb_funding_amount` - `u64`, The minimum CKB funding amount for automatically accepting open channel requests, serialized as a hexadecimal string.
+* `auto_accept_channel_ckb_funding_amount` - `u64`, The CKB funding amount for automatically accepting channel requests, serialized as a hexadecimal string.
+* `default_funding_lock_script` - `Script`, The default funding lock script for the node.
+* `tlc_expiry_delta` - `u64`, The locktime expiry delta for Time-Locked Contracts (TLC), serialized as a hexadecimal string.
+* `tlc_min_value` - `u128`, The minimum value for Time-Locked Contracts (TLC) we can send, serialized as a hexadecimal string.
+* `tlc_fee_proportional_millionths` - `u128`, The fee (to forward payments) proportional to the value of Time-Locked Contracts (TLC),
+ expressed in millionths and serialized as a hexadecimal string.
+* `channel_count` - `u32`, The number of channels associated with the node, serialized as a hexadecimal string.
+* `pending_channel_count` - `u32`, The number of pending channels associated with the node, serialized as a hexadecimal string.
+* `peers_count` - `u32`, The number of peers connected to the node, serialized as a hexadecimal string.
+* `udt_cfg_infos` - [UdtCfgInfos](#type-udtcfginfos), Configuration information for User-Defined Tokens (UDT) associated with the node.

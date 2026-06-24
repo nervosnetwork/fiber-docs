@@ -1,0 +1,107 @@
+---
+title: Fiber Node Backup
+description: "How to backup and restore Fiber node data"
+date: 2026-06-09
+author: "gpBlockchain"
+authorUrl: "https://github.com/gpBlockchain"
+dependencies:
+  - name: Fiber Node
+    minVersion: "0.9.0-rc4"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0-rc4"
+---
+
+## TL;DR
+
+Stop the node, tar the entire node directory, store the archive and `FIBER_SECRET_KEY_PASSWORD` securely. To restore, extract the archive and start the node with the same password.
+
+This guide explains how to securely back up Fiber node data to safeguard funds, maintain node identity, and ensure smooth migration or upgrades. **Never store plaintext private keys**, as they risk theft if exposed.
+
+## 1. Why Back Up?
+
+Backups protect:
+- **Funds**: The encrypted private key (`ckb/key`) and its password (`FIBER_SECRET_KEY_PASSWORD`) are critical for accessing funds. Losing either makes funds unrecoverable.
+- **Node Identity**: The network ID key (`fiber/sk`) allows other nodes to recognize your node. Losing it disrupts network communication.
+
+**Warning**: Always stop the node before backing up to prevent data corruption, which could cause errors or loss of funds.
+
+## 2. Backing Up Node Data
+
+Back up the entire node directory (`node1`), which includes:
+- `ckb/key` (encrypted private key)
+- `fiber/sk` (network ID key)
+- `fiber/store` (database files)
+- `config.yml` (configuration)
+
+**Steps**:
+1. **Stop the Node**:
+   ```bash
+   # Check for running node processes
+   ps aux | grep fnn
+   # Example output: ckb 3585187 0.7 2.4 756932 194052 ? Sl May07 71:52 ./fnn -c ./node1/config.yml -d ./node1
+   # Terminate it (replace 3585187 with your process ID)
+   kill 3585187
+   ```
+2. **Create Backup**:
+   ```bash
+   tar -zcvf node1.tar.gz node1
+   ```
+3. **Store Securely**: Save `node1.tar.gz` and the `FIBER_SECRET_KEY_PASSWORD` in an offline, encrypted environment (e.g., an encrypted drive or password manager).
+
+**Note**: A future update will allow backups without stopping the node. Check release notes for updates.
+
+## 3. Restoring Node Data
+
+**Steps**:
+1. **Extract Backup**:
+   ```bash
+   tar -zxvf node1.tar.gz
+   ```
+2. **Run Storage Migration** (if upgrading from an older version):
+   ```bash
+   ./fnn-migrate -d ./node1
+   ```
+   This step is required when the backup was created with an older Fiber version (e.g., v0.7.x or v0.8.x) and you are restoring to a newer version. If the backup and target version are the same, you can skip this step.
+3. **Start Node**:
+   ```bash
+   FIBER_SECRET_KEY_PASSWORD='YOUR_PASSWORD' ./fnn -c ./node1/config.yml -d ./node1
+   ```
+
+**Warning**: Using the wrong password will trigger a startup error (`Secret key file error: decryption failed`). Double-check the password before starting.
+
+## 4. Handling Forgotten Passwords
+
+If you lose the `FIBER_SECRET_KEY_PASSWORD` but have a plaintext private key (not recommended), you can reset the password.
+
+**Steps**:
+1. **Extract Backup**:
+   ```bash
+   tar -zxvf node1.tar.gz
+   ```
+2. **Remove Encrypted Key**:
+   ```bash
+   rm -rf node1/ckb
+   ```
+3. **Add Plaintext Key**:
+   ```bash
+   mkdir node1/ckb
+   echo "YOUR_PLAINTEXT_KEY" > node1/ckb/key
+   ```
+4. **Start Node with New Password**:
+   ```bash
+   FIBER_SECRET_KEY_PASSWORD='NEW_PASSWORD' ./fnn -c ./node1/config.yml -d ./node1
+   ```
+5. **Secure the Key**: The `ckb/key` file will be re-encrypted with the new password. Store the new password securely.
+
+## 5. Cross-Version Restore
+
+When restoring a backup created on an older Fiber version to a newer binary, the on-disk storage schema may differ. Fiber does **not** auto-migrate data on startup — it will refuse to open an incompatible store.
+
+**Steps**:
+1. Extract the backup as usual
+2. Run the migration tool:
+   ```bash
+   ./fnn-migrate -d ./node1
+   ```
+3. Start the node with the new binary
+
+For details on what changes between versions, see the [Storage Migration section](/docs/build/toolchain#storage-migration) in the Toolchain docs.

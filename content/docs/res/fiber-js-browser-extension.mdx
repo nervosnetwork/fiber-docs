@@ -1,0 +1,274 @@
+---
+title: Using fiber-js in a Browser Extension
+description: Guide for running @nervosnetwork/fiber-js inside a Chrome browser extension using Offscreen Documents
+date: 2026-06-17
+---
+
+## Introduction
+
+This demo verifies whether `@nervosnetwork/fiber-js` can run inside a browser extension.
+
+( fiber-js is a JavaScript wrapper around the Fiber WebAssembly runtime. It starts a Fiber node inside browser workers and exposes JavaScript methods for controlling that node.)
+
+Project repository:
+
+https://github.com/joii2020/fiber-browser-extension-demo
+
+Current support status:
+
+- Chrome / Chromium-based browsers: supported
+- Firefox: not supported for now
+- Safari (macOS): not supported for now
+
+The current demo is mainly designed for Chrome / Chromium Manifest V3 extensions.
+
+---
+
+## Overall Extension Structure
+
+In this demo, `fiber-js` runs inside a hidden Offscreen Document instead of the popup or a normal web page.
+
+The recommended structure is:
+
+```
+popup / extension page
+↓
+background service worker
+↓
+Offscreen Document
+↓
+fiber-js
+```
+
+In simple terms:
+
+- popup / extension page: handles the user interface;
+- background service worker: receives requests and forwards messages;
+- Offscreen Document: runs `fiber-js`;
+- `fiber-js`: starts the Fiber node and handles related operations.
+
+---
+
+## Why Use an Offscreen Document
+
+The main reason for using an Offscreen Document is to keep `fiber-js` running in the extension background.
+
+If `fiber-js` runs in the popup, a normal extension page, or a web page, it may be interrupted when that page is closed. For payments and channel operations, being interrupted midway may cause abnormal states and may even affect transaction results.
+
+An Offscreen Document is not shown to the user, but it can stay alive in the background for a relatively long time. This makes it a better container for running `fiber-js`.
+
+It also provides a normal page-like `window` / `document` environment, which makes it easier to load WASM, Workers, and other resources.
+
+---
+
+## What the Offscreen Document Does
+
+The Offscreen Document is mainly responsible for:
+
+- loading `@nervosnetwork/fiber-js`;
+- initializing WASM;
+- creating the Fiber instance;
+- calling `fiber.start()`;
+- storing Fiber runtime state;
+- receiving requests forwarded by the background;
+- returning execution results or error messages.
+
+You can think of it as the background runtime page for `fiber-js` inside the browser extension.
+
+---
+
+## Extension Call Flow
+
+The call flow for using `fiber-js` in the extension is roughly as follows:
+
+```
+1. The user opens the popup or extension page
+2. The page sends a request to the background service worker
+3. The background checks whether the Offscreen Document already exists
+4. If it does not exist, the background creates the Offscreen Document
+5. The Offscreen Document loads fiber-js
+6. A Fiber instance is created
+7. fiber.start() is called
+8. Later Fiber-related operations are sent to the Offscreen Document through messages
+```
+
+In other words, the popup does not directly hold the Fiber instance.
+
+The popup only sends requests, for example:
+
+- start Fiber;
+- query status;
+- connect to a peer.
+
+If invoice creation, invoice payment, channel opening, channel closing, and other operations are supported later, the same structure should be used: the popup sends messages, and the Offscreen Document handles the actual `fiber-js` calls.
+
+---
+
+## Required Configuration
+
+### 1. Chrome Version and Manifest V3
+
+Offscreen Document requires Chrome 109+ and Manifest V3.
+
+If you write the manifest directly, you can declare the minimum Chrome version:
+
+```json
+minimum_chrome_version: "109"
+```
+
+The current demo only targets Chrome / Chromium MV3 extensions. It does not apply to Firefox or Safari.
+
+### 2. Offscreen Permission
+
+Because an Offscreen Document is used, the following permission needs to be declared in the manifest:
+
+```json
+permissions: ["offscreen"]
+```
+
+---
+
+### 3. WASM and Worker Permissions
+
+`fiber-js` loads WASM and also uses Workers, so CSP needs to be configured:
+
+```json
+content_security_policy: {
+  extension_pages: "script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; object-src 'self';"
+}
+```
+
+Where:
+
+- `wasm-unsafe-eval`: allows WASM to run;
+- `worker-src 'self'`: allows Workers inside the extension package to be loaded.
+
+---
+
+### 4. Cross-Origin Isolation Configuration
+
+`fiber-js` needs to use `SharedArrayBuffer` in the browser.
+
+In Chrome / Chromium extensions, the following fields need to be added to the manifest:
+
+```json
+cross_origin_embedder_policy: {
+  value: "require-corp"
+},
+
+cross_origin_opener_policy: {
+  value: "same-origin"
+}
+```
+
+You can use the following code to check whether the environment meets the requirements:
+
+```js
+window.crossOriginIsolated === true
+typeof SharedArrayBuffer === "function"
+```
+
+If these two conditions are not met, `fiber-js` may fail to start properly.
+
+---
+
+### 5. Fiber Key Storage
+
+The current demo generates a Fiber key inside the Offscreen Document and stores it in that page's own `localStorage`.
+
+The storage key is:
+
+```
+fiber-extension-demo:fiber-key
+```
+
+On subsequent startups, the demo reads this key first to avoid generating a new Fiber node identity every time the popup is opened.
+
+If this key changes on the next startup, `fiber-js` will treat it as a different node identity. Fiber state, channels, and other data associated with the old key may no longer be usable and may not be recoverable.
+
+---
+
+## Example Manifest Configuration
+
+Full configuration example:
+
+```json
+manifest: {
+  minimum_chrome_version: "109",
+
+  permissions: ["offscreen"],
+
+  content_security_policy: {
+    extension_pages: "script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; object-src 'self';"
+  },
+
+  cross_origin_embedder_policy: {
+    value: "require-corp"
+  },
+
+  cross_origin_opener_policy: {
+    value: "same-origin"
+  }
+}
+```
+
+---
+
+## Build Notes
+
+During packaging, make sure that:
+
+- the `.wasm` file has been included in the extension package;
+- the Worker file can be loaded by extension pages;
+- the manifest includes the `offscreen` permission;
+- the manifest includes the WASM, Worker, and cross-origin isolation configurations.
+
+If the `.wasm` file is missing, the extension may still be installed, but `fiber-js` may fail to start.
+
+When publishing the demo, it is recommended to clearly mark it as:
+
+```
+Chrome / Chromium MV3 only
+```
+
+Do not mark Firefox and Safari as supported targets.
+
+---
+
+## Memory Usage
+
+Use the browser's built-in memory tools to inspect the Offscreen Document page.
+
+Current simple test results:
+
+- initial memory usage is about 135 MB;
+- no obvious memory leak was observed in idle state.
+
+Only the idle scenario has been tested so far.
+
+Further testing is still needed for:
+
+- long-running usage;
+- repeated starts and stops;
+- repeated connections;
+- channel opening and closing;
+- recovery after abnormal disconnection.
+
+---
+
+## Firefox and Safari (macOS)
+
+Currently, `fiber-js` cannot run in Firefox or Safari as a browser extension. For normal web pages, if COOP/COEP can make `crossOriginIsolated=true`, then the `SharedArrayBuffer` requirement can be satisfied.
+
+The reason is that the browser implementation of `fiber-js` depends on `SharedArrayBuffer` to share memory between Workers, and uses `Atomics` for synchronization. The Web platform only exposes `SharedArrayBuffer` when `crossOriginIsolated=true`.
+
+In Chrome / Chromium extensions, cross-origin isolation can be enabled through the extra manifest fields `cross_origin_embedder_policy` and `cross_origin_opener_policy`.
+
+MDN's WebExtension manifest key list does not include descriptions for `cross_origin_embedder_policy` / `cross_origin_opener_policy`. Firefox and Safari also do not currently provide equivalent extension manifest fields like Chrome / Chromium does. Therefore, even if a normal web page can satisfy `crossOriginIsolated=true`, extension pages currently lack an equivalent configuration entry.
+
+Related Firefox community issues:
+
+- https://bugzilla.mozilla.org/show_bug.cgi?id=1673477
+- https://bugzilla.mozilla.org/show_bug.cgi?id=1750654
+
+No clearly corresponding Safari issue has been found yet.

@@ -32,19 +32,21 @@ function FeaturedProjectCard({
         <div className="self-stretch inline-flex justify-between items-start">
           <div className="text-primary text-h4">{project.title}</div>
           <div className="hidden md:flex justify-end items-center gap-xs relative z-20 pointer-events-auto">
-            <a
-              href={project.githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Image
-                src="/github.svg"
-                alt="GitHub"
-                width={16}
-                height={16}
-                className="opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
-              />
-            </a>
+            {project.githubUrl && (
+              <a
+                href={project.githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Image
+                  src="/github.svg"
+                  alt="GitHub"
+                  width={16}
+                  height={16}
+                  className="opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
+                />
+              </a>
+            )}
             {project.demoUrl && (
               <a
                 href={project.demoUrl}
@@ -78,19 +80,21 @@ function FeaturedProjectCard({
           {project.description}
         </div>
         <div className="md:hidden absolute bottom-4 left-4 inline-flex justify-start items-center gap-xs relative z-20 pointer-events-auto">
-          <a
-            href={project.githubUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              src="/github.svg"
-              alt="GitHub"
-              width={16}
-              height={16}
-              className="opacity-50 cursor-pointer"
-            />
-          </a>
+          {project.githubUrl && (
+            <a
+              href={project.githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Image
+                src="/github.svg"
+                alt="GitHub"
+                width={16}
+                height={16}
+                className="opacity-50 cursor-pointer"
+              />
+            </a>
+          )}
           {project.demoUrl && (
             <a
               href={project.demoUrl}

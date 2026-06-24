@@ -1,0 +1,223 @@
+---
+title: Module `Payment`
+description: Payment management RPC methods
+date: 2026-05-25
+---
+
+## Module `Payment`
+
+RPC module for channel management.
+
+
+### Method `send_payment`
+
+Sends a payment to a peer.
+
+#### Params
+
+* `target_pubkey` - `Option<[Pubkey](#type-pubkey)>`, The public key (`Pubkey`) of the payment target node, serialized as a hex string.
+ You can obtain a node's pubkey via the `node_info` or `graph_nodes` RPC.
+* `amount` - `Option<u128>`, the amount of the payment, the unit is Shannons for non UDT payment
+ If not set and there is a invoice, the amount will be set to the invoice amount
+* `payment_hash` - `Option<[Hash256](#type-hash256)>`, the hash to use within the payment's HTLC.
+ If not set and `keysend` is set to true, a random hash will be generated.
+ If not set and there is a `payment_hash` in the invoice, it will be used.
+ Otherwise, `payment_hash` need to be set.
+* `final_tlc_expiry_delta` - `Option<u64>`, the TLC expiry delta should be used to set the timelock for the final hop, in milliseconds
+* `tlc_expiry_limit` - `Option<u64>`, the TLC expiry limit for the whole payment, in milliseconds, each hop is with a default tlc delta of 1 day
+ suppose the payment router is with N hops, the total tlc expiry limit is at least (N-1) days
+ this is also the default value for the payment if this parameter is not provided
+* `invoice` - `Option<String>`, the encoded invoice to send to the recipient
+* `timeout` - `Option<u64>`, the payment timeout in seconds, if the payment is not completed within this time, it will be cancelled
+* `max_fee_amount` - `Option<u128>`, the maximum fee amounts in shannons that the sender is willing to pay.
+ Note: In trampoline routing mode, the sender will use the max_fee_amount as the total fee as much as possible.
+* `max_fee_rate` - `Option<u64>`, the maximum fee rate per thousand, default is 5 (0.5%)
+* `max_parts` - `Option<u64>`, max parts for the payment, only used for multi-part payments
+* `trampoline_hops` - `Option<Vec<[Pubkey](#type-pubkey)>>`, Optional explicit trampoline hops.
+
+ When set to a non-empty list `[t1, t2, ...]`, routing will only find a path from the
+ payer to `t1`, and the inner trampoline onion will encode `t1 -> t2 -> ... -> final`.
+* `keysend` - `Option<bool>`, keysend payment
+* `udt_type_script` - `Option<Script>`, udt type script for the payment
+* `allow_self_payment` - `Option<bool>`, Allow paying yourself through a circular route, default is false.
+ This is useful for **channel rebalancing**: the payment flows out of one channel and
+ back through another, shifting liquidity between your channels without changing your
+ total balance (only routing fees are deducted).
+ Set `target_pubkey` to your own node pubkey and `keysend` to `true` to perform a rebalance.
+ Note: `allow_self_payment` is not compatible with trampoline routing.
+* `custom_records` - `Option<[PaymentCustomRecords](#type-paymentcustomrecords)>`, Some custom records for the payment which contains a map of u32 to Vec&lt;u8&gt;
+ The key is the record type, and the value is the serialized data
+ For example:
+ ```json
+ "custom_records": {
+    "0x1": "0x01020304",
+    "0x2": "0x05060708",
+    "0x3": "0x090a0b0c",
+    "0x4": "0x0d0e0f10010d090a0b0c"
+  }
+ ```
+* `hop_hints` - `Option<Vec<[HopHint](#type-hophint)>>`, Optional route hints to reach the destination through private channels.
+ Note:
+    1. this is only used for the private channels with the last hop.
+    2. `hop_hints` is only a `hint` for routing algorithm,
+       it is not a guarantee that the payment will be routed through the specified channels,
+       it is up to the routing algorithm to decide whether to use the hints or not.
+
+ For example `(pubkey, channel_outpoint, fee_rate, tlc_expiry_delta)` suggest path router
+ to use the channel of `channel_outpoint` at hop with `pubkey` to forward the payment
+ and the fee rate is `fee_rate` and tlc_expiry_delta is `tlc_expiry_delta`.
+* `dry_run` - `Option<bool>`, dry_run for payment, used for check whether we can build valid router and the fee for this payment,
+ it's useful for the sender to double check the payment before sending it to the network,
+ default is false
+
+#### Returns
+
+* `payment_hash` - [Hash256](#type-hash256), The payment hash of the payment
+* `status` - [PaymentStatus](#type-paymentstatus), The status of the payment
+* `created_at` - `u64`, The time the payment was created at, in milliseconds from UNIX epoch
+* `last_updated_at` - `u64`, The time the payment was last updated at, in milliseconds from UNIX epoch
+* `failed_error` - `Option<String>`, The error message if the payment failed
+* `fee` - `u128`, fee paid for the payment
+* `custom_records` - `Option<[PaymentCustomRecords](#type-paymentcustomrecords)>`, The custom records to be included in the payment.
+* `routers` - `Vec<[SessionRoute](#type-sessionroute)>`, The router is a list of nodes that the payment will go through.
+ We store in the payment session and then will use it to track the payment history.
+ If the payment adapted MPP (multi-part payment), the routers will be a list of nodes.
+ For example:
+    `A(amount, channel) -> B -> C -> D`
+ means A will send `amount` with `channel` to B.
+
+***
+
+
+
+### Method `get_payment`
+
+Retrieves a payment.
+
+#### Params
+
+* `payment_hash` - [Hash256](#type-hash256), The payment hash of the payment to retrieve
+
+#### Returns
+
+* `payment_hash` - [Hash256](#type-hash256), The payment hash of the payment
+* `status` - [PaymentStatus](#type-paymentstatus), The status of the payment
+* `created_at` - `u64`, The time the payment was created at, in milliseconds from UNIX epoch
+* `last_updated_at` - `u64`, The time the payment was last updated at, in milliseconds from UNIX epoch
+* `failed_error` - `Option<String>`, The error message if the payment failed
+* `fee` - `u128`, fee paid for the payment
+* `custom_records` - `Option<[PaymentCustomRecords](#type-paymentcustomrecords)>`, The custom records to be included in the payment.
+* `routers` - `Vec<[SessionRoute](#type-sessionroute)>`, The router is a list of nodes that the payment will go through.
+ We store in the payment session and then will use it to track the payment history.
+ If the payment adapted MPP (multi-part payment), the routers will be a list of nodes.
+ For example:
+    `A(amount, channel) -> B -> C -> D`
+ means A will send `amount` with `channel` to B.
+
+***
+
+
+
+### Method `build_router`
+
+Builds a router with a list of pubkeys and required channels.
+
+#### Params
+
+* `amount` - `Option<u128>`, the amount of the payment, the unit is Shannons for non UDT payment
+ If not set, the minimum routable amount `1` is used
+* `udt_type_script` - `Option<Script>`, udt type script for the payment router
+* `hops_info` - `Vec<[HopRequire](#type-hoprequire)>`, A list of hops that defines the route. This does not include the source hop pubkey.
+ A hop info is a tuple of pubkey and the channel(specified by channel funding tx) will be used.
+ This is a strong restriction given on payment router, which means these specified hops and channels
+ must be adapted in the router. This is different from hop hints, which maybe ignored by find path.
+ If channel is not specified, find path algorithm will pick a channel within these two peers.
+
+ An error will be returned if there is no router could be build from given hops and channels
+* `final_tlc_expiry_delta` - `Option<u64>`, the TLC expiry delta should be used to set the timelock for the final hop, in milliseconds
+
+#### Returns
+
+* `router_hops` - `Vec<[RouterHop](#type-routerhop)>`, The hops information for router
+
+***
+
+
+
+### Method `send_payment_with_router`
+
+Sends a payment to a peer with specified router.
+ This method differs from SendPayment in that it allows users to specify a full route manually.
+
+ A typical use case is **channel rebalancing**: you can construct a circular route
+ (your node -&gt; intermediate nodes -&gt; your node) to shift liquidity between your channels.
+
+ To rebalance, follow these steps:
+
+ 1. Call `build_router` with `hops_info` defining the circular route you want,
+    e.g. your_node -&gt; peer_A -&gt; peer_B -&gt; your_node.
+ 2. Call `send_payment_with_router` with the returned `router_hops` and `keysend: true`.
+
+ Only routing fees are deducted; your total balance across channels remains the same.
+
+#### Params
+
+* `payment_hash` - `Option<[Hash256](#type-hash256)>`, the hash to use within the payment's HTLC.
+ If not set and `keysend` is set to true, a random hash will be generated.
+ If not set and there is a `payment_hash` in the invoice, it will be used.
+ Otherwise, `payment_hash` need to be set.
+* `router` - `Vec<[RouterHop](#type-routerhop)>`, The router to use for the payment
+* `invoice` - `Option<String>`, the encoded invoice to send to the recipient
+* `custom_records` - `Option<[PaymentCustomRecords](#type-paymentcustomrecords)>`, Some custom records for the payment which contains a map of u32 to Vec&lt;u8&gt;
+ The key is the record type, and the value is the serialized data.
+ Limits: the sum size of values can not exceed 2048 bytes.
+
+ For example:
+ ```json
+ "custom_records": {
+    "0x1": "0x01020304",
+    "0x2": "0x05060708",
+    "0x3": "0x090a0b0c",
+    "0x4": "0x0d0e0f10010d090a0b0c"
+  }
+ ```
+* `keysend` - `Option<bool>`, keysend payment
+* `udt_type_script` - `Option<Script>`, udt type script for the payment
+* `dry_run` - `Option<bool>`, dry_run for payment, used for check whether we can build valid router and the fee for this payment,
+ it's useful for the sender to double check the payment before sending it to the network,
+ default is false
+
+#### Returns
+
+* `payment_hash` - [Hash256](#type-hash256), The payment hash of the payment
+* `status` - [PaymentStatus](#type-paymentstatus), The status of the payment
+* `created_at` - `u64`, The time the payment was created at, in milliseconds from UNIX epoch
+* `last_updated_at` - `u64`, The time the payment was last updated at, in milliseconds from UNIX epoch
+* `failed_error` - `Option<String>`, The error message if the payment failed
+* `fee` - `u128`, fee paid for the payment
+* `custom_records` - `Option<[PaymentCustomRecords](#type-paymentcustomrecords)>`, The custom records to be included in the payment.
+* `routers` - `Vec<[SessionRoute](#type-sessionroute)>`, The router is a list of nodes that the payment will go through.
+ We store in the payment session and then will use it to track the payment history.
+ If the payment adapted MPP (multi-part payment), the routers will be a list of nodes.
+ For example:
+    `A(amount, channel) -> B -> C -> D`
+ means A will send `amount` with `channel` to B.
+
+***
+
+
+
+### Method `list_payments`
+
+Lists all payments, optionally filtered by status.
+
+#### Params
+
+* `status` - `Option<[PaymentStatus](#type-paymentstatus)>`, Filter payments by status. If not set, all payments are returned.
+* `limit` - `Option<u64>`, The maximum number of payments to return. Default is 15.
+* `after` - `Option<[Hash256](#type-hash256)>`, The payment hash to start returning payments after (exclusive cursor for pagination).
+
+#### Returns
+
+* `payments` - `Vec<[GetPaymentCommandResult](#type-getpaymentcommandresult)>`, The list of payments.
+* `last_cursor` - `Option<[Hash256](#type-hash256)>`, The last cursor for pagination. Use this as `after` in the next request to get more results.

@@ -19,8 +19,34 @@ export default async function Page(props: {
 
   const MDXContent = page.data.body;
 
+  const slug = (await props.params).slug ? (await props.params).slug!.join("/") : "";
+  const pageUrl = `https://www.fiber.world/docs/${slug}`;
+  const description =
+    page.data.description || page.data.title;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    headline: page.data.title,
+    description,
+    url: pageUrl,
+    datePublished: typeof page.data.date === "string" ? page.data.date : undefined,
+    author: page.data.author
+      ? { "@type": "Person", name: page.data.author, url: page.data.authorUrl }
+      : { "@type": "Organization", name: "Fiber Network", url: "https://www.fiber.world" },
+    publisher: {
+      "@type": "Organization",
+      name: "Fiber Network",
+      url: "https://www.fiber.world",
+    },
+  };
+
   return (
     <DocsPage toc={page.data.toc} full={page.data.full}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="mb-4">
         <DocsTitle className="mb-4">{page.data.title}</DocsTitle>
         <DocsDescription>{page.data.description}</DocsDescription>
@@ -63,10 +89,29 @@ export async function generateMetadata(props: {
   const description =
     page.data.description ||
     (author ? `${page.data.title} - By ${author}` : page.data.title);
+  const slug = params.slug ? params.slug.join("/") : "";
+  const url = `https://www.fiber.world/docs/${slug}`;
 
   return {
     title: page.data.title,
     description,
     authors: author ? [{ name: author, url: page.data.authorUrl }] : undefined,
+    openGraph: {
+      title: page.data.title,
+      description,
+      url,
+      siteName: "Fiber Network",
+      type: "article",
+      publishedTime: typeof page.data.date === "string" ? page.data.date : undefined,
+      authors: author ? [author] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: page.data.title,
+      description,
+    },
+    alternates: {
+      canonical: url,
+    },
   };
 }

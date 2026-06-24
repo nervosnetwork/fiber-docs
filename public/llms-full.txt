@@ -1,0 +1,479 @@
+# Fiber Network Documentation (Full)
+
+## What is Fiber Network?
+
+Source: https://www.fiber.world/docs
+
+Fiber Network is a peer-to-peer payment and swap network built on Nervos CKB. Similar to the Lightning Network, it uses payment channels to move repeated transfers off-chain and reduce the need to submit every payment to Layer 1. Unlike single-asset payment networks, Fiber is designed to support multi-asset payments, stablecoin transfers, asset swaps, and Bitcoin-aligned financial applications.
+
+Fiber Network addresses the limitations of using Layer 1 transactions for small, frequent, or time-sensitive payments. While blockchains provide strong settlement guarantees, submitting every payment or balance update on-chain can introduce latency, cost, and scalability constraints.
+
+By using CKB as the settlement and enforcement layer, Fiber allows participants to lock assets when opening a channel, exchange signed state updates directly during the channel’s lifetime, and return to Layer 1 only when closing or disputing the channel. This makes Fiber suitable for applications that require low-cost payments, fast settlement experiences, and flexible asset movement.
+
+Fiber Network Node (FNN) is the reference node implementation of the Fiber Network Protocol (FNP).
+
+## Features
+
+- Multi-asset payments and swaps: Fiber supports multiple asset types, including stablecoins, RGB++ assets issued on the Bitcoin ledger, and UDT assets issued on the CKB ledger. Users can transfer supported assets through payment channels and perform swaps when a channel path with sufficient liquidity is available.
+- Cross-network interoperability: Fiber is designed to support payments and swaps across compatible payment channel networks, including flows between the Lightning Network and Fiber Network.
+- Low-cost, low-latency transfers: Fiber enables low-cost micropayments by moving repeated transfers off-chain. Payments are processed directly between involved peers, allowing transfers to complete with low latency and without requiring network-wide consensus for each update.
+- Multi-hop routing: Payments do not require a direct channel between sender and receiver. If a route with sufficient liquidity exists, payments can be forwarded through intermediate nodes. Node operators can participate in routing and earn fees for forwarding payments.
+- Privacy-by-default design: Fiber transactions are only visible to the peers involved in the selected payment path. Because transfers do not require global broadcast or network-wide consensus, Fiber can provide improved transaction privacy compared with fully on-chain payment flows.
+- Watchtower support: Fiber supports watchtower services to help monitor channels and protect users when they are offline. This improves operational safety for users and node operators.
+- HTLC-based payment security: Fiber currently uses HTLC-based mechanisms to secure conditional payments and maintain compatibility with Lightning-style flows. Future protocol work may introduce PTLC-based mechanisms to improve privacy and security.
+- CKB Script composability: Fiber channels are built on CKB Scripts, allowing payment channel logic to compose with CKB’s programmable contract model.
+
+## What Can You Build With Fiber?
+
+Fiber is useful for applications where payments need to be fast, frequent, low-cost, or programmable. The examples below highlight community-built demos that explore different ways to use Fiber in real applications.
+
+### Usage-Based Payments
+
+Fiber can support applications where users pay according to actual usage, such as per second, per page, per request, or per unit consumed.
+
+- Fiber Audio Player demonstrates per-second micropayments for self-hosted audio and podcast services.
+- EV Charging applies usage-based micropayments to an EV charging simulation.
+
+### Checkout and Access Control
+
+Fiber can be used to accept low-fee payments and unlock digital goods, services, protected resources, or application features.
+
+- Fiber Checkout provides a Stripe-style payment experience for React and Next.js applications.
+- Fiber L402 explores payment-based access control for online content and services.
+
+### Community and Creator Payments
+
+Fiber can support small social payments such as tips, rewards, creator support, memberships, and community incentives.
+
+- Fiber Link demonstrates tipping and micropayments inside community platforms.
+
+### Interactive and Autonomous Payments
+
+Fiber can support payment flows triggered by games, software agents, connected devices, or other application logic.
+
+- Micro-payment Game shows how Fiber can support instant in-game micropayments.
+- Fiber Pay provides an AI-friendly payment toolchain.
+- FiberAgentPay explores agent-to-agent commerce over Fiber.
+- Fiber402 explores machine-driven payment flows for paid data access.
+
+### Network Operations and Developer Tools
+
+Fiber also creates opportunities for tools that help developers and node operators understand, integrate, and manage the network. Useful directions include dashboards, node setup tools, liquidity management interfaces, routing monitors, watchtower services, SDKs, testing tools, and local development environments.
+
+- Fiber Dashboard provides a real-time view into Fiber network structure and activity.
+- Fiber Studio wraps the official FNN binary in a guided desktop UI, allowing users to run a Nervos CKB payment-channel node without touching the terminal.
+
+For more community-built demos and examples, see the Showcase.
+
+## Roadmap
+
+- [x] Connect with other Fiber nodes
+- [x] Create and close Fiber channels
+- [x] Send payments over Fiber channels (via fiber-scripts)
+- [x] Support cross-network asset transfers
+- [ ] Web-browser-friendly runtime
+- [ ] Programmable conditional payments
+- [ ] Advanced channel liquidity management
+- [ ] Atomic multi-path payments
+
+---
+
+## How Fiber Network Works
+
+Source: https://www.fiber.world/docs/how-it-works
+
+Fiber Network uses payment channels to move frequent transfers off-chain while using CKB for settlement and enforcement. Participants lock assets on-chain when opening a channel, exchange signed state updates directly while the channel is active, and return to Layer 1 when closing or disputing the channel.
+
+This page explains the core mechanisms behind Fiber: payment channels, multi-hop routing, and the difference between off-chain transfers and on-chain settlement.
+
+## Payment Channels
+
+A payment channel is a direct relationship between two participants. To open a channel, both participants lock assets into a shared on-chain Script. This funding transaction defines the initial state of the channel.
+
+After the channel is opened, participants can start exchanging payments off-chain. Instead of sending every payment to Layer 1, they keep track of the latest balance between themselves and only submit the final result when the channel is closed.
+
+When both participants agree to close the channel, the latest mutually signed state is submitted on-chain for settlement. If one participant attempts to close with an outdated state, the on-chain Script enforces the dispute rules and allows the counterparty to challenge it.
+
+The simulator below illustrates the lifecycle of a payment channel.
+
+Note: For visual clarity, this demo allows up to 7 channels between Node 1 and Node 2. In practice, multiple channels can exist between the same pair of nodes.
+
+Use the simulator to observe the channel lifecycle:
+
+1. Select Node 1 and Node 2.
+2. Click "Open Channel" to simulate a Layer 1 funding transaction.
+3. Send off-chain updates and observe the Layer 2 transaction count.
+4. Select a channel and click "Close Channel" to simulate Layer 1 settlement.
+
+## Multi-Hop Routing
+
+While a payment channel enables transfers between two participants, Fiber operates as a network of interconnected channels. A direct channel between sender and receiver is not required; if a path with sufficient liquidity exists, a payment can be forwarded through intermediate participants.
+
+For example, Alice does not need a direct channel with Carol. If Alice has a channel with Bob, and Bob has a channel with Carol, Bob can forward the payment as an intermediate node.
+
+In a multi-hop payment, each intermediary forwards a conditional transfer to the next hop along the route. These transfers are locked under cryptographic conditions and can only be claimed if a required secret is revealed within a defined time window. This ensures that all hops along the path either complete successfully or are safely reverted.
+
+Only the nodes involved in the selected path participate in the transaction, and no network-wide consensus is required. Payments therefore traverse the network off-chain while remaining cryptographically enforceable.
+
+The simulator below demonstrates multi-hop routing. By clicking "Trigger Sample Transaction," you can observe a transaction being forwarded across intermediate nodes without interacting with Layer 1.
+
+## Interactive Network Simulation
+
+This simulator combines the previous concepts in one view. You can open and close channels, trigger routed payments, and observe when activity happens off-chain versus when it requires Layer 1 settlement.
+
+Note: For visual clarity, this demo displays only one channel between two nodes. In practice, multiple channels can exist between the same pair of nodes.
+
+Experiment by:
+
+- Opening channels between unconnected nodes
+- Triggering transactions across connected paths
+- Closing channels and observing Layer 1 settlement
+
+Notice that:
+
+- Layer 2 transaction count increases during off-chain transfers.
+- Layer 1 operations change only when channels are opened or closed.
+
+---
+
+## Basic Transfer Example
+
+Source: https://www.fiber.world/docs/quick-start/basic-transfer
+
+## TL;DR
+
+Set up two local nodes, open a channel between them, and send a CKB payment from one to the other. The whole process takes about 10 minutes.
+
+## Overview
+
+This guide walks you through setting up and executing a basic token (CKB) transfer between two nodes on the Fiber Testnet.
+
+## Prerequisites
+
+- Git (if building from source)
+- Rust and Cargo (if building from source)
+- Basic understanding of command line operations
+- curl for making RPC calls
+- ckb-cli for generating keys
+
+## Setting Up Your Nodes
+
+### 1. Prepare Fiber Binary
+
+Download the latest release binary from the Fiber GitHub Releases page, or build from source:
+
+[sh code block]
+
+If you're using macOS, remove the quarantine attribute:
+[sh code block]
+
+If you encounter 503 errors when using fnn-cli, run:
+[sh code block]
+
+### 2. Create Data Directories
+
+[sh code block]
+
+### 3. Configure Node Keys
+
+Each node needs its own private key. Create two separate CKB accounts:
+
+[sh code block]
+
+Export the keys:
+
+[sh code block]
+
+The ckb/key file must contain only the 64-character hex private key (first line), without 0x prefix.
+
+Get Testnet funds from https://faucet.nervos.org for both nodes.
+
+### 4. Configure Ports
+
+Edit config.yml for each node:
+- Node 1: RPC Port 8227, P2P Port 8228
+- Node 2: RPC Port 8237, P2P Port 8238
+
+View complete config.yml example
+
+[yaml code block]
+
+## Step-by-Step Transfer Process
+
+### 1. Start Both Nodes
+
+[sh code block]
+
+### 2. Connect the Nodes
+
+First get Node 2's pubkey, then connect from Node 1:
+
+  
+[sh code block]
+  
+  
+[sh code block]
+  
+  
+    CCC support coming soon.
+  
+
+### 3. Open a Payment Channel
+
+  
+[sh code block]
+  
+  
+[sh code block]
+  
+  
+    CCC support coming soon.
+  
+
+Check channel status — wait until statename becomes CHANNELREADY:
+
+  
+[sh code block]
+  
+  
+[sh code block]
+  
+  
+    CCC support coming soon.
+  
+
+### 4. Generate an Invoice
+
+Create a payment invoice on Node 2 for 100 CKB:
+
+  
+[sh code block]
+  
+  
+[sh code block]
+  
+  
+    CCC support coming soon.
+  
+
+### 5. Make the Payment
+
+  
+[sh code block]
+  
+  
+[sh code block]
+  
+  
+    CCC support coming soon.
+  
+
+### 6. Verify the Transfer
+
+Check channel balances to confirm the transfer:
+
+  
+[sh code block]
+  
+  
+[sh code block]
+  
+  
+    CCC support coming soon.
+  
+
+After sending 100 CKB from Node 1, Node 1's localbalance decreases by ~100 CKB and remotebalance increases by 100 CKB.
+
+## Closing the Channel
+
+  
+[sh code block]
+  
+  
+[sh code block]
+  
+  
+    CCC support coming soon.
+  
+
+With CLI --force true, closescript and feerate are determined automatically. With RPC, you must provide close_script matching your node's CKB lock script (get it from ckb-cli account list).
+
+## Next Steps
+
+- Transfer Stablecoins — transfer RUSD through a multi-hop path
+- Network Resources — public nodes, faucets, explorers, and more
+
+---
+
+## Transfer Stablecoins
+
+Source: https://www.fiber.world/docs/quick-start/transfer-stablecoin
+
+## TL;DR
+
+Set up three nodes, open UDT (stablecoin) channels, and send a stablecoin payment through a multi-hop path. Builds on the Basic Transfer example.
+
+## Overview
+
+This guide demonstrates UDT transfers using stablecoins (RUSD) across 3 nodes via multi-hop routing.
+
+## Prerequisites
+
+- Completed Basic Transfer
+- curl for RPC calls
+- ckb-cli for key management
+
+## Setting Up Your Environment
+
+### 1. Prepare Fiber Binary
+
+Download from GitHub Releases or build from source:
+
+[sh code block]
+
+[sh code block]
+
+### 2. Configure Three Nodes
+
+[sh code block]
+
+Create a CKB account for each node and export the keys:
+
+[sh code block]
+
+ckb/key must contain only the 64-character hex private key, no 0x prefix.
+
+Get Testnet funds:
+- CKB: https://faucet.nervos.org
+- RUSD: https://testnet0815.stablepp.xyz/stablecoin (claim via JoyID wallet at testnet.joyid.dev, then transfer to node address)
+
+### 3. Configure Ports
+
+- Node 1: RPC 8227, P2P 8228
+- Node 2: RPC 8237, P2P 8238
+- Node 3: RPC 8247, P2P 8248
+
+View complete config.yml example
+
+[yaml code block]
+
+### 4. Start All Nodes
+
+[sh code block]
+
+## Creating Stablecoin Payment Channels
+
+### 1. Connect Node 1 and Node 2
+
+  
+[sh code block]
+  
+  
+[sh code block]
+  
+  
+    CCC support coming soon.
+  
+
+Get Node 2's peer ID and pubkey: cd node2 && ./fnn-cli --url http://127.0.0.1:8237 info
+
+### 2. Open a Stablecoin Channel (Node 1 → Node 2)
+
+The fundingudttypescript identifies the RUSD token:
+
+  
+[sh code block]
+  
+  
+[sh code block]
+  
+  
+    CCC support coming soon.
+  
+
+Opening a UDT channel also requires ~99 CKB in the node's wallet to cover on-chain cell capacity and shutdown fees. Make sure each node has sufficient CKB balance from the faucet.
+
+### 3. Monitor Channel Status
+
+Wait until statename becomes ChannelReady:
+
+  
+[sh code block]
+  
+  
+[sh code block]
+  
+  
+    CCC support coming soon.
+  
+
+Repeat steps 1–3 to connect Node 2 and Node 3 (using ports 8247/8248).
+
+## Generating Invoices and Making Payments
+
+### 1. Generate a Stablecoin Invoice on Node 2
+
+  
+[sh code block]
+  
+  
+[sh code block]
+  
+  
+    CCC support coming soon.
+  
+
+The paymentpreimage is auto-generated by both CLI and RPC. You can optionally provide your own with "paymentpreimage": "" in the RPC params if needed.
+
+### 2. Send the Stablecoin Payment from Node 1
+
+  
+[sh code block]
+  
+  
+[sh code block]
+  
+  
+    CCC support coming soon.
+  
+
+### 3. Check Channel Balance
+
+  
+[sh code block]
+  
+  
+[sh code block]
+  
+  
+    CCC support coming soon.
+  
+
+## Closing the Channel
+
+  
+[sh code block]
+  
+  
+[sh code block]
+  
+  
+    CCC support coming soon.
+  
+
+Get args from fnn-cli info under defaultfundinglockscript.args. The feerate (shannons/KW) is optional and defaults to 1000. You can also use --force (CLI) or "force": true (RPC) to force-close a channel unilaterally, in which case closescript and feerate are ignored.
+
+## Important Notes
+
+- RUSD amounts: CLI uses base units (e.g. 10 = 10 RUSD); RPC uses hex strings (e.g. "0xa" = 10)
+- Invoice currency: Use "Fibt" for testnet, not "RUSD"
+- **autoacceptamount**: Channels with funding below this value require manual acceptance
+
+---
+
+## Fiber RPC API Reference
+
+Source: https://github.com/nervosnetwork/fiber/blob/main/crates/fiber-lib/src/rpc/README.md
+
+The complete RPC API is maintained in the Fiber GitHub repository. See the link above for the latest version.
+

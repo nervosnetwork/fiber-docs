@@ -1,0 +1,42 @@
+---
+title: Module `Graph`
+description: Network graph RPC methods
+date: 2026-05-25
+---
+
+## Module `Graph`
+
+RPC module for graph management.
+
+
+### Method `graph_nodes`
+
+Get the list of nodes in the network graph.
+
+#### Params
+
+* `limit` - `Option<u64>`, The maximum number of nodes to return.
+* `after` - `Option<JsonBytes>`, The cursor to start returning nodes from.
+
+#### Returns
+
+* `nodes` - `Vec<[NodeInfo](#type-nodeinfo)>`, The list of nodes.
+* `last_cursor` - `JsonBytes`, The last cursor.
+
+***
+
+
+
+### Method `graph_channels`
+
+Get the list of channels in the network graph.
+
+#### Params
+
+* `limit` - `Option<u64>`, The maximum number of channels to return.
+* `after` - `Option<JsonBytes>`, The cursor to start returning channels from.
+
+#### Returns
+
+* `channels` - `Vec<[ChannelInfo](#type-channelinfo)>`, A list of channels.
+* `last_cursor` - `JsonBytes`, The last cursor for pagination.

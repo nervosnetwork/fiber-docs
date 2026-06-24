@@ -3,8 +3,9 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "build": "next build",
-    "dev": "next dev --turbo",
+    "build": "pnpm build-kb && node scripts/generate-llms.js && next build",
+    "build-kb": "node scripts/build-kb.mjs",
+    "dev": "fumadocs-mdx && pnpm exec esbuild source.config.ts --bundle --outfile=.source/source.config.mjs --format=esm --platform=node --target=node18 --packages=external && next dev --turbo",
     "start": "next start",
     "postinstall": "fumadocs-mdx && pnpm exec esbuild source.config.ts --bundle --outfile=.source/source.config.mjs --format=esm --platform=node --target=node18 --packages=external || true",
     "prepare": "fumadocs-mdx || true"
@@ -13,10 +14,12 @@
     "fumadocs-core": "15.5.1",
     "fumadocs-mdx": "11.6.7",
     "fumadocs-ui": "15.5.1",
+    "gray-matter": "^4.0.3",
     "next": "16.1.5",
     "next-mdx-remote": "^6.0.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-markdown": "^10.1.0",
     "zod": "^3.25.56"
   },
   "devDependencies": {
@@ -28,6 +31,7 @@
     "esbuild": "^0.25.12",
     "postcss": "^8.5.4",
     "tailwindcss": "^4.1.8",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "unist-util-visit": "^5.1.0"
   }
 }

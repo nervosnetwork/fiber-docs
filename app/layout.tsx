@@ -3,6 +3,7 @@ import { RootProvider } from 'fumadocs-ui/provider';
 import { Inter, Atkinson_Hyperlegible } from 'next/font/google';
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
+import SearchDialogWrapper from '@/components/search-dialog-wrapper';
 
 const inter = Inter({
   variable: '--font-inter',
@@ -48,7 +49,12 @@ export default function Layout({ children }: { children: ReactNode }) {
             attribute: 'class',
             enableSystem: false,
           }}
-        >{children}</RootProvider>
+          search={{
+            SearchDialog: SearchDialogWrapper,
+          }}
+        >
+          {children}
+        </RootProvider>
       </body>
     </html>
   );

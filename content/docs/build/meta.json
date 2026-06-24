@@ -1,0 +1,9 @@
+{
+  "title": "Build",
+  "pages": [
+    "toolchain",
+    "api-reference",
+    "sdk",
+    "simple-game"
+  ]
+}

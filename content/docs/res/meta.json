@@ -1,0 +1,14 @@
+{
+  "title": "Resources",
+  "pages": [
+    "glossary",
+    "cheat-code",
+    "light-paper",
+    "high-level",
+    "payment-channel",
+    "p2p-message",
+    "gossip-protocol",
+    "cross-chain-htlc",
+    "fiber-js-browser-extension"
+  ]
+}

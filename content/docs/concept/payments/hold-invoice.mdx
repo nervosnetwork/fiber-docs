@@ -1,0 +1,319 @@
+---
+title: Hold Invoice
+description: Deferred settlement invoices for conditional payments in the Fiber network
+date: 2026-06-15
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+A **hold invoice** (also known as a HODL invoice) is a special type of invoice where the payment is accepted by the recipient's node but not immediately settled. Unlike a regular invoice — which is fulfilled the moment the incoming TLC arrives — a hold invoice keeps the payment in a held state until the recipient explicitly reveals the preimage or cancels it. This deferred-settlement mechanism is the building block for conditional payments on Fiber.
+
+## TL;DR
+
+- A hold invoice locks the sender's funds in the network without letting the recipient claim them — settlement is deferred until the recipient reveals a preimage
+- Unlike a regular invoice (automatic settlement), the invoice enters a `Received` state where funds are committed but not yet transferred
+- The trust model depends on **who holds the preimage**: the recipient, a third-party escrow, or an automated system
+- Create with `payment_hash` only (no `payment_preimage`); settle with `settle_invoice`; cancel with `cancel_invoice`
+- States: `Open` → `Received` → `Paid`, or → `Cancelled` / `Expired`
+
+```bash
+# Create a hold invoice (note: no --payment-preimage)
+fnn-cli invoice new_invoice --amount 1000 --currency fibt --payment-hash 0x<hash> --description "atomic swap"
+
+# Later, settle it with the preimage
+fnn-cli invoice settle_invoice --payment-hash 0x<hash> --payment-preimage 0x<preimage>
+```
+
+## When to Use Hold Invoices
+
+A regular invoice settles the instant the payment arrives — this is fine for straightforward transfers, but many real-world scenarios need the payment to be **committed but not finalized** until some external condition is verified. That is exactly what hold invoices provide: the sender's funds are locked in the network (so they cannot double-spend), yet the recipient cannot claim them until the agreed-upon condition is met.
+
+Typical situations where this matters:
+
+- **Atomic swaps** — You and a counterparty are trading assets across two chains (e.g., CKB and BTC). Each side creates a hold invoice with the same payment hash. Whoever settles first reveals the preimage, and the other party uses that same preimage to settle the other chain. Neither side can run away with both assets.
+- **Digital goods delivery** — A buyer pays upfront, but the seller should only receive funds after confirming the buyer got what they ordered. The payment sits in the `Received` state as proof of commitment; the seller calls `settle_invoice` once delivery is confirmed.
+- **Escrow** — A trusted third party holds the preimage. Funds are locked and visible to both sides, but release depends on the arbiter's judgment.
+- **Cross-chain hub** — Fiber's built-in cross-chain hub relies on hold invoices (on both the CKB and Lightning sides) to atomically swap between CKB and BTC. See [Cross-Chain HTLC](/docs/res/cross-chain-htlc) for details.
+
+If your use case is a simple transfer where the recipient should get paid immediately, use a [regular invoice](/docs/concept/payments/invoice-guide) instead.
+
+## How Hold Invoices Differ from Regular Invoices
+
+| | Regular Invoice | Hold Invoice |
+|---|---|---|
+| **Creation** | `payment_preimage` is provided, or one is randomly generated | Only `payment_hash` is provided — no preimage is stored |
+| **Settlement** | Automatic — the TLC is fulfilled as soon as it arrives | Manual — the recipient must call `settle_invoice` with the preimage |
+| **Status flow** | `Open` → `Paid` | `Open` → `Received` → `Paid` (or `Cancelled`) |
+| **Preimage** | Known to the recipient from the start | Unknown to the node until the recipient reveals it |
+| **Sender risk** | Low — payment completes instantly | Funds are locked until the recipient settles or the invoice expires |
+| **Use case** | Everyday payments | Conditional payments, atomic swaps, escrow |
+
+## Invoice States
+
+A hold invoice moves through a distinct set of states:
+
+| State | Meaning |
+|-------|---------|
+| **Open** | The invoice has been created but no payment has arrived yet |
+| **Received** | A TLC has arrived and is being held — the preimage has not been revealed |
+| **Paid** | The recipient revealed the preimage via `settle_invoice` and the TLCs have been fulfilled |
+| **Cancelled** | The recipient called `cancel_invoice` — held TLCs are rejected and funds return to the sender |
+| **Expired** | The invoice exceeded its expiry time without being settled |
+
+The `Received` state is unique to hold invoices. Regular invoices skip it entirely because the preimage is already available when the TLC arrives.
+
+## How It Works
+
+The lifecycle of a hold invoice has four phases:
+
+**1. Creation** — The recipient generates a preimage and computes its hash locally (e.g., `payment_hash = sha256(preimage)`). Only the `payment_hash` is passed to `new_invoice`; the preimage is kept secret. The invoice is stored with status `Open` and no preimage on the node.
+
+**2. Payment** — The sender pays the invoice as usual via `send_payment`. The payment routes through the network and a TLC (Time-Locked Contract) arrives at the recipient's channel.
+
+**3. Hold** — The recipient's node checks for a preimage. Since none is stored, it cannot fulfill the TLC immediately. Instead, the TLC is held and the invoice transitions to `Received`. The hold duration is bounded by the invoice's expiry time and the TLC's own expiry — whichever comes first.
+
+**4. Resolution** — One of three things happens next:
+
+- **Settlement**: The recipient calls `settle_invoice` with the preimage. The node verifies it matches the `payment_hash`, stores it, and fulfills all held TLCs. The invoice transitions to `Paid`.
+- **Cancellation**: The recipient calls `cancel_invoice`. The invoice is marked `Cancelled` and all held TLCs are rejected with an `InvoiceCancelled` error, returning funds to the sender.
+- **Timeout**: If neither settle nor cancel happens before the hold expires, the held TLCs are released automatically.
+
+| Transition | Trigger |
+|------------|---------|
+| **Open** → **Received** | A TLC matching the payment hash arrives at the recipient's node, but no preimage is stored |
+| **Received** → **Paid** | The recipient calls `settle_invoice` with the matching preimage |
+| **Received** → **Cancelled** | The recipient calls `cancel_invoice` — held TLCs are rejected |
+| **Received** → **Expired** | Hold timeout fires before settle or cancel — held TLCs are released |
+| **Open** → **Cancelled** | The recipient calls `cancel_invoice` before any payment arrives |
+| **Open** → **Expired** | Current time exceeds `timestamp + expiry` without receiving a payment |
+
+## Trust Model
+
+A hold invoice guarantees that **funds are locked** once the sender pays, but it does not by itself resolve real-world disputes — for example, a seller claims goods were shipped while the buyer claims they were not received. What a hold invoice provides is a cryptographic commitment layer; the question of *who gets to decide* when to release the funds is determined by **who holds the preimage**.
+
+### Who Holds the Preimage?
+
+**Recipient holds the preimage.** The simplest model: the recipient decides when to settle. This works well when the sender trusts the recipient to act honestly — for instance, a buyer who will settle after confirming delivery. The risk is that a dishonest recipient could settle without fulfilling their side of the deal.
+
+**Sender holds the preimage.** The sender pays the hold invoice and later reveals the preimage to let the recipient claim the funds. This is equivalent to "I'll pay you after I'm satisfied." The risk is reversed: the sender could simply never reveal the preimage, leaving the recipient unpaid even after delivering goods.
+
+**Third-party escrow.** A trusted arbitrator holds the preimage. Neither the sender nor the recipient can unilaterally settle or cancel — only the escrow agent can. When both parties agree, the agent settles; when there is a dispute, the agent reviews evidence and decides whether to settle or cancel. This is the closest analogue to traditional escrow services.
+
+**Automated / programmatic release.** The preimage is released by an external system when a verifiable condition is met — for example, an on-chain oracle confirming a transaction, or a smart contract callback. Fiber's cross-chain hub uses this model: the preimage is automatically obtained from the outgoing payment on the other chain, so there is no human judgment involved and no opportunity for either party to cheat.
+
+### Why Not Just Delay `send_payment`?
+
+A common question is: why not use a regular invoice and simply call `send_payment` only after the condition is met (e.g., after receiving the goods)? The difference is **commitment**.
+
+With a regular invoice, the buyer has made no commitment at all — they could walk away at any time, and the seller has no proof that the buyer ever intended to pay. The seller ships goods entirely on trust.
+
+With a hold invoice, the buyer has already called `send_payment` and the funds are locked in the network. The seller can observe the `Received` state as verifiable proof that funds are committed and waiting. The buyer cannot double-spend or withdraw the locked funds. Both parties are protected: the seller knows the money is there, and the buyer knows the seller cannot claim it without fulfilling the condition.
+
+### Why Not Use a Platform with Regular Invoices?
+
+Another common approach is to have a centralized platform mediate: the buyer pays a regular invoice (funds settle instantly into the platform's account), and the platform releases goods only after confirming payment. This works, but it requires the buyer to fully trust the platform — once the payment settles, the funds belong to the platform, and the buyer has no on-chain mechanism to get them back if the platform fails to deliver, goes offline, or acts maliciously.
+
+With a hold invoice, the funds never reach the recipient's account until `settle_invoice` is called. Before that point, the money is locked in the network — not in anyone's wallet. If the platform fails to deliver, it must call `cancel_invoice` to return the locked funds (or they are returned automatically on expiry). The buyer does not need to trust the platform to refund from its own balance; the refund path is enforced by the protocol itself.
+
+| | Regular invoice + platform | Hold invoice |
+|---|---|---|
+| **Funds after payment** | In the platform's account | Locked in the network, not claimable by anyone |
+| **Buyer protection** | Relies on the platform's refund policy | Enforced by the protocol — funds cannot be claimed without settlement |
+| **Refund mechanism** | Platform sends a new payment from its own balance | `cancel_invoice` releases the original locked funds automatically |
+| **Trust assumption** | Buyer trusts the platform | Neither party needs to trust the other |
+
+In short, hold invoices separate the **cryptographic commitment** (funds locked, preimage required to unlock) from the **business logic** (who decides when the condition is met). The commitment layer is universal; the trust model is built on top by your application.
+
+## Creating a Hold Invoice
+
+To create a hold invoice, first generate a preimage and compute its hash on your side. Then pass only the hash to `new_invoice`.
+
+### Generate a Preimage and Hash
+
+```bash
+# Example: generate a random preimage and compute its SHA-256 hash
+PREIMAGE="0x$(openssl rand -hex 32)"
+PAYMENT_HASH="0x$(echo -n "$PREIMAGE" | xxd -r -p | sha256sum | awk '{print $1}')"
+echo "Preimage: $PREIMAGE"
+echo "Payment hash: $PAYMENT_HASH"
+```
+
+<Callout type="warning">
+  Store the preimage securely before creating the invoice. You will need it to settle later. If you lose the preimage, the funds remain locked until the invoice expires.
+</Callout>
+
+### Using fnn-cli
+
+```bash
+fnn-cli invoice new_invoice \
+  --amount 1000 \
+  --currency fibt \
+  --payment-hash "$PAYMENT_HASH" \
+  --expiry 3600 \
+  --description "Hold invoice for atomic swap"
+```
+
+### Using RPC
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "new_invoice",
+  "params": [
+    {
+      "amount": "0x3E8",
+      "currency": "Fibt",
+      "payment_hash": "0x<your-payment-hash>",
+      "expiry": "0xE10",
+      "description": "Hold invoice for atomic swap"
+    }
+  ],
+  "id": 1
+}
+```
+
+Note that `payment_preimage` is intentionally omitted. If you provide `payment_preimage` instead of `payment_hash`, the node creates a regular invoice — the preimage is stored and TLCs are fulfilled automatically. If you provide neither, the node generates a random preimage for you, which also results in a regular invoice.
+
+## Paying a Hold Invoice
+
+From the sender's perspective, paying a hold invoice is identical to paying a regular one:
+
+### Using fnn-cli
+
+```bash
+fnn-cli payment send_payment --invoice "fibt1..."
+```
+
+### Using RPC
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "send_payment",
+  "params": [
+    {
+      "invoice": "fibt1..."
+    }
+  ],
+  "id": 1
+}
+```
+
+The sender's funds are locked in TLCs along the route until the recipient settles or cancels the invoice. The sender does not need to know whether the invoice is a hold invoice or a regular one.
+
+## Settling a Hold Invoice
+
+Once the external condition is met (goods delivered, swap confirmed, etc.), reveal the preimage to claim the funds.
+
+### Using fnn-cli
+
+```bash
+fnn-cli invoice settle_invoice \
+  --payment-hash "$PAYMENT_HASH" \
+  --payment-preimage "$PREIMAGE"
+```
+
+### Using RPC
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "settle_invoice",
+  "params": [
+    {
+      "payment_hash": "0x<your-payment-hash>",
+      "payment_preimage": "0x<your-preimage>"
+    }
+  ],
+  "id": 1
+}
+```
+
+The node verifies that `hash(preimage) == payment_hash`, stores the preimage, and fulfills all held TLCs. The invoice transitions to `Paid`.
+
+<Callout type="info">
+  You can only settle an invoice that is in the <code>Received</code> state — meaning a payment has actually arrived. If the invoice is still <code>Open</code> (no payment received yet), calling <code>settle_invoice</code> returns an <code>InvoiceStillOpen</code> error. If the invoice has expired, you get <code>InvoiceAlreadyExpired</code>.
+</Callout>
+
+## Cancelling a Hold Invoice
+
+If the condition is never met, cancel the invoice to release the sender's funds.
+
+### Using fnn-cli
+
+```bash
+fnn-cli invoice cancel_invoice --payment-hash "$PAYMENT_HASH"
+```
+
+### Using RPC
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "cancel_invoice",
+  "params": [
+    {
+      "payment_hash": "0x<your-payment-hash>"
+    }
+  ],
+  "id": 1
+}
+```
+
+Cancellation is allowed when the invoice is in the `Open`, `Received`, or `Expired` state. An invoice that is already `Paid` or `Cancelled` cannot be cancelled.
+
+## Checking Invoice Status
+
+You can query the current state of any invoice at any time:
+
+### Using fnn-cli
+
+```bash
+fnn-cli invoice get_invoice --payment-hash "$PAYMENT_HASH"
+```
+
+### Using RPC
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "get_invoice",
+  "params": [
+    {
+      "payment_hash": "0x<your-payment-hash>"
+    }
+  ],
+  "id": 1
+}
+```
+
+The response includes the invoice's current `status` field (`Open`, `Received`, `Paid`, `Cancelled`, or `Expired`), which tells you exactly where the hold invoice is in its lifecycle.
+
+## Managing Hold Invoices
+
+| Action | RPC Method | fnn-cli |
+|--------|-----------|---------|
+| Create hold invoice | `new_invoice` (with `payment_hash`) | `fnn-cli invoice new_invoice --payment-hash 0x...` |
+| Settle hold invoice | `settle_invoice` | `fnn-cli invoice settle_invoice --payment-hash 0x... --payment-preimage 0x...` |
+| Cancel hold invoice | `cancel_invoice` | `fnn-cli invoice cancel_invoice --payment-hash 0x...` |
+| Check status | `get_invoice` | `fnn-cli invoice get_invoice --payment-hash 0x...` |
+| Parse invoice | `parse_invoice` | `fnn-cli invoice parse_invoice --invoice fibt1...` |
+
+Both `settle_invoice` and `cancel_invoice` require `write("invoices")` permission when using Biscuit token authentication.
+
+## Common Issues
+
+| Issue | Error | Cause | Solution |
+|-------|-------|-------|----------|
+| Settling too early | `InvoiceStillOpen` | No payment has arrived yet | Wait for the sender's payment to reach your node |
+| Settling after expiry | `InvoiceAlreadyExpired` | The invoice's expiry time has passed | Create a new invoice with a longer `expiry` |
+| Wrong preimage | `HashMismatch` | The preimage doesn't match the `payment_hash` | Double-check the preimage used to compute the hash |
+| Cannot cancel | — | Invoice is already `Paid` or `Cancelled` | No action needed |
+| Funds stuck | — | Preimage lost before settlement | Wait for the invoice to expire; TLCs are released automatically |
+
+## Related Topics
+
+- [Invoice Guide](/docs/concept/payments/invoice-guide) — general invoice creation and management
+- [Payment Lifecycle](/docs/concept/payments/payment-lifecycle) — how payments are routed and settled
+- [Invoice Protocol](/docs/res/invoice-protocol) — the technical specification for invoice encoding
+- [Cross-Chain HTLC](/docs/res/cross-chain-htlc) — how hold invoices enable cross-chain atomic swaps

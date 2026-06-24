@@ -1,154 +1,95 @@
 ---
 title: "Transfer Stablecoins"
 description: Learn how to transfer stablecoins between nodes
-date: 2026-04-09
+date: 2026-06-17
 dependencies:
   - name: Fiber Node
-    minVersion: "0.8.0"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.8.0"
+    minVersion: "0.9.0-rc4"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0-rc4"
 ---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+## TL;DR
+
+Set up three nodes, open UDT (stablecoin) channels, and send a stablecoin payment through a multi-hop path. Builds on the [Basic Transfer](/docs/quick-start/basic-transfer) example.
 
 ## Overview
 
-This guide walks you through setting up and executing stablecoin transfers between 3 nodes in the Fiber Testnet. Unlike [native CKB transfers example](/docs/quick-start/basic-transfer), this example demonstrates how to use [User-Defined Tokens (UDTs)](https://docs.nervos.org/docs/tech-explanation/glossary#user-defined-token) in payment channels, specifically focusing on stablecoins like [RUSD](https://testnet0815.stablepp.xyz/stablecoin).
+This guide demonstrates [UDT](https://docs.nervos.org/docs/tech-explanation/glossary#user-defined-token) transfers using stablecoins ([RUSD](https://testnet0815.stablepp.xyz/stablecoin)) across 3 nodes via multi-hop routing.
 
 ## Prerequisites
 
-- [Git](https://git-scm.com/) (if building from source)
-- [Rust](https://www.rust-lang.org/) and [Cargo](https://doc.rust-lang.org/cargo/) (if building from source)
-- Basic understanding of command line operations
-- [curl](https://curl.se/) or similar HTTP client for making RPC calls
-- [ckb-cli](https://github.com/nervosnetwork/ckb-cli) for generating keys
+- Completed [Basic Transfer](/docs/quick-start/basic-transfer)
+- [curl](https://curl.se/) for RPC calls
+- [ckb-cli](https://github.com/nervosnetwork/ckb-cli) for key management
 
 ## Setting Up Your Environment
 
 ### 1. Prepare Fiber Binary
 
-Download the latest release binary from the [Fiber GitHub Releases](https://github.com/nervosnetwork/fiber/releases) page.
-
-If you prefer to build the binary by yourself, you will need to install [Rust](https://www.rust-lang.org/) and [Cargo](https://doc.rust-lang.org/cargo/):
+Download from [GitHub Releases](https://github.com/nervosnetwork/fiber/releases) or build from source:
 
 ```sh
 git clone https://github.com/nervosnetwork/fiber.git
 cd fiber
 cargo build --release
-cp target/release/fnn ./
 ```
 
-This document used the [v0.8.0 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.8.0) throughout the guide.
-
 <Callout type="info" title="macOS Security">
-If you're using macOS, the downloaded binary may be blocked by Gatekeeper. Remove the quarantine attribute:
 ```sh
 xattr -d com.apple.quarantine fnn fnn-cli
 ```
 </Callout>
 
-<Callout type="info" title="HTTP Proxy Issues">
-If you encounter 503 errors when using fnn-cli, it may be due to HTTP proxy settings. Try running:
+### 2. Configure Three Nodes
+
 ```sh
-export NO_PROXY=127.0.0.1,localhost
+for node in node1 node2 node3; do
+  mkdir $node
+  cp target/release/fnn $node/
+  cp target/release/fnn-cli $node/
+  cp config/testnet/config.yml $node/
+done
 ```
-before using fnn-cli commands.
+
+Create a CKB account for each node and export the keys:
+
+```sh
+ckb-cli account new  # repeat 3 times, save each lock_arg
+
+# For each node directory:
+mkdir ckb
+ckb-cli account export --lock-arg <node_lock_arg> --extended-privkey-path ./ckb/exported-key
+head -n 1 ./ckb/exported-key > ./ckb/key
+```
+
+<Callout type="warning" title="Key File Format">
+`ckb/key` must contain only the 64-character hex private key, no `0x` prefix.
 </Callout>
 
-### 2. Configure Fiber Nodes
+Get Testnet funds:
+- CKB: [https://faucet.nervos.org](https://faucet.nervos.org/)
+- RUSD: [https://testnet0815.stablepp.xyz/stablecoin](https://testnet0815.stablepp.xyz/stablecoin) (claim via JoyID wallet at [testnet.joyid.dev](https://testnet.joyid.dev/), then transfer to node address)
 
-We'll set up three nodes for this tutorial. Set up separate directories for each node:
+### 3. Configure Ports
 
-```sh
-# For Node 1
-mkdir node1
-cp target/release/fnn node1/
-cp target/release/fnn-cli node1/
-cp config/testnet/config.yml node1/
-
-# For Node 2
-mkdir node2
-cp target/release/fnn node2/
-cp target/release/fnn-cli node2/
-cp config/testnet/config.yml node2/
-
-# For Node 3
-mkdir node3
-cp target/release/fnn node3/
-cp target/release/fnn-cli node3/
-cp config/testnet/config.yml node3/
-```
-
-Each node needs its **own private key** for signing transactions. You need to create **three separate CKB accounts** - one for each node:
-
-```sh
-# Create account for Node 1
-ckb-cli account new
-# Note the lock-arg and address for Node 1
-
-# Create account for Node 2
-ckb-cli account new
-# Note the lock-arg and address for Node 2
-
-# Create account for Node 3
-ckb-cli account new
-# Note the lock-arg and address for Node 3
-```
-
-Then export the keys for each node:
-
-```sh
-# In node1 directory
-mkdir ckb
-ckb-cli account export --lock-arg <node1_lock_arg> --extended-privkey-path ./ckb/exported-key
-# Extract the first line (private key) from exported file and save to key file
-head -n 1 ./ckb/exported-key > ./ckb/key
-
-# In node2 directory
-mkdir ckb
-ckb-cli account export --lock-arg <node2_lock_arg> --extended-privkey-path ./ckb/exported-key
-head -n 1 ./ckb/exported-key > ./ckb/key
-
-# In node3 directory
-mkdir ckb
-ckb-cli account export --lock-arg <node3_lock_arg> --extended-privkey-path ./ckb/exported-key
-head -n 1 ./ckb/exported-key > ./ckb/key
-```
-
-<Callout type="warning" title="Important: Key File Format">
-The `ckb/key` file must contain only the 64-character hex private key string (first line of exported-key file), without any `0x` prefix or extra content.
-</Callout>
-
-You can get Testnet funds from Faucets. (The RUSD faucet cannot directly fill an address, so you can first claim 20RUSD through a wallet like joyid, then transfer it to nodeA's address from [the joyid wallet page](https://testnet.joyid.dev/).)
-
-- [https://faucet.nervos.org](https://faucet.nervos.org/) for CKB
-- [https://testnet0815.stablepp.xyz/stablecoin](https://testnet0815.stablepp.xyz/stablecoin) for RUSD
-
-### 4. Configure Ports
-
-Edit the `config.yml` files to use different ports for each node:
-
-- Node 1: RPC Port 8227, P2P Port 8228
-- Node 2: RPC Port 8237, P2P Port 8238
-- Node 3: RPC Port 8247, P2P Port 8248
-
-Below is an example of the `config.yml` file, take a note on the `listening_addr` and `rpc -> listening_addr` fields:
+- Node 1: RPC `8227`, P2P `8228`
+- Node 2: RPC `8237`, P2P `8238`
+- Node 3: RPC `8247`, P2P `8248`
 
 <details>
-<summary>View complete config.yml</summary>
+<summary>View complete config.yml example</summary>
 
-```sh
-# This configuration file only contains the necessary configurations for the testnet deployment.
-# All options' descriptions can be found via `fnn --help` and be overridden by command line arguments or environment variables.
+```yaml
 fiber:
   listening_addr: "/ip4/127.0.0.1/tcp/8228"
   bootnode_addrs:
     - "/ip4/54.179.226.154/tcp/8228/p2p/Qmes1EBD4yNo9Ywkfe6eRw9tG1nVNGLDmMud1xJMsoYFKy"
-    - "/ip4/54.179.226.154/tcp/18228/p2p/QmdyQWjPtbK4NWWsvy8s69NGJaQULwgeQDT5ZpNDrTNaeV"
+    - "/ip4/16.163.7.105/tcp/8228/p2p/QmdyQWjPtbK4NWWsvy8s69NGJaQULwgeQDT5ZpNDrTNaeV"
   announce_listening_addr: true
-  announced_addrs:
-    # If you want to announce your fiber node public address to the network, you need to add the address here, please change the ip to your public ip accordingly.
-    # - "/ip4/YOUR-FIBER-NODE-PUBLIC-IP/tcp/8228"
   chain: testnet
-  # lock script configurations related to fiber network
-  # https://github.com/nervosnetwork/fiber-scripts/blob/main/deployment/testnet/migrations/2025-02-28-111246.json
   scripts:
     - name: FundingLock
       script:
@@ -162,7 +103,7 @@ fiber:
             args: 0x3cb7c0304fe53f75bb5727e2484d0beae4bd99d979813c6fc97c3cca569f10f6
         - cell_dep:
             out_point:
-              tx_hash: 0x12c569a258dd9c5bd99f632bb8314b1263b90921ba31496467580d6b79dd14a7 # ckb_auth
+              tx_hash: 0x12c569a258dd9c5bd99f632bb8314b1263b90921ba31496467580d6b79dd14a7
               index: 0x0
             dep_type: code
     - name: CommitmentLock
@@ -177,16 +118,11 @@ fiber:
             args: 0xf7e458887495cf70dd30d1543cad47dc1dfe9d874177bf19291e4db478d5751b
         - cell_dep:
             out_point:
-              tx_hash: 0x12c569a258dd9c5bd99f632bb8314b1263b90921ba31496467580d6b79dd14a7 #ckb_auth
+              tx_hash: 0x12c569a258dd9c5bd99f632bb8314b1263b90921ba31496467580d6b79dd14a7
               index: 0x0
             dep_type: code
-
 rpc:
-  # By default RPC only binds to localhost, thus it only allows accessing from the same machine.
-  # Allowing arbitrary machines to access the JSON-RPC port is dangerous and strongly discouraged.
-  # Please strictly limit the access to only trusted machines.
   listening_addr: "127.0.0.1:8227"
-
 ckb:
   rpc_url: "https://testnet.ckbapp.dev/"
   udt_whitelist:
@@ -201,328 +137,316 @@ ckb:
             hash_type: type
             args: 0x97d30b723c0b2c66e9cb8d4d0df4ab5d7222cbb00d4a9a2055ce2e5d7f0d8b0f
       auto_accept_amount: 10
-
 services:
   - fiber
   - rpc
   - ckb
 ```
-
 </details>
 
-### 3. Start All Nodes
-
-Start each node in a separate terminal:
+### 4. Start All Nodes
 
 ```sh
 # Terminal 1
-FIBER_SECRET_KEY_PASSWORD='password1' RUST_LOG=info ./fnn -c node1/config.yml -d node1
+cd node1 && FIBER_SECRET_KEY_PASSWORD='password1' RUST_LOG=info ./fnn -c config.yml -d .
 
 # Terminal 2
-FIBER_SECRET_KEY_PASSWORD='password2' RUST_LOG=info ./fnn -c node2/config.yml -d node2
+cd node2 && FIBER_SECRET_KEY_PASSWORD='password2' RUST_LOG=info ./fnn -c config.yml -d .
 
 # Terminal 3
-FIBER_SECRET_KEY_PASSWORD='password3' RUST_LOG=info ./fnn -c node3/config.yml -d node3
+cd node3 && FIBER_SECRET_KEY_PASSWORD='password3' RUST_LOG=info ./fnn -c config.yml -d .
 ```
-
-<Callout type="info" title="Using fnn-cli vs RPC">
-This guide provides both **fnn-cli** (command-line interface) and **RPC** (HTTP API) examples for each step.
-
-**Important notes for fnn-cli:**
-- Default RPC endpoint is `http://127.0.0.1:8227` (Node 1). For Node 2, use `--url http://127.0.0.1:8237`. For Node 3, use `--url http://127.0.0.1:8247`
-- **CKB amounts** are in shannons (1 CKB = 100,000,000 shannons)
-- **RUSD/stablecoin amounts** are in the token's base unit (e.g., 10 RUSD = 10, not 1000000000)
-
-**Important notes for RPC:**
-- **Amounts** must be specified as hex strings (e.g., `"0xa"` for 10)
-- **expiry** must be specified as hex strings (e.g., `"0xe10"` for 3600 seconds)
-- **currency** must be `"Fibt"` for testnet (not `"RUSD"`)
-</Callout>
 
 ## Creating Stablecoin Payment Channels
 
 ### 1. Connect Node 1 and Node 2
 
-Establish a connection between the nodes:
-
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
 ```sh
-# Using CLI
-cd node1 && ./fnn-cli peer connect_peer --address "/ip4/127.0.0.1/tcp/8238"
-
-# Or using RPC
+cd node1 && ./fnn-cli peer connect_peer --address "/ip4/127.0.0.1/tcp/8238/p2p/<node2_peer_id>"
+```
+  </Tab>
+  <Tab value="RPC">
+```sh
 curl --location 'http://127.0.0.1:8227' \
   --header 'Content-Type: application/json' \
   --data '{
-    "id": 42,
-    "jsonrpc": "2.0",
-    "method": "connect_peer",
-    "params": [
-      {
-        "pubkey": "<node2_pubkey>",
-        "address": "/ip4/127.0.0.1/tcp/8238"
-      }
-    ]
+    "id": 42, "jsonrpc": "2.0", "method": "connect_peer",
+    "params": [{"pubkey": "<node2_pubkey>", "address": "/ip4/127.0.0.1/tcp/8238"}]
   }'
 ```
-
-You can get Node 2's pubkey by running:
-```sh
-cd node2 && ./fnn-cli --url http://127.0.0.1:8237 info | grep pubkey
+  </Tab>
+  <Tab value="CCC">
+```typescript
+await sdk.connectPeer({
+  address: "/ip4/127.0.0.1/tcp/8238/p2p/<node2_peer_id>",
+});
 ```
+  </Tab>
+</Tabs>
 
-### 2. Create a Stablecoin Channel
+Get Node 2's peer ID and pubkey: `cd node2 && ./fnn-cli --url http://127.0.0.1:8237 info`
 
-Open a channel with 10 RUSD from Node 1 to Node 2:
+### 2. Open a Stablecoin Channel (Node 1 → Node 2)
 
+The `funding_udt_type_script` identifies the RUSD token:
+
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
 ```sh
-# Using CLI
 cd node1 && ./fnn-cli channel open_channel \
   --pubkey <node2_pubkey> \
   --funding-amount 10 \
   --public true \
   --funding-udt-type-script '{"code_hash":"0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a","hash_type":"type","args":"0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"}'
-
-# Or using RPC
+```
+  </Tab>
+  <Tab value="RPC">
+```sh
 curl --location 'http://127.0.0.1:8227' \
   --header 'Content-Type: application/json' \
   --data '{
-    "id": 42,
-    "jsonrpc": "2.0",
-    "method": "open_channel",
-    "params": [
-      {
-        "pubkey": "<node2_pubkey>",
-        "funding_amount": "0xa",
-        "public": true,
-        "funding_udt_type_script": {
-          "code_hash": "0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a",
-          "hash_type": "type",
-          "args": "0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"
-        }
+    "id": 42, "jsonrpc": "2.0", "method": "open_channel",
+    "params": [{
+      "pubkey": "<node2_pubkey>",
+      "funding_amount": "0xa",
+      "public": true,
+      "funding_udt_type_script": {
+        "code_hash": "0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a",
+        "hash_type": "type",
+        "args": "0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"
       }
-    ]
+    }]
   }'
 ```
-
-The response will contain a temporary channel ID:
-
-```sh
-{
-  "jsonrpc": "2.0",
-  "result": {"temporary_channel_id": "0x4a62f1963882e0a7476582bd397ca2a1faf86c202e5dc4e6b66d7914ce9a2761"},
-  "id": 42
-}
+  </Tab>
+  <Tab value="CCC">
+```typescript
+// funding_amount: 0xa = 10 RUSD
+const tempChannelId = await sdk.openChannel({
+  pubkey: "<node2_pubkey>",
+  fundingAmount: "0xa",
+  public: true,
+  fundingUdtTypeScript: {
+    codeHash: "0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a",
+    hashType: "type",
+    args: "0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b",
+  },
+});
+console.log("Temporary channel ID:", tempChannelId);
 ```
+  </Tab>
+</Tabs>
+
+<Callout type="warning" title="CKB Requirement">
+Opening a UDT channel also requires ~99 CKB in the node's wallet to cover on-chain cell capacity and shutdown fees. Make sure each node has sufficient CKB balance from the faucet.
+</Callout>
 
 ### 3. Monitor Channel Status
 
-Wait until the `state_name` becomes `ChannelReady`:
+Wait until `state.state_name` becomes `"ChannelReady"`:
 
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
 ```sh
-# Using CLI
 ./fnn-cli channel list_channels
-
-# Or using RPC
+```
+  </Tab>
+  <Tab value="RPC">
+```sh
 curl --location 'http://127.0.0.1:8227' \
   --header 'Content-Type: application/json' \
-  --data '{
-    "id": 42,
-    "jsonrpc": "2.0",
-    "method": "list_channels",
-    "params": [{}]
-  }'
+  --data '{"id": 42, "jsonrpc": "2.0", "method": "list_channels", "params": [{}]}'
 ```
+  </Tab>
+  <Tab value="CCC">
+```typescript
+const channels = await sdk.listChannels();
+for (const ch of channels) {
+  console.log(`${ch.channelId} — ${ch.state.stateName}`);
+}
+```
+  </Tab>
+</Tabs>
 
-The channel state will transition from `AwaitingTxSignatures` to `ChannelReady`. This typically takes a few minutes as the funding transaction needs to be confirmed on-chain.
+Repeat steps 1–3 to connect Node 2 and Node 3 (using ports `8247`/`8248`).
 
-## Connect Node 2 and Node 3
-
-Repeat the connection and channel creation process between Node 2 and Node 3.
-
-## Generating Stablecoin Invoices and Making Payments
+## Generating Invoices and Making Payments
 
 ### 1. Generate a Stablecoin Invoice on Node 2
 
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
 ```sh
-# Using CLI (Node 2 uses port 8237)
 cd node2 && ./fnn-cli --url http://127.0.0.1:8237 invoice new_invoice \
   --amount 10 \
   --currency Fibt \
-  --description "test invoice generated by node2" \
+  --description "test stablecoin invoice" \
   --expiry 3600 \
   --udt-type-script '{"code_hash":"0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a","hash_type":"type","args":"0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"}'
-
-# Or using RPC
+```
+  </Tab>
+  <Tab value="RPC">
+```sh
 curl --location 'http://127.0.0.1:8237' \
   --header 'Content-Type: application/json' \
   --data '{
-    "id": 42,
-    "jsonrpc": "2.0",
-    "method": "new_invoice",
-    "params": [
-      {
-        "amount": "0xa",
-        "currency": "Fibt",
-        "description": "test invoice generated by node2",
-        "expiry": "0xe10",
-        "udt_type_script": {
-          "code_hash": "0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a",
-          "hash_type": "type",
-          "args": "0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"
-        }
+    "id": 42, "jsonrpc": "2.0", "method": "new_invoice",
+    "params": [{
+      "amount": "0xa",
+      "currency": "Fibt",
+      "description": "test stablecoin invoice",
+      "expiry": "0xe10",
+      "udt_type_script": {
+        "code_hash": "0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a",
+        "hash_type": "type",
+        "args": "0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"
       }
-    ]
+    }]
   }'
 ```
-
-`payment_preimage` is a set of random bytes and can be generated using `openssl rand -hex 32`.
-
-The response will include an invoice address that can be used for payment:
-
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "invoice_address": "fibt10000000001p98tjdhf7emczxzat8lhtacrwqgzl9yjnq9ym97kp9kzetyuelpz0ttu98cusyr4z66wf3xxwxwa4ue5h9h63xgeg2j524c8vrct09wu9pqr9uk3hypg5388kw3tpdanz0k4muask0yaaczeunm7cdqvw5ek460v88phxw2nrx46p885l6xvcz3cge6ucnqn28e4zg4r2tqygdzh3v3rg3aqtzwrcjg33gz6v63gjgqn3vrhhftm5mcmme5vfzfxzzdn99500hnetluexzj05nzu3ehye005aed5qdkkmkwamny4c0675zuaq07fqxyakjhxve8g0xdhau67j7ejpp6pm8j7rc98qqg4k5nu9t4fnfl3xyyncrsqxlq85q7h8w0t37qhqx8nxvdxq4pm7aka7kdn0vsdtrf38m8g2dcakz9s3wrexute2uw9z9a4z249x220xnqaeyd3urwgurlugqhckzg7quxzn30he20q4d3cp8fa4vy",
-        "invoice": {
-            "currency": "Fibt",
-            "amount": "0xa",
-            "signature": "060713060c0d060015011b1e1d161d1e160d130f0c100d0b030911071b07080a0d181d16020510110e0319061c0b190a1c0e0502051d15020a1505060a0a0f0613001d19040d111c030e081c031f1c080017181602081e001c060213110f17190a0f00150d111801",
-            "data": {
-                "timestamp": "0x19b887faff7",
-                "payment_hash": "0xfd2e39468311062410470be7af3e973b42e4e027ed5c9a41039125a2e4a8c113",
-                "attrs": [
-                    {"description": "test invoice generated by node2"},
-                    {"expiry_time": "0xe10"},
-                    {"udt_script": "0x550000001000000030000000310000001142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a0120000000878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"},
-                    {"hash_algorithm": "sha256"},
-                    {"payee_public_key": "026015474b61e66a7ec4a1004d00b175ca687f31e01e3d1d2f11d3a7ae47cf2794"}
-                ]
-            }
-        }
-    }
-}
-
+  </Tab>
+  <Tab value="CCC">
+```typescript
+// Create invoice on Node 2
+const node2 = new FiberSDK({ endpoint: "http://127.0.0.1:8237" });
+const { invoiceAddress } = await node2.newInvoice({
+  amount: "0xa",
+  currency: "Fibt",
+  description: "test stablecoin invoice",
+  expiry: "0xe10",
+  udtTypeScript: {
+    codeHash: "0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a",
+    hashType: "type",
+    args: "0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b",
+  },
+});
+console.log("Invoice:", invoiceAddress);
 ```
+  </Tab>
+</Tabs>
 
-### 2. Send a Stablecoin Payment
+<Callout type="info">
+The `payment_preimage` is auto-generated by both CLI and RPC. You can optionally provide your own with `"payment_preimage": "<your_preimage>"` in the RPC params if needed.
+</Callout>
 
-Node 1 can now send a payment using the invoice address:
+### 2. Send the Stablecoin Payment from Node 1
 
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
 ```sh
-# Using CLI
 cd node1 && ./fnn-cli payment send_payment --invoice "fibt10000000001p..."
-
-# Or using RPC
+```
+  </Tab>
+  <Tab value="RPC">
+```sh
 curl --location 'http://127.0.0.1:8227' \
   --header 'Content-Type: application/json' \
   --data '{
-    "id": 42,
-    "jsonrpc": "2.0",
-    "method": "send_payment",
-    "params": [
-      {
-        "invoice": "fibt10000000001p98tjdhf7emczxzat8lhtacrwqgzl9yjnq9ym97kp9kzetyuelpz0ttu98cusyr4z66wf3xxwxwa4ue5h9h63xgeg2j524c8vrct09wu9pqr9uk3hypg5388kw3tpdanz0k4muask0yaaczeunm7cdqvw5ek460v88phxw2nrx46p885l6xvcz3cge6ucnqn28e4zg4r2tqygdzh3v3rg3aqtzwrcjg33gz6v63gjgqn3vrhhftm5mcmme5vfzfxzzdn99500hnetluexzj05nzu3ehye005aed5qdkkmkwamny4c0675zuaq07fqxyakjhxve8g0xdhau67j7ejpp6pm8j7rc98qqg4k5nu9t4fnfl3xyyncrsqxlq85q7h8w0t37qhqx8nxvdxq4pm7aka7kdn0vsdtrf38m8g2dcakz9s3wrexute2uw9z9a4z249x220xnqaeyd3urwgurlugqhckzg7quxzn30he20q4d3cp8fa4vy"
-      }
-    ]
+    "id": 42, "jsonrpc": "2.0", "method": "send_payment",
+    "params": [{"invoice": "fibt10000000001p..."}]
   }'
 ```
+  </Tab>
+  <Tab value="CCC">
+```typescript
+const result = await sdk.sendPayment({ invoice: "fibt10000000001p..." });
+console.log("Payment hash:", result.paymentHash);
+console.log("Status:", result.status);
+```
+  </Tab>
+</Tabs>
 
 ### 3. Check Channel Balance
 
-Verify the payment by checking the channel balance:
-
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
 ```sh
-# Using CLI on Node 1
+# Node 1
 ./fnn-cli channel list_channels
 
-# Using CLI on Node 2 (note the different port)
+# Node 2
 ./fnn-cli --url http://127.0.0.1:8237 channel list_channels
-
-# Or using RPC
+```
+  </Tab>
+  <Tab value="RPC">
+```sh
 curl --location 'http://127.0.0.1:8227' \
   --header 'Content-Type: application/json' \
-  --data '{
-    "id": 42,
-    "jsonrpc": "2.0",
-    "method": "list_channels",
-    "params": [{}]
-  }'
+  --data '{"id": 42, "jsonrpc": "2.0", "method": "list_channels", "params": [{}]}'
 ```
+  </Tab>
+  <Tab value="CCC">
+```typescript
+// Node 1
+const node1Channels = await sdk.listChannels();
+for (const ch of node1Channels) {
+  console.log(`local: ${ch.localBalance}, remote: ${ch.remoteBalance}`);
+}
 
-### 4. Multi-Node Payment
-
-To demonstrate a full multi-node payment path, you can:
-
-1. Set up a similar payment channel from Node 2 to Node 3
-2. Generate an invoice on Node 3
-3. Make a payment from Node 1 that routes through Node 2 to Node 3
+// Node 2
+const node2Channels = await node2.listChannels();
+for (const ch of node2Channels) {
+  console.log(`local: ${ch.localBalance}, remote: ${ch.remoteBalance}`);
+}
+```
+  </Tab>
+</Tabs>
 
 ## Closing the Channel
 
-When you're done with the payment channel, you can close it:
-
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
 ```sh
-# Using CLI
 cd node1 && ./fnn-cli channel shutdown_channel \
   --channel-id <channel_id> \
-  --close-script '{"code_hash":"0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8","hash_type":"type","args":"<your_node_lock_arg>"}'
-
-# Or using RPC
-curl --location 'http://127.0.0.1:8227' \
-  --header 'Content-Type: application/json' \
-  --data '{
-    "id": 42,
-    "jsonrpc": "2.0",
-    "method": "shutdown_channel",
-    "params": [
-      {
-        "channel_id": "0x9e27ad3c4935af445e8d1b1fdf1cca3615ce7f761be079eda88e242c39d7fc7c",
-        "close_script": {
-          "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
-          "hash_type": "type",
-          "args": "0xe266ef916081dbf19e13f1a485bbbc2206a01dc1"
-        }
-      }
-    ]
-  }'
+  --close-script '{"code_hash":"0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8","hash_type":"type","args":"<your_lock_arg>"}' \
+  --fee-rate 1000
 ```
-
-<Callout type="info" title="close_script Note">
-The `close_script` should be your node's funding lock script, which you can get from `fnn-cli info`. It consists of:
-- `code_hash`: `0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8` (standard CKB lock script)
-- `hash_type`: `type`
-- `args`: Your node's unique lock argument (from `fnn-cli info` under `default_funding_lock_script.args`)
-</Callout>
-```
-
-Verify the channel has been closed:
-
+  </Tab>
+  <Tab value="RPC">
 ```sh
-# Using CLI
-./fnn-cli channel list_channels
-
-# Or using RPC
 curl --location 'http://127.0.0.1:8227' \
   --header 'Content-Type: application/json' \
   --data '{
-    "id": 42,
-    "jsonrpc": "2.0",
-    "method": "list_channels",
-    "params": [{}]
+    "id": 42, "jsonrpc": "2.0", "method": "shutdown_channel",
+    "params": [{
+      "channel_id": "<channel_id>",
+      "close_script": {
+        "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+        "hash_type": "type",
+        "args": "<your_lock_arg>"
+      },
+      "fee_rate": "0x3e8"
+    }]
   }'
 ```
+  </Tab>
+  <Tab value="CCC">
+```typescript
+await sdk.shutdownChannel({
+  channelId: "<channel_id>",
+  closeScript: {
+    codeHash: "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+    hashType: "type",
+    args: "<your_lock_arg>",
+  },
+  feeRate: "0x3e8",
+});
+console.log("Channel closed.");
+```
+  </Tab>
+</Tabs>
+
+<Callout type="info" title="close_script">
+Get `args` from `fnn-cli info` under `default_funding_lock_script.args`. The `fee_rate` (shannons/KW) is optional and defaults to `1000`. You can also use `--force` (CLI) or `"force": true` (RPC) to force-close a channel unilaterally, in which case `close_script` and `fee_rate` are ignored.
+</Callout>
 
 ## Important Notes
 
-- Always ensure you have sufficient Testnet funds from the faucets before getting started
-- **RUSD auto_accept_amount**: The `auto_accept_amount` in config.yml uses the token's base unit (e.g., `10` means 10 RUSD). Channels with funding amounts less than this value require manual acceptance
-- When using UDTs like stablecoins, you must specify the correct `funding_udt_type_script`
-- **RPC amount format**: In RPC calls, amounts must be hex strings (e.g., `"0xa"` for 10 RUSD), not plain numbers
-- **Invoice currency**: Use `"Fibt"` for testnet invoices, not `"RUSD"`
-- Keep track of your channel IDs and peer pubkeys
-- Monitor your node logs for any errors or important messages
-- Make sure to properly close channels when they're no longer needed
-- When connecting Node 2 and Node 3, use Node 3's pubkey and address
-- **Peer connection**: Use IP-based address format (`/ip4/127.0.0.1/tcp/8238`) for reliable connections
+- **RUSD amounts**: CLI uses base units (e.g. `10` = 10 RUSD); RPC uses hex strings (e.g. `"0xa"` = 10)
+- **Invoice currency**: Use `"Fibt"` for testnet, not `"RUSD"`
+- **auto_accept_amount**: Channels with funding below this value require manual acceptance
+- **Channel state format**: The `list_channels` response returns state as a nested object: `state.state_name` (e.g. `"ChannelReady"`) and `state.state_flags` (e.g. `["PublicChannel"]`)
+- **Gossip sync time**: After starting nodes, wait for the gossip protocol to fully sync the network graph before attempting multi-hop payments. This may take several minutes depending on network conditions.
