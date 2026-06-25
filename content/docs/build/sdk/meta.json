@@ -1,7 +1,7 @@
 {
   "title": "SDK",
   "pages": [
-    "fiber-js",
+    "js",
     "wasm-node"
   ]
 }
