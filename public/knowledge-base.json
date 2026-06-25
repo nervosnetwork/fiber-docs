@@ -1432,132 +1432,132 @@
       "id": "chunk-204",
       "title": "JavaScript SDK",
       "content": "import { Callout } from 'fumadocs-ui/components/callout';\nimport { Tabs, Tab } from 'fumadocs-ui/components/tabs';\n\n## TL;DR\n\nThe Fiber JavaScript SDK (`@ckb-ccc/fiber`) is a typed, camelCase client for Fiber payment channels. Every channel interaction is **two-party**: one side opens, the other accepts; one side invoices, the other pays; either side can close. This guide walks through each interaction from both perspectives using \"Alice\" and \"Bob.\"\n\n## Overview\n\n`@ckb-ccc/fiber` is a high-level TypeScript/JavaScript SDK for building on the [Fiber Network](https://github.com/nervosnetwork/fiber) — Nervos CKB's payment channel network. It wraps the Fiber node JSON-RPC with a typed, camelCase API and is part of the [CCC](https://github.com/ckb-devrel/ccc) (Common Chains Connector) stack.",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-205",
       "title": "JavaScript SDK",
       "content": "Fiber payment channels are inherently **two-party**: one side opens a channel, the other accepts it; one side creates an invoice, the other pays it; either side can close the channel. This guide walks through every interaction from both perspectives, using \"Alice\" and \"Bob\" as the two parties.\n\n## Installation\n\n```bash\nnpm install @ckb-ccc/fiber\n```\n\n<Callout type=\"info\">\n  `@ckb-ccc/fiber` depends on `@ckb-ccc/core`. Both will be installed automatically.\n</Callout>\n\n## Quick Start\n\nCreate a client pointing at your Fiber node's RPC endpoint and verify the connection:\n\n```typescript\nimport { FiberSDK } from \"@ckb-ccc/fiber\";\n\nconst sdk = new FiberSDK({\n  endpoint: \"http://127.0.0.1:8227\",\n  timeout: 5000, // optional, milliseconds\n});",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-206",
       "title": "JavaScript SDK",
       "content": "// Verify the connection\nconst info = await sdk.getNodeInfo();\nconsole.log(\"Version:\", info.version);\nconsole.log(\"Pubkey:\", info.pubkey);\nconsole.log(\"Connected peers:\", info.peersCount);\n```\n\nFrom here, the same `sdk` handles everything — see the [User Stories](#user-stories) below.\n\n## Architecture\n\n`FiberSDK` is the main class. It composes five API domains (Channel, Invoice, Payment, Info, Peer) into a single object. Most methods are available directly on the `sdk` instance, while a few are accessed through domain sub-objects:\n\n```typescript\n// Top-level (most methods)\nawait sdk.openChannel({ ... });\nawait sdk.newInvoice({ ... });\nawait sdk.sendPayment({ ... });\nawait sdk.shutdownChannel({ ... });",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-207",
       "title": "JavaScript SDK",
       "content": "// Domain sub-object (specific methods)\nawait sdk.channel.acceptChannel({ ... });\nawait sdk.invoice.settleInvoice({ ... });\n```\n\n<Callout type=\"info\">\n  `acceptChannel` and `settleInvoice` are on sub-objects because they represent the counterparty's side of a two-party handshake — `sdk.channel.acceptChannel()` and `sdk.invoice.settleInvoice()`.\n</Callout>\n\n## Two-Party Interaction Model\n\nEvery channel interaction involves two nodes. Throughout this guide, we label them **Alice** and **Bob** for clarity. Each side has its own `FiberSDK` instance pointing at its own node's RPC.\n\nIn all examples below, assume these two nodes:\n\n- **Alice's node** — RPC at `http://127.0.0.1:8227`\n- **Bob's node** — RPC at `http://127.0.0.1:8237`",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-208",
       "title": "JavaScript SDK",
       "content": "```typescript\n// Alice's SDK — connects to her node\nconst alice = new FiberSDK({ endpoint: \"http://127.0.0.1:8227\" });\n\n// Bob's SDK — connects to his node\nconst bob = new FiberSDK({ endpoint: \"http://127.0.0.1:8237\" });\n```\n\n<Callout type=\"info\">\n  In practice, Alice and Bob run on different machines (or processes). Each points their SDK at their own node's RPC endpoint. The code blocks below use `alice` and `bob` as shorthand for each party's SDK instance.\n</Callout>\n\nFor reference, here are the peer identities we assume throughout the examples (your actual keys and addresses will differ):",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-209",
       "title": "JavaScript SDK",
       "content": "|           | Pubkey                                                                 | P2P Address                            |\n| --------- | ---------------------------------------------------------------------- | -------------------------------------- |\n| **Alice** | `0x02aa3beb0d770fe835db99bf894fb2d9afaf4df0d5ec1871fad731d4fc6c90faed` | `/ip4/127.0.0.1/tcp/8228/p2p/QmdW4...` |\n| **Bob**   | `0x03827ccddf3fdf59808fa6baea647d93bd6f6105309d3b20e1fc0d9e40495865cc` | `/ip4/127.0.0.1/tcp/8238/p2p/QmcF...`  |\n\n## User Stories\n\n### 1. Check My Node's Health\n\n**Goal:** Verify the SDK is connected and inspect your node's current state.\n\nThis is a single-party check — it works identically for either Alice or Bob.",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-210",
       "title": "JavaScript SDK",
       "content": "```typescript\n// Get node metadata\nconst info = await alice.getNodeInfo();\nconsole.log(\"Version:\", info.version);\nconsole.log(\"Pubkey:\", info.pubkey);\nconsole.log(\"Active channels:\", info.channelCount);\nconsole.log(\"Pending channels:\", info.pendingChannelCount);\nconsole.log(\"Connected peers:\", info.peersCount);\n\n// List existing channels\nconst channels = await alice.listChannels();\nfor (const ch of channels) {\n  console.log(\n    `  ${ch.channelId} — ${ch.state.stateName} — local: ${ch.localBalance}`,\n  );\n}\n\n// List connected peers\nconst peers = await alice.listPeers();\nfor (const p of peers) {\n  console.log(`  ${p.pubkey} @ ${p.address}`);\n}\n```\n\n---\n\n### 2. Establish a Payment Channel\n\n**Goal:** Alice wants to open a channel with Bob so they can send payments to each other.",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-211",
       "title": "JavaScript SDK",
       "content": "**Flow:** Alice connects to Bob's node → Alice opens a channel → Bob accepts the incoming channel → both wait for it to reach `ChannelReady`.\n\n<Tabs items={[\"Alice (opens channel)\", \"Bob (accepts channel)\"]}>\n\n<Tab value=\"Alice (opens channel)\">\n\n```typescript\n// Alice: connect to Bob and open a channel\n\n// 1. Connect to Bob's node (using Bob's address from the table above)\nawait alice.connectPeer({\n  address: \"/ip4/127.0.0.1/tcp/8238/p2p/QmcF...\",\n  save: true,\n});\n\n// 2. Open a channel funded with 500 CKB\nconst tempChannelId = await alice.openChannel({\n  pubkey:\n    \"0x03827ccddf3fdf59808fa6baea647d93bd6f6105309d3b20e1fc0d9e40495865cc\",\n  fundingAmount: \"0xba43b7400\", // 500 CKB in shannons\n  public: true,\n});\nconsole.log(\"Temporary channel ID:\", tempChannelId);",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-212",
       "title": "JavaScript SDK",
       "content": "// 3. Poll until the channel reaches ChannelReady\nlet channelId;\nwhile (!channelId) {\n  await new Promise((r) => setTimeout(r, 2000));\n  const channels = await alice.listChannels();\n  const ch = channels.find((c) => c.channelId === tempChannelId);\n  if (ch?.state.stateName === \"ChannelReady\") {\n    channelId = ch.channelId;\n    console.log(\"Channel ready:\", channelId);\n  } else if (ch) {\n    console.log(`  State: ${ch.state.stateName}`);\n  }\n}\n```\n\n</Tab>\n\n<Tab value=\"Bob (accepts channel)\">\n\n```typescript\n// Bob: accept the incoming channel from Alice\n\n// The temporary channel ID comes from Alice (share it out-of-band)\nconst tempChannelId = \"0x...\"; // from Alice's console above",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-213",
       "title": "JavaScript SDK",
       "content": "const channelId = await bob.channel.acceptChannel({\n  temporaryChannelId: tempChannelId,\n  fundingAmount: \"0x0\", // Bob contributes 0; only Alice funds this channel\n});\nconsole.log(\"Accepted channel:\", channelId);\n```\n\n</Tab>\n\n</Tabs>\n\n<Callout type=\"info\">\n  `openChannel` returns a **temporary channel ID**. Once both parties accept and the funding transaction confirms on-chain, the temporary ID is replaced by a permanent `channelId` and the channel state becomes `ChannelReady`.\n\nIf you want to cancel before the channel is ready, either party can call `sdk.abandonChannel({ temporaryChannelId, reason: \"...\" })`.\n</Callout>\n\n---\n\n### 3. Receive a Payment\n\n**Goal:** Bob wants to receive a payment from Alice. He creates an invoice, Alice pays it, and Bob settles to finalize.",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-214",
       "title": "JavaScript SDK",
       "content": "**Flow:** Bob creates an invoice → Bob shares the `invoiceAddress` with Alice → Alice pays the invoice → Bob detects the payment → Bob settles with the preimage.\n\n<Tabs items={[\"Bob (creates invoice & settles)\", \"Alice (pays invoice)\"]}>\n\n<Tab value=\"Bob (creates invoice & settles)\">\n\n```typescript\n// Bob: create an invoice for Alice to pay\n\n// 1. Generate a preimage — keep this secret until payment arrives\nconst paymentPreimage = \"0x\" + \"01\".repeat(32);\n\n// 2. Create the invoice\nconst { invoiceAddress, invoice } = await bob.newInvoice({\n  amount: \"0x5f5e100\", // 1 CKB in shannons\n  currency: \"Fibt\",\n  paymentPreimage,\n  description: \"Payment for services\",\n  expiry: \"0xe10\", // 3600 seconds\n  finalExpiryDelta: \"0x9283C0\", // ~4 hours in ms\n});",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-215",
       "title": "JavaScript SDK",
       "content": "// Share this with Alice (out-of-band — QR, copy-paste, API, etc.)\nconsole.log(\"Invoice address (send to Alice):\");\nconsole.log(invoiceAddress);\n\n// 3. Poll until the invoice is paid\nlet status = await bob.getInvoice(invoice.data.paymentHash);\nwhile (status.status === \"Open\") {\n  await new Promise((r) => setTimeout(r, 1000));\n  status = await bob.getInvoice(invoice.data.paymentHash);\n  console.log(`  Payment status: ${status.status}`);\n}\nconsole.log(\"Invoice paid!\");\n\n// 4. Settle — reveal the preimage to finalize the payment\nawait bob.invoice.settleInvoice({\n  paymentHash: invoice.data.paymentHash,\n  paymentPreimage,\n});\nconsole.log(\"Invoice settled.\");\n```\n\n</Tab>\n\n<Tab value=\"Alice (pays invoice)\">\n\n```typescript\n// Alice: pay Bob's invoice",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-216",
       "title": "JavaScript SDK",
       "content": "// The invoice address Bob shared with her\nconst invoiceAddress = \"fibt100000000001p...\";\n\n// Send the payment\nconst result = await alice.sendPayment({ invoice: invoiceAddress });\nconsole.log(\"Payment hash:\", result.paymentHash);\nconsole.log(\"Status:\", result.status);\nconsole.log(\"Fee:\", result.fee);\n\n// Check final status\nconst final = await alice.getPayment(result.paymentHash);\nconsole.log(\"Final status:\", final.status);\n```\n\n</Tab>\n\n</Tabs>",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-217",
       "title": "JavaScript SDK",
       "content": "<Callout type=\"info\">\n  **How settlement works:** When Alice pays, the funds flow through the channel but are not yet final — Bob's node holds them pending the preimage. When Bob calls `settleInvoice`, he reveals the preimage, which unlocks the funds cryptographically. This is the core Lightning-style trustless exchange: Alice knows Bob can only claim the funds if he knows the preimage, and Bob knows Alice can only reclaim after the expiry.\n</Callout>\n\n---\n\n### 4. Send a Payment\n\n**Goal:** Alice receives an invoice address and wants to inspect it before paying, then verify the payment succeeded.\n\nThis is the **payer's perspective** of the flow shown above. See [Receive a Payment](#receive-a-payment) for the full two-party exchange.\n\n```typescript\n// Alice: inspect an invoice, then pay it",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-218",
       "title": "JavaScript SDK",
       "content": "const invoiceAddress = \"fibt100000000001p...\";\n\n// 1. Inspect the invoice before paying\nconst parsed = await alice.parseInvoice({ invoice: invoiceAddress });\nconsole.log(\"Amount:\", parsed.amount);\nconsole.log(\"Currency:\", parsed.currency);\n\n// Check description and other attributes\nfor (const attr of parsed.data.attrs) {\n  if (\"description\" in attr) console.log(\"Description:\", attr.description);\n}\n\n// 2. Send the payment\nconst result = await alice.sendPayment({ invoice: invoiceAddress });\nconsole.log(\"Payment hash:\", result.paymentHash);\nconsole.log(\"Status:\", result.status);\nconsole.log(\"Fee:\", result.fee);",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-219",
       "title": "JavaScript SDK",
       "content": "// 3. Verify final status\nif (result.status !== \"Success\") {\n  const final = await alice.getPayment(result.paymentHash);\n  if (final.status === \"Failed\") {\n    console.error(\"Payment failed:\", final.failedError);\n  } else {\n    console.log(\"Status:\", final.status);\n  }\n}\n```\n\n<Callout type=\"warning\">\n  The `sendPayment` result may show `\"Created\"` or `\"Inflight\"` — the payment routes through the network asynchronously. Use `getPayment` to confirm it reaches `\"Success\"`.\n</Callout>\n\n---\n\n### 5. Close the Channel\n\n**Goal:** Alice (or Bob) wants to close the channel and settle the final balance on-chain.\n\nEither party can initiate a close. The channel must be in `ChannelReady` state.\n\n<Tabs items={[\"Cooperative close\", \"Force close\"]}>\n\n<Tab value=\"Cooperative close\">",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-220",
       "title": "JavaScript SDK",
       "content": "```typescript\n// Either Alice or Bob: close the channel cooperatively (both parties online)\nawait alice.shutdownChannel({\n  channelId: \"0x...\", // the permanent channel ID from ChannelReady state\n  force: false, // cooperative close — fast, low fees\n});\nconsole.log(\"Channel closed cooperatively.\");\n```\n\n</Tab>\n\n<Tab value=\"Force close\">\n\n```typescript\n// Either Alice or Bob: force-close when the counterparty is unresponsive\nawait alice.shutdownChannel({\n  channelId: \"0x...\",\n  force: true, // force close — funds locked for timelock period\n});\nconsole.log(\"Channel force-closed. Funds unlock after the timelock.\");\n```\n\n</Tab>\n\n</Tabs>",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-221",
       "title": "JavaScript SDK",
       "content": "| Close Type                   | When to Use                  | Speed                     | Counterparty Needed? |\n| ---------------------------- | ---------------------------- | ------------------------- | -------------------- |\n| Cooperative (`force: false`) | Both parties are online      | Immediate                 | Yes                  |\n| Force (`force: true`)        | Counterparty is unresponsive | After timelock (~4 hours) | No                   |\n\n<Callout type=\"warning\">\n  Force-closing imposes a timelock before you can spend your funds. Always try a cooperative close first — it's faster and cheaper.\n</Callout>",
-      "url": "/docs/build/sdk/fiber-js",
-      "source": "docs/build/sdk/fiber-js.mdx"
+      "url": "/docs/build/sdk/js",
+      "source": "docs/build/sdk/js.mdx"
     },
     {
       "id": "chunk-222",
       "title": "SDK",
-      "content": "# SDK\n\nFiber provides multiple SDKs to help developers integrate with the network. Choose the one that fits your stack and use case.\n\n## Available SDKs\n\n| SDK | Description | Environment | Status |\n|-----|-------------|-------------|--------|\n| [JavaScript SDK](/docs/build/sdk/fiber-js) | High-level TypeScript/JavaScript SDK with camelCase APIs and full type safety for channels, invoices, payments, and more | Node.js, Browser | Available |\n| [WASM Node](/docs/build/sdk/wasm-node) | Run a full Fiber node in WebAssembly | Browser | Coming soon |\n\n## Choosing an SDK",
+      "content": "# SDK\n\nFiber provides multiple SDKs to help developers integrate with the network. Choose the one that fits your stack and use case.\n\n## Available SDKs\n\n| SDK | Description | Environment | Status |\n|-----|-------------|-------------|--------|\n| [JavaScript SDK](/docs/build/sdk/js) | High-level TypeScript/JavaScript SDK with camelCase APIs and full type safety for channels, invoices, payments, and more | Node.js, Browser | Available |\n| [WASM Node](/docs/build/sdk/wasm-node) | Run a full Fiber node in WebAssembly | Browser | Coming soon |\n\n## Choosing an SDK",
       "url": "/docs/build/sdk/index",
       "source": "docs/build/sdk/index.mdx"
     },
@@ -2138,7 +2138,7 @@
     {
       "id": "chunk-305",
       "title": "Toolchain Overview",
-      "content": "| I want to... | Use |\n|---|---|\n| Run a production node | [fnn](/docs/quick-start/run-a-node) + [fnn-cli](#fnn-cli) |\n| Control a node from my backend | [HTTP RPC](/docs/api-reference) |\n| Build a browser wallet | [fiber-js](/docs/build/fiber-js) |\n| Add payments to my web game | [fiber-js](/docs/build/fiber-js) or [HTTP RPC](/docs/api-reference) |\n| Do cross-chain swaps (BTC ↔ CKB) | [fnn](/docs/quick-start/run-a-node) with the CCH service configured |\n| Understand the protocol | [Tech Explanation](/docs/res/light-paper) |",
+      "content": "| I want to... | Use |\n|---|---|\n| Run a production node | [fnn](/docs/quick-start/run-a-node) + [fnn-cli](#fnn-cli) |\n| Control a node from my backend | [HTTP RPC](/docs/api-reference) |\n| Build a browser wallet | [fiber-js](/docs/build/sdk/js) |\n| Add payments to my web game | [fiber-js](/docs/build/sdk/js) or [HTTP RPC](/docs/api-reference) |\n| Do cross-chain swaps (BTC ↔ CKB) | [fnn](/docs/quick-start/run-a-node) with the CCH service configured |\n| Understand the protocol | [Tech Explanation](/docs/res/light-paper) |",
       "url": "/docs/build/toolchain",
       "source": "docs/build/toolchain.mdx"
     },
@@ -4455,14 +4455,14 @@
     {
       "id": "chunk-636",
       "title": "Run a WASM Node",
-      "content": "| Area | Key Methods |\n|--------|--------------|\n| **Lifecycle** | `start`, `stop`, `invokeCommand` |\n| **Channel** | `openChannel`, `openChannelWithExternalFunding`, `submitSignedFundingTx`, `listChannels`, `shutdownChannel`, `updateChannel` |\n| **Payment** | `sendPayment`, `getPayment`, `buildRouter`, `sendPaymentWithRouter` |\n| **Invoice** | `newInvoice`, `parseInvoice`, `getInvoice`, `cancelInvoice` |\n| **Peer** | `connectPeer`, `disconnectPeer`, `listPeers` |\n| **Graph** | `graphNodes`, `graphChannels` |\n| **Node** | `nodeInfo` |\n\nFor the full API reference see [Build -> fiber-js](/docs/build/fiber-js).\n\n## Next Steps",
+      "content": "| Area | Key Methods |\n|--------|--------------|\n| **Lifecycle** | `start`, `stop`, `invokeCommand` |\n| **Channel** | `openChannel`, `openChannelWithExternalFunding`, `submitSignedFundingTx`, `listChannels`, `shutdownChannel`, `updateChannel` |\n| **Payment** | `sendPayment`, `getPayment`, `buildRouter`, `sendPaymentWithRouter` |\n| **Invoice** | `newInvoice`, `parseInvoice`, `getInvoice`, `cancelInvoice` |\n| **Peer** | `connectPeer`, `disconnectPeer`, `listPeers` |\n| **Graph** | `graphNodes`, `graphChannels` |\n| **Node** | `nodeInfo` |\n\nFor the full API reference see [Build -> fiber-js](/docs/build/sdk/js).\n\n## Next Steps",
       "url": "/docs/quick-start/run-a-node/fiberjs",
       "source": "docs/quick-start/run-a-node/fiberjs.mdx"
     },
     {
       "id": "chunk-637",
       "title": "Run a WASM Node",
-      "content": "- [Basic Transfer](/docs/quick-start/basic-transfer) — learn the channel and payment flow\n- [JavaScript Overview](/docs/build/fiber-js) — browser runtime, security headers, and API details\n- [Build a Game with Fiber](/docs/build/simple-game) — end-to-end example with Fiber payments",
+      "content": "- [Basic Transfer](/docs/quick-start/basic-transfer) — learn the channel and payment flow\n- [JavaScript Overview](/docs/build/sdk/js) — browser runtime, security headers, and API details\n- [Build a Game with Fiber](/docs/build/simple-game) — end-to-end example with Fiber payments",
       "url": "/docs/quick-start/run-a-node/fiberjs",
       "source": "docs/quick-start/run-a-node/fiberjs.mdx"
     },

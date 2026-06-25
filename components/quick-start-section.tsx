@@ -76,7 +76,7 @@ export default function QuickStartSection() {
           href="/docs/guide/developer/http-rpc-guide"
           items={[
             { label: 'HTTP RPC Guide', href: '/docs/guide/developer/http-rpc-guide' },
-            { label: 'fiber-js (WASM Node)', href: '/docs/guide/developer/fiber-js' },
+            { label: 'fiber-js (WASM Node)', href: '/docs/build/sdk/js' },
             { label: 'Toolchain Overview', href: '/docs/guide/developer/toolchain' },
           ]}
         />

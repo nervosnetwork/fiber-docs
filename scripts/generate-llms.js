@@ -54,7 +54,7 @@ const PAGE_STRUCTURE = [
     section: "Guide / Build on Fiber",
   },
   {
-    slug: "guide/developer/fiber-js",
+    slug: "build/sdk/js",
     section: "Guide / Build on Fiber",
   },
   {
