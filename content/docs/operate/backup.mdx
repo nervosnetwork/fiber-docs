@@ -63,7 +63,7 @@ Back up the entire node directory (`node1`), which includes:
    If the backup was created with an older Fiber version, the node will detect the database version mismatch on startup and prompt you to confirm a migration. Simply follow the on-screen prompt to proceed.
 
 <Callout type="info">
-Starting from v0.9.0-rc5, storage migration is integrated directly into the `fnn` binary. There is no separate `fnn-migrate` tool — migration runs automatically on startup when needed, with your confirmation.
+Starting from v0.9.0-rc1, storage migration is integrated directly into the `fnn` binary. There is no separate `fnn-migrate` tool — migration runs automatically on startup when needed, with your confirmation.
 </Callout>
 
 **Warning**: Using the wrong password will trigger a startup error (`Secret key file error: decryption failed`). Double-check the password before starting.
@@ -114,11 +114,11 @@ Databases older than version `20260302100001` (pre-v0.8.x) cannot be migrated di
    ```bash
    ./fnn-migrate -d ./node1
    ```
-3. Start the v0.9.0-rc5 node — it will handle any remaining migration automatically:
+3. Start the v0.9.0+ node — it will handle any remaining migration automatically:
    ```bash
    FIBER_SECRET_KEY_PASSWORD='YOUR_PASSWORD' ./fnn -c ./node1/config.yml -d ./node1
    ```
 
 <Callout type="info">
-The standalone `fnn-migrate` tool has been archived as of v0.9.0-rc5. Migration is now built into the main `fnn` binary. The v0.8.x `fnn-migrate` binary is only needed for databases created before v0.8.x.
+The standalone `fnn-migrate` tool has been archived as of v0.9.0-rc1. Migration is now built into the main `fnn` binary. The v0.8.x `fnn-migrate` binary is only needed for databases created before v0.8.x.
 </Callout>
