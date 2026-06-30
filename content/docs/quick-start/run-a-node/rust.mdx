@@ -38,7 +38,7 @@ This document used the [v0.8.0 binary](https://github.com/nervosnetwork/fiber/re
 <Callout type="info" title="macOS Security">
 If you're using macOS, the downloaded binary may be blocked by Gatekeeper. To resolve this, remove the quarantine attribute:
 ```sh
-xattr -d com.apple.quarantine fnn fnn-migrate fnn-cli
+xattr -d com.apple.quarantine fnn fnn-cli
 ```
 </Callout>
 
@@ -51,7 +51,6 @@ mkdir /folder-to/my-fnn
 # If using released binary, replace target/release/fnn with the path to your downloaded binary
 cp target/release/fnn /folder-to/my-fnn
 # Copy additional tools (v0.8.0+)
-cp target/release/fnn-migrate /folder-to/my-fnn
 cp target/release/fnn-cli /folder-to/my-fnn
 cp config/testnet/config.yml /folder-to/my-fnn
 cd /folder-to/my-fnn
@@ -175,17 +174,9 @@ rm -rf /folder-to/my-fnn/fiber/store
 
 3. Replace the FNN binary and restart
 
-### Storage Migration (Optional)
+### Storage Migration
 
-If you want to preserve channel states during an upgrade:
-
-```sh
-# Back up first
-cp -r /folder-to/my-fnn/fiber/store /folder-to/my-fnn/fiber/store.backup
-
-# Run migration
-./fnn-migrate -d /folder-to/my-fnn
-```
+Starting from v0.9.0-rc1, storage migration is handled automatically by FNN on startup. When upgrading, simply start FNN normally and it will detect and apply any necessary migrations to preserve your channel state. No separate migration tool is needed.
 
 ## Next Steps
 

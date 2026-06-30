@@ -2047,14 +2047,14 @@
     {
       "id": "chunk-292",
       "title": "Toolchain Overview",
-      "content": "The current native migration tool is the standalone `fnn-migrate` binary built from [`migrate`](https://github.com/nervosnetwork/fiber/tree/main/migrate). When a native filesystem-backed store needs migration, stop `fnn`, back up the Fiber data directory, run `fnn-migrate -d <fiber-data-dir>`, and then start the new `fnn` binary again. The node startup path checks whether migration is needed; it does not apply data migrations automatically.\n\n## Cryptography & On-Chain Scripts\n\n### fiber-sphinx\n\n[fiber-sphinx](https://github.com/nervosnetwork/fiber-sphinx) is the cryptography library implementing Sphinx-based onion routing for Fiber's payment privacy. It handles the construction and peeling of onion packets used in multi-hop payments.\n\n### fiber-scripts",
+      "content": "Starting from v0.9.0, migration is built into the `fnn` binary and runs automatically on startup when needed (with user confirmation). The standalone `fnn-migrate` binary, previously built from the [`migrate`](https://github.com/nervosnetwork/fiber/tree/main/migrate) directory, was deprecated and removed in v0.9.0. For databases created before v0.8.x (database version older than `20260302100001`), you must first upgrade using the v0.8.x `fnn-migrate` tool before starting the current `fnn` binary. See the [backup guide](/docs/operate/backup) for details.\n\n## Cryptography & On-Chain Scripts\n\n### fiber-sphinx",
       "url": "/docs/build/toolchain",
       "source": "docs/build/toolchain.mdx"
     },
     {
       "id": "chunk-293",
       "title": "Toolchain Overview",
-      "content": "[fiber-scripts](https://github.com/nervosnetwork/fiber-scripts) contains the CKB on-chain scripts that secure Fiber payment channels:\n- **Funding Lock**: Secures the multi-sig output that funds a channel\n- **Commitment Lock**: Enforces the revocation mechanism and dispute resolution\n\n## Decision Guide",
+      "content": "[fiber-sphinx](https://github.com/nervosnetwork/fiber-sphinx) is the cryptography library implementing Sphinx-based onion routing for Fiber's payment privacy. It handles the construction and peeling of onion packets used in multi-hop payments.\n\n### fiber-scripts\n\n[fiber-scripts](https://github.com/nervosnetwork/fiber-scripts) contains the CKB on-chain scripts that secure Fiber payment channels:\n- **Funding Lock**: Secures the multi-sig output that funds a channel\n- **Commitment Lock**: Enforces the revocation mechanism and dispute resolution\n\n## Decision Guide",
       "url": "/docs/build/toolchain",
       "source": "docs/build/toolchain.mdx"
     },
@@ -4385,14 +4385,14 @@
     {
       "id": "chunk-626",
       "title": "Run a Native Node",
-      "content": "```sh\ngit clone https://github.com/nervosnetwork/fiber.git\ncd fiber\ncargo build --release\n```\n\nThis document used the [v0.8.0 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.8.0) throughout the guide.\n\n<Callout type=\"info\" title=\"macOS Security\">\nIf you're using macOS, the downloaded binary may be blocked by Gatekeeper. To resolve this, remove the quarantine attribute:\n```sh\nxattr -d com.apple.quarantine fnn fnn-migrate fnn-cli\n```\n</Callout>\n\n### 2. Create Node Directory\n\nCreate a dedicated directory for your node and copy the necessary files:",
+      "content": "```sh\ngit clone https://github.com/nervosnetwork/fiber.git\ncd fiber\ncargo build --release\n```\n\nThis document used the [v0.8.0 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.8.0) throughout the guide.\n\n<Callout type=\"info\" title=\"macOS Security\">\nIf you're using macOS, the downloaded binary may be blocked by Gatekeeper. To resolve this, remove the quarantine attribute:\n```sh\nxattr -d com.apple.quarantine fnn fnn-cli\n```\n</Callout>\n\n### 2. Create Node Directory\n\nCreate a dedicated directory for your node and copy the necessary files:",
       "url": "/docs/quick-start/run-a-node/rust",
       "source": "docs/quick-start/run-a-node/rust.mdx"
     },
     {
       "id": "chunk-627",
       "title": "Run a Native Node",
-      "content": "```sh\nmkdir /folder-to/my-fnn\n# If using released binary, replace target/release/fnn with the path to your downloaded binary\ncp target/release/fnn /folder-to/my-fnn\n# Copy additional tools (v0.8.0+)\ncp target/release/fnn-migrate /folder-to/my-fnn\ncp target/release/fnn-cli /folder-to/my-fnn\ncp config/testnet/config.yml /folder-to/my-fnn\ncd /folder-to/my-fnn\n```\n\n### 3. Set Up Node Keys\n\nFNN includes built-in wallet functionality for signing funding transactions. You'll need to create or import a private key:\n\ncreate a new ckb account and get the `lock_arg` of the new account\n\n```sh\nckb-cli account new",
+      "content": "```sh\nmkdir /folder-to/my-fnn\n# If using released binary, replace target/release/fnn with the path to your downloaded binary\ncp target/release/fnn /folder-to/my-fnn\n# Copy additional tools (v0.8.0+)\ncp target/release/fnn-cli /folder-to/my-fnn\ncp config/testnet/config.yml /folder-to/my-fnn\ncd /folder-to/my-fnn\n```\n\n### 3. Set Up Node Keys\n\nFNN includes built-in wallet functionality for signing funding transactions. You'll need to create or import a private key:\n\ncreate a new ckb account and get the `lock_arg` of the new account\n\n```sh\nckb-cli account new",
       "url": "/docs/quick-start/run-a-node/rust",
       "source": "docs/quick-start/run-a-node/rust.mdx"
     },
@@ -4434,7 +4434,7 @@
     {
       "id": "chunk-633",
       "title": "Run a Native Node",
-      "content": "```sh\nrm -rf /folder-to/my-fnn/fiber/store\n```\n\n3. Replace the FNN binary and restart\n\n### Storage Migration (Optional)\n\nIf you want to preserve channel states during an upgrade:\n\n```sh\n# Back up first\ncp -r /folder-to/my-fnn/fiber/store /folder-to/my-fnn/fiber/store.backup\n\n# Run migration\n./fnn-migrate -d /folder-to/my-fnn\n```\n\n## Next Steps\n\n- [Basic Transfer](/docs/quick-start/basic-transfer) — send your first payment\n- [Config Reference](/docs/guide/node-operator/config-reference) — full configuration options",
+      "content": "```sh\nrm -rf /folder-to/my-fnn/fiber/store\n```\n\n3. Replace the FNN binary and restart\n\n### Storage Migration\n\nStarting from v0.9.0, storage migration is handled automatically by FNN on startup. When upgrading, simply start FNN normally and it will detect and apply any necessary migrations to preserve your channel state. No separate migration tool is needed.\n\n## Next Steps\n\n- [Basic Transfer](/docs/quick-start/basic-transfer) — send your first payment\n- [Config Reference](/docs/guide/node-operator/config-reference) — full configuration options",
       "url": "/docs/quick-start/run-a-node/rust",
       "source": "docs/quick-start/run-a-node/rust.mdx"
     },
@@ -8058,5 +8058,5 @@
       "source": "specs/trampoline-routing.md"
     }
   ],
-  "generatedAt": "2026-06-30T02:40:50.483Z"
+  "generatedAt": "2026-06-30T11:58:31.058Z"
 }
