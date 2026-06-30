@@ -14,6 +14,10 @@ Fiber Network Node (FNN) is the reference Rust implementation. fiber-js provides
 - [Basic Transfer Example](https://www.fiber.world/docs/quick-start/basic-transfer): Learn how to set up and execute transfers between two nodes
 - [Transfer Stablecoins](https://www.fiber.world/docs/quick-start/transfer-stablecoin): Learn how to transfer stablecoins between nodes
 
+## Guide / Build on Fiber
+
+- [JavaScript SDK](https://www.fiber.world/docs/build/sdk/js): TypeScript/JavaScript SDK for Fiber Network — channels, invoices, payments, and more
+
 ## Optional
 
 - [Fiber GitHub Repository](https://github.com/nervosnetwork/fiber): The main FNN source code
