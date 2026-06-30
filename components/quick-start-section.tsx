@@ -1,4 +1,7 @@
+"use client";
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface QuickStartCardProps {
   icon: React.ReactNode;
@@ -9,10 +12,19 @@ interface QuickStartCardProps {
 }
 
 function QuickStartCard({ icon, title, description, href, items }: QuickStartCardProps) {
+  const router = useRouter();
+
+  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('a')) return;
+    router.push(href);
+  };
+
   return (
-    <Link
-      href={href}
-      className="group block border border-invisible bg-layer-02 hover:bg-layer-03 hover-border-bright transition-all duration-200 p-lg flex flex-col gap-md"
+    <div
+      role="link"
+      tabIndex={0}
+      className="group block border border-invisible bg-layer-02 hover:bg-layer-03 hover-border-bright transition-all duration-200 p-lg flex flex-col gap-md cursor-pointer"
+      onClick={handleCardClick}
     >
       <div className="flex items-center gap-sm">
         <div className="text-secondary group-hover:text-primary transition-colors duration-200">
@@ -35,7 +47,7 @@ function QuickStartCard({ icon, title, description, href, items }: QuickStartCar
           </li>
         ))}
       </ul>
-    </Link>
+    </div>
   );
 }
 
