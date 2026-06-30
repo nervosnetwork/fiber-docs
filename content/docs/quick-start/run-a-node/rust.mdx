@@ -33,7 +33,7 @@ cd fiber
 cargo build --release
 ```
 
-This document used the [v0.8.0 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.8.0) throughout the guide.
+This document used the [v0.9.0-rc5 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0-rc5) throughout the guide.
 
 <Callout type="info" title="macOS Security">
 If you're using macOS, the downloaded binary may be blocked by Gatekeeper. To resolve this, remove the quarantine attribute:
@@ -50,7 +50,7 @@ Create a dedicated directory for your node and copy the necessary files:
 mkdir /folder-to/my-fnn
 # If using released binary, replace target/release/fnn with the path to your downloaded binary
 cp target/release/fnn /folder-to/my-fnn
-# Copy additional tools (v0.8.0+)
+# Copy additional tools (v0.9.0-rc5+)
 cp target/release/fnn-migrate /folder-to/my-fnn
 cp target/release/fnn-cli /folder-to/my-fnn
 cp config/testnet/config.yml /folder-to/my-fnn
@@ -100,7 +100,7 @@ FIBER_SECRET_KEY_PASSWORD='123' RUST_LOG=info ./fnn -c config.yml -d .
 
 Once your node is running, you can interact with it using the RPC interface or the CLI tool.
 
-### Using the CLI Tool (v0.8.0+)
+### Using the CLI Tool (v0.9.0-rc5+)
 
 v0.8.0 introduces `fnn-cli`, a command-line interface that provides a convenient way to manage your node without writing raw JSON-RPC requests:
 
