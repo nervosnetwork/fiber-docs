@@ -16,17 +16,17 @@ This page is the single source of truth for Fiber network resources. All public 
 
 ### Mainnet
 
-| Name | Pubkey | Auto-accept CKB |
-|------|--------|------------------|
-| fiber-mainnet-public-ca | `03a8d7da8d0934363dbc17f52c872e8d833016415266eabb3527439c5dd17adc6b` | ≥ 499 CKB |
-| fiber-mainnet-public-tokyo | `033a69e5be369dab43aefa96fa729d83c571ccb066f312136c6ab2d354fcc028f9` | ≥ 499 CKB |
+| Name | Pubkey | WSS Address | Auto-accept CKB |
+|------|--------|-------------|------------------|
+| fiber-mainnet-public-ca | `03a8d7da8d0934363dbc17f52c872e8d833016415266eabb3527439c5dd17adc6b` | `/dns4/ca.fiber.channel/tcp/443/wss/p2p/QmZCfzENZqWrWwifJj9BFDvxQWFyYw5GjdB4vN7Ynd4FxY` | ≥ 499 CKB |
+| fiber-mainnet-public-tokyo | `033a69e5be369dab43aefa96fa729d83c571ccb066f312136c6ab2d354fcc028f9` | `/dns4/tokyo.fiber.channel/tcp/443/wss/p2p/QmZ73KHvZ5GFxf6XhHZ3icPeKFo93rk86kZ8qauox3avJP` | ≥ 499 CKB |
 
 ### Testnet
 
-| Name | Pubkey | Auto-accept CKB | Auto-accept UDT |
-|------|--------|------------------|------------------|
-| fiber-testnet-public-bottle | `02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71` | ≥ 499 CKB | RUSD ≥ 20 |
-| fiber-testnet-public-bracer | `0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc` | ≥ 499 CKB | RUSD ≥ 20 |
+| Name | Pubkey | WSS Address | Auto-accept CKB | Auto-accept UDT |
+|------|--------|-------------|------------------|------------------|
+| fiber-testnet-public-bottle | `02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71` | `/dns4/bottle.fiber.channel/tcp/443/wss/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo` | ≥ 499 CKB | RUSD ≥ 20 |
+| fiber-testnet-public-bracer | `0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc` | `/dns4/bracer.fiber.channel/tcp/443/wss/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC4F3p89` | ≥ 499 CKB | RUSD ≥ 20 |
 
 <Callout type="info">
   Since v0.8.0, Fiber uses **pubkey** (hex-encoded secp256k1) for peer identification. Use `connect_peer` with the pubkey — the node will resolve the address automatically via gossip.
