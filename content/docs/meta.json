@@ -13,6 +13,7 @@
     "---Build---",
     "build/toolchain",
     "build/sdk",
+    "build/ffi",
     "build/simple-game",
     "---Node Operations---",
     "operate/config-reference",

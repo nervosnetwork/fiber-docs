@@ -1,7 +1,7 @@
 ---
 title: Toolchain Overview
 description: A complete map of the Fiber ecosystem — tools, libraries, and how they fit together
-date: 2026-06-17
+date: 2026-07-07
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -11,44 +11,42 @@ The Fiber ecosystem includes several tools and libraries that serve different ro
 ## Ecosystem Map
 
 ```text
-┌──────────────────────────────────────────────────────────────────────┐
-│ Application Layer                                                    │
-│   ┌──────────────────────────┐    ┌──────────────────────────┐       │
-│   │ Operators / backends     │    │ Wallets / dApps / games  │       │
-│   │ Services in any language │    │ Browser UI (JS/TS)       │       │
-│   └─────────────┬────────────┘    └─────────────┬────────────┘       │
-│                 │                               │                    │
-│                 ▼                               ▼                    │
-├──────────────────────────────────────────────────────────────────────┤
-│ Access / API Layer                                                   │
-│   ┌──────────────────────────┐    ┌──────────────────────────┐       │
-│   │ HTTP JSON-RPC / fnn-cli  │    │ @nervosnetwork/fiber-js  │       │
-│   │ Native node control      │    │ JS/TS API + workers      │       │
-│   └─────────────┬────────────┘    └─────────────┬────────────┘       │
-│                 │                               │                    │
-│                 │                               ▼                    │
-├──────────────────────────────────────────────────────────────────────┤
-│ Runtime Layer                                                        │
-│   ┌──────────────────────────┐    ┌──────────────────────────┐       │
-│   │ fnn native binary        │    │ fiber-wasm               │       │
-│   │ crates/fiber-bin         │    │ wasm-bindgen wrapper     │       │
-│   └─────────────┬────────────┘    │ crates/fiber-wasm        │       │
-│                 │                 └─────────────┬────────────┘       │
-│                 │                               │                    │
-│                 └───────────────┬───────────────┘                    │
-│                                 ▼                                    │
-├──────────────────────────────────────────────────────────────────────┤
-│ Shared Core Layer                                                    │
-│   ┌──────────────────────────────────────────────────────────────┐   │
-│   │ fiber-lib (package name: fnn)                                │   │
-│   │ Actors, RPC handlers, channels, graph, invoices, payments    │   │
-│   └──────────────────────────────┬───────────────────────────────┘   │
-│                                  ▼                                   │
-├──────────────────────────────────────────────────────────────────────┤
-│ Shared Supporting Crates / Assets                                    │
-│   fiber-store · fiber-types · fiber-json-types · fiber-sphinx         │
-│   fiber-scripts                                                      │
-└──────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│ Application Layer                                                                  │
+│  ┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────────────┐  │
+│  │ Operators / backends │  │ Wallets / dApps      │  │ Native mobile / desktop  │  │
+│  │ Services any lang    │  │ Browser UI (JS/TS)   │  │ Android / iOS / C/C++    │  │
+│  └──────────┬───────────┘  └──────────┬───────────┘  └────────────┬─────────────┘  │
+│             │                         │                           │                │
+│             ▼                         ▼                           ▼                │
+├────────────────────────────────────────────────────────────────────────────────────┤
+│ Access / API Layer                                                                 │
+│  ┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────────────┐  │
+│  │ HTTP RPC / fnn-cli   │  │ fiber-js API         │  │ fiber-ffi C ABI wrappers │  │
+│  │ Native node control  │  │ JS/TS API + workers  │  │ JNI / Swift / C binding  │  │
+│  └──────────┬───────────┘  └──────────┬───────────┘  └────────────┬─────────────┘  │
+│             │                         │                           │                │
+│             ▼                         ▼                           ▼                │
+├────────────────────────────────────────────────────────────────────────────────────┤
+│ Runtime Layer                                                                      │
+│  ┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────────────┐  │
+│  │ fnn native binary    │  │ fiber-wasm           │  │ fiber-ffi dynamic lib    │  │
+│  │ crates/fiber-bin     │  │ crates/fiber-wasm    │  │ exploratory C ABI        │  │
+│  └──────────┬───────────┘  └──────────┬───────────┘  └────────────┬─────────────┘  │
+│             │                         │                           │                │
+│             └─────────────────────────┼───────────────────────────┘                │
+│                                         ▼                                          │
+├────────────────────────────────────────────────────────────────────────────────────┤
+│ Shared Core Layer                                                                  │
+│  ┌──────────────────────────────────────────────────────────────────────────────┐  │
+│  │ fiber-lib (package name: fnn)                                                │  │
+│  │ Actors, RPC handlers, channels, graph, invoices, payments                    │  │
+│  └──────────────────────────────────────┬───────────────────────────────────────┘  │
+│                                         ▼                                          │
+├────────────────────────────────────────────────────────────────────────────────────┤
+│ Shared Supporting Crates / Assets                                                  │
+│  fiber-store · fiber-types · fiber-json-types · fiber-sphinx · fiber-scripts       │
+└────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Runtime Stacks
@@ -76,6 +74,21 @@ The browser stack has one more layer than the native stack: application code cal
 - You don't want to run a separate server
 - You are building a web game with micro-payments
 
+### fiber-ffi — Native Mobile / C ABI Node
+
+<Callout type="warning" title="About fiber-ffi">
+  `fiber-ffi` currently lives in a personal repository. It is an exploratory reference for Fiber native/mobile integration, not an official Fiber SDK, release artifact, or compatibility commitment.
+</Callout>
+
+[`fiber-ffi`](https://github.com/joii2020/fiber-ffi) wraps the shared Fiber node core as a C ABI exposed through a dynamic library and `fiber_ffi.h`. It lets Android apps, iOS apps, C/C++ programs, desktop apps, and other native host runtimes embed a Fiber node in-process while keeping platform-specific work in JNI bridges, Swift bridging headers, or host-language wrappers.
+
+The FFI path is different from `fiber-js`: it targets native app runtimes rather than browser runtimes, and the host app is responsible for dynamic library packaging, platform lifecycle, threading, string ownership, private-key handling, and app sandbox paths.
+
+**Choose fiber-ffi if**:
+- You are exploring a native Android or iOS app integration
+- You need a C ABI boundary for a non-JavaScript runtime
+- You want to prototype language bindings or SDK shape above the Fiber node core
+
 ## Access Layer
 
 ### HTTP RPC
@@ -93,9 +106,13 @@ See the [API Reference](/docs/api-reference) for details.
 
 The `@nervosnetwork/fiber-js` API is the browser-facing integration layer. It does not talk to a local HTTP server. Instead, it sends commands to its Fiber Web Worker, and that worker invokes the functions exported by `fiber-wasm`.
 
+### fiber-ffi C ABI
+
+The `fiber-ffi` C ABI is the native embedding boundary. Host applications call functions declared in `fiber_ffi.h`, receive status codes, returned data, and event callbacks, and wrap those C-level details in a platform runtime such as an Android JNI bridge, an iOS Swift runtime, or a C/C++ integration layer.
+
 ## Runtime-Specific Operations
 
-The native and WASM runtimes have different operational surfaces. Native `fnn` exposes HTTP RPC and CLI-based node-maintenance tooling. `fiber-js` embeds the WASM node in browser workers, uses IndexedDB-backed storage through the WASM database worker, and presents a JS/TS API to application code. Both paths share `fiber-lib` underneath, including the store version check used when each runtime opens its store.
+The native, WASM, and FFI runtimes have different operational surfaces. Native `fnn` exposes HTTP RPC and CLI-based node-maintenance tooling. `fiber-js` embeds the WASM node in browser workers, uses IndexedDB-backed storage through the WASM database worker, and presents a JS/TS API to application code. `fiber-ffi` exposes a C ABI through a dynamic library and leaves platform lifecycle, packaging, and host-language wrappers to the app. These paths share `fiber-lib` underneath, including the store version check used when each runtime opens its store.
 
 ### fnn-cli
 
@@ -103,7 +120,7 @@ The native and WASM runtimes have different operational surfaces. Native `fnn` e
 
 ### Storage Migration
 
-Storage version checking is part of the shared Fiber node startup path. Native `fnn` and `fiber-wasm` both call the store opening path from [`crates/fiber-lib`](https://github.com/nervosnetwork/fiber/tree/main/crates/fiber-lib), which initializes the version for a new store and refuses to open an incompatible or older store that needs migration.
+Storage version checking is part of the shared Fiber node startup path. Native `fnn`, `fiber-wasm`, and `fiber-ffi` all call the store opening path from [`crates/fiber-lib`](https://github.com/nervosnetwork/fiber/tree/main/crates/fiber-lib), which initializes the version for a new store and refuses to open an incompatible or older store that needs migration.
 
 Starting from v0.9.0, migration is built into the `fnn` binary and runs automatically on startup when needed (with user confirmation). The standalone `fnn-migrate` binary, previously built from the [`migrate`](https://github.com/nervosnetwork/fiber/tree/main/migrate) directory, was deprecated and removed in v0.9.0. For databases created before v0.8.x (database version older than `20260302100001`), you must first upgrade using the v0.8.x `fnn-migrate` tool before starting the current `fnn` binary. See the [backup guide](/docs/operate/backup) for details.
 
@@ -126,6 +143,9 @@ Starting from v0.9.0, migration is built into the `fnn` binary and runs automati
 | Run a production node | [fnn](/docs/quick-start/run-a-node) + [fnn-cli](#fnn-cli) |
 | Control a node from my backend | [HTTP RPC](/docs/api-reference) |
 | Build a browser wallet | [fiber-js](/docs/build/sdk/js) |
+| Embed Fiber in a non-JS native runtime | [fiber-ffi](/docs/build/ffi) |
+| Build a native Android app | [fiber-ffi Android guide](/docs/build/ffi/android-native-integration) |
+| Build a native iOS app | [fiber-ffi iOS guide](/docs/build/ffi/ios-native-integration) |
 | Add payments to my web game | [fiber-js](/docs/build/sdk/js) or [HTTP RPC](/docs/api-reference) |
 | Do cross-chain swaps (BTC ↔ CKB) | [fnn](/docs/quick-start/run-a-node) with the CCH service configured |
 | Understand the protocol | [Tech Explanation](/docs/res/light-paper) |

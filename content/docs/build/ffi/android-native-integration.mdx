@@ -1,0 +1,238 @@
+---
+title: Android Native Integration
+description: Integrate fiber-ffi into an Android app through JNI and the native C ABI
+date: 2026-07-07
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Fiber: Android Native Integration Guide
+
+<Callout type="warning" title="About fiber-ffi">
+  `fiber-ffi` currently lives in a personal repository. This page uses it as an exploratory reference for Android native integration, not as an official Fiber Android SDK or support commitment.
+</Callout>
+
+This document uses `fiber-ffi` as a reference example to explain how the existing Rust Fiber node can be integrated into an Android app through JNI and the native C ABI. The repository provides a runnable demo:
+
+[demos/android](https://github.com/joii2020/fiber-ffi/tree/master/demos/android)
+
+The demo covers starting and stopping a node, reading NodeInfo, receiving native events, connecting peers, creating and sending invoices, and listing, creating, and closing channels.
+
+## Quick Start
+
+First build the Android native library from the `fiber-ffi` repository root:
+
+```sh
+ANDROID_NDK_HOME=/path/to/android-ndk make build-android
+```
+
+The current [`Makefile`](https://github.com/joii2020/fiber-ffi/blob/master/Makefile) builds the following by default:
+
+```text
+target           = aarch64-linux-android
+Android ABI      = arm64-v8a
+min Android API  = 23
+features         = sqlite
+page size        = 16 KB max-page-size
+```
+
+After the build completes, only two files need to be synced:
+
+```text
+target/aarch64-linux-android/release/libfiber_ffi.so -> demos/android/app/src/main/jniLibs/arm64-v8a/libfiber_ffi.so
+include/fiber_ffi.h -> demos/android/app/src/main/cpp/include/fiber_ffi.h
+```
+
+Then build the demo:
+
+```sh
+cd demos/android
+./gradlew clean assembleDebug
+```
+
+You can also open [`demos/android`](https://github.com/joii2020/fiber-ffi/tree/master/demos/android) directly in Android Studio and run `app`. When building the demo from the command line, run `cd demos/android && ./gradlew clean assembleDebug`; on Windows, use `gradlew.bat clean assembleDebug`.
+
+## Integration Steps
+
+### Prepare Files
+
+An Android project needs the following files. The header file is available at [`include/fiber_ffi.h`](https://github.com/joii2020/fiber-ffi/blob/master/include/fiber_ffi.h):
+
+```text
+app/src/main/jniLibs/arm64-v8a/libfiber_ffi.so
+app/src/main/cpp/include/fiber_ffi.h
+app/src/main/assets/fiber_config.yml
+```
+
+`fiber_config.yml` must include both `fiber` and `ckb` services. The demo uses a testnet configuration, which can be referenced directly at [`demos/android/app/src/main/assets/fiber_config.yml`](https://github.com/joii2020/fiber-ffi/blob/master/demos/android/app/src/main/assets/fiber_config.yml).
+
+`chain` affects the invoice currency. The demo uses a `testnet` configuration, so when creating an invoice, the currency should be the testnet value `Fibt` (the FFI enum is `FIBER_INVOICE_CURRENCY_FIBT`). If the configuration is switched to mainnet or devnet, the currency must also be changed to `Fibb` or `Fibd`; otherwise `newInvoice` will be rejected by Fiber RPC. For the demo, fixing one network and its corresponding currency is enough. A production app should choose dynamically based on the current network.
+
+### JNI Bridge
+
+[`fiber_bridge.cpp`](https://github.com/joii2020/fiber-ffi/blob/master/demos/android/app/src/main/cpp/fiber_bridge.cpp) is the Android adapter layer: Java/Kotlin calls `FiberRuntime`, and the bridge calls the C ABI in `fiber_ffi.h`. The app side usually only uses `FiberRuntime`; it should not directly handle `FiberHandle *`, `Fiber*Options`, or `char **out_json`.
+
+A bridge is needed because `fiber-ffi` exports a C ABI, while Android business code is better expressed with ordinary Java types. The bridge converts `String`, `boolean`, amounts, and other parameters into the format required by C, holds a single `FiberHandle *`, and converts returned JSON or error text into Java strings. When adding new capabilities, prefer adding methods to `FiberRuntime` and reusing the conversion and error handling patterns in [`fiber_bridge.cpp`](https://github.com/joii2020/fiber-ffi/blob/master/demos/android/app/src/main/cpp/fiber_bridge.cpp).
+
+Pay special attention to memory boundaries:
+
+- `char *` values returned by FFI are allocated by `libfiber_ffi.so`; the bridge must copy them into Java `String` values and then call `fiber_string_free`.
+- Java string pointers obtained with `GetStringUTFChars` must be released with `ReleaseStringUTFChars` before the current JNI call ends.
+- `event_json` in event callbacks is only valid during the callback. Copy it immediately before entering Java.
+- `fiber_stop` consumes the handle. After Stop, the old handle must not be passed back to FFI.
+
+CMake must let `fiber_bridge` find the header file and link `fiber_ffi`. The demo's [`app/src/main/cpp/CMakeLists.txt`](https://github.com/joii2020/fiber-ffi/blob/master/demos/android/app/src/main/cpp/CMakeLists.txt) already handles this.
+
+### Load Native Libraries
+
+The Java/Kotlin layer must load `fiber_ffi` first, then `fiber_bridge`:
+
+```java
+System.loadLibrary("fiber_ffi");
+System.loadLibrary("fiber_bridge");
+```
+
+### Prepare Data Directories
+
+Before startup, copy the configuration from assets to a normal file path and prepare the data directory:
+
+```text
+config_path      = filesDir/fiber_config.yml
+database_prefix = filesDir/fiber-data
+```
+
+The CKB private key is stored at:
+
+```text
+filesDir/fiber-data/ckb/key
+```
+
+The demo writes this file through `SetCKBKey`: the Java layer normalizes the user-entered 32-byte hex private key and writes it to `ckb/key`, and the JNI layer sets `FIBER_SECRET_KEY_PASSWORD` before startup.
+
+Distinguish the "plaintext file at import time" from the "persistent file after Fiber starts." Fiber's default logic reads `FIBER_SECRET_KEY_PASSWORD` when loading the CKB private key. If it finds that `ckb/key` is still parseable plaintext hex, it encrypts it with this password and overwrites the file in place. Later it decrypts the file with the same password. Therefore, after the first `SetCKBKey` and before the first successful `Start`, `ckb/key` may briefly remain plaintext. After a successful start, the file should have been migrated to encrypted contents.
+
+If writing `ckb/key` manually, the contents should be a 32-byte hex string without the `0x` prefix. The demo automatically removes a `0x` prefix from user input. The plaintext migration logic in the Fiber source rejects key files with a `0x` prefix.
+
+A production app should use its own wallet or key management process, and must not use the fixed `FIBER_SECRET_KEY_PASSWORD` from the demo. This password and the encrypted `ckb/key` are both required to recover the ability to sign funds. If either one is lost, the CKB private key cannot be recovered from the encrypted file.
+
+### Start and Stop
+
+Start the node by calling:
+
+```java
+FiberRuntime.start(context)
+```
+
+After startup succeeds, you can continue with:
+
+```java
+FiberRuntime.nodeInfo()
+```
+
+Stop the node by calling:
+
+```java
+FiberRuntime.stop()
+```
+
+Do not start multiple nodes in the same process. For repeated Start calls, you can return already running directly. After Stop, clear the native handle. The old handle must not be used again.
+
+### Calling Features
+
+The current demo wraps the following Java methods:
+
+| Method | Purpose |
+| --- | --- |
+| `start(context)` | Start the node |
+| `stop()` | Stop the node |
+| `nodeInfo()` | Read node information |
+| `listPeers()` | List peers |
+| `connectPeer(...)` | Connect a peer |
+| `listChannels()` | List channels |
+| `createChannel(...)` | Create a channel |
+| `shutdownChannel(...)` | Close a channel |
+| `newInvoice(...)` | Create an invoice |
+| `sendPayment(...)` | Pay an invoice |
+
+Pay attention to amount units:
+
+- The demo's `createChannel(...)` accepts a decimal CKB string for display, such as `1.5`. The Java/JNI bridge converts it to shannons before filling the FFI `FiberU128`.
+- The demo's `newInvoice(...)` accepts an integer shannons string and does not accept decimal CKB.
+- Amount fields actually passed into FFI always use integer smallest units: CKB uses shannons, where 1 CKB = 100000000 shannons; UDT uses the integer smallest unit of that UDT.
+- If UDT channels or UDT invoices are added later, pass UDT parameters such as `funding_udt_type_script_json` / `udt_type_script_json`, and pass `amount` as the UDT's raw integer amount. Do not reuse the CKB `amount * 100000000` conversion.
+
+More APIs can be extended following the JNI Bridge template above.
+
+### Handling Events
+
+Pass the native event callback during startup. The Java layer listens like this:
+
+```java
+FiberRuntime.addNativeEventListener(eventJson -> {
+    // Parse eventJson, then refresh UI or local state.
+});
+```
+
+Event contents are JSON strings. Business code should parse the JSON first, then dispatch based on the `kind` field. Common `kind` values include:
+
+```text
+NetworkStarted
+NetworkStopped
+PeerConnected
+PeerDisConnected
+ChannelCreated
+ChannelReady
+ChannelClosed
+PreimageCreated
+```
+
+The list above is only a set of common event examples, not a complete enum. When consuming events, use the `kind` field in the callback JSON as the source of truth. If an event `kind` is not currently relevant or is added in the future, it can be logged and ignored.
+
+Do not update UI directly from the native callback thread. Switch to the main thread after receiving events.
+
+### Lifecycle
+
+Recommended handling:
+
+- Do not execute potentially blocking native calls directly on the UI thread.
+- Start, Stop, and calls on the same handle must be serialized.
+- Execute Stop when the user logs out, switches accounts, or explicitly closes the node.
+- When switching network, account, or data directory, call Stop first, then restart the app process.
+- Use different `database_prefix` values for different users, accounts, and networks.
+- The Android demo includes a minimal `FiberNodeService` foreground service to demonstrate letting a service help keep the process after the node starts. Background execution strategy, notification presentation, power consumption, and restrictions across system versions must be designed and verified by production app developers.
+
+The current document mentions the foreground service only as a demo reminder. It does not treat it as a complete persistent background node solution.
+
+### Build
+
+- The current demo packages only `arm64-v8a`, and [`app/build.gradle.kts`](https://github.com/joii2020/fiber-ffi/blob/master/demos/android/app/build.gradle.kts) also configures only this ABI. To support more ABIs, build the corresponding targets separately and put each `.so` into the corresponding directory.
+- Android builds currently enable only the `sqlite` feature. If you want to enable `watchtower`, change the feature to `sqlite,watchtower` and re-verify size, linking, and runtime behavior.
+- Some Android 15+ devices use a 16 KB page size. The current Rust `.so` and JNI bridge both add `-Wl,-z,max-page-size=16384`; do not remove it.
+
+## Demo Operations
+
+1. `SetCKBKey`: enter the CKB private key.
+2. `Start`: start the node.
+3. `NodeInfo`: read the node address and pubkey.
+4. `Peers`: view or connect peers.
+5. `Invoice`: create an invoice or pay an invoice.
+6. `Channels`: list, create, or close channels.
+7. `Stop`: stop the node.
+
+## Q&A
+
+### `System.loadLibrary("fiber_ffi")` fails
+
+Check whether `libfiber_ffi.so` is under `app/src/main/jniLibs/<ABI>/`, whether the device ABI is included in `abiFilters`, whether the Rust target matches the Android ABI, and whether the `.so` has been relinked for 16 KB page size.
+
+### Loading `fiber_bridge` fails
+
+Load `fiber_ffi` first, then `fiber_bridge`. Also check whether `IMPORTED_LOCATION` in CMake points to the `.so` for `${ANDROID_ABI}`, and whether `fiber_bridge` correctly links `fiber_ffi` and the Android `log` library.
+
+### Startup fails and says the configuration file is unreadable
+
+Do not pass the assets path directly to FFI. First copy `fiber_config.yml` from assets to `filesDir`, then pass the real file path.
+
+### Startup fails and says the CKB private key is not set
+
+The demo requires running `SetCKBKey` first. The key is a 32-byte hex string, with or without a `0x` prefix. The demo normalizes it and writes it to `filesDir/fiber-data/ckb/key`. During the first successful `Start`, Fiber uses `FIBER_SECRET_KEY_PASSWORD` to migrate this plaintext key into an encrypted file. Later starts must continue using the same password to decrypt it.

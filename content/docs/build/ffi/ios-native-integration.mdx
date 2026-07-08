@@ -1,0 +1,436 @@
+---
+title: iOS Native Integration
+description: Integrate fiber-ffi into an iOS app through Swift and an Objective-C bridging header
+date: 2026-07-07
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Fiber: iOS Native Integration Guide
+
+<Callout type="warning" title="About fiber-ffi">
+  `fiber-ffi` currently lives in a personal repository. This page uses it as an exploratory reference for iOS native integration, not as an official Fiber iOS SDK or support commitment.
+</Callout>
+
+This document uses `fiber-ffi` as a reference example to explain how the existing Rust Fiber node can be integrated into an iOS app through Swift and an Objective-C bridging header. The repository provides a runnable demo:
+
+[demos/ios](https://github.com/joii2020/fiber-ffi/tree/master/demos/ios)
+
+The demo covers starting and stopping a node, reading NodeInfo, receiving native events, connecting peers, creating and sending invoices, and listing, creating, and closing channels.
+
+iOS integration differs from Android integration. Android needs a JNI bridge, while iOS can use an Objective-C bridging header to let Swift directly access the C ABI exposed by `fiber_ffi.h`. What iOS really needs is a Swift runtime layer that manages the dynamic library, `FiberHandle *`, threading, string memory, app sandbox paths, and scene lifecycle.
+
+## Quick Start
+
+iOS builds must be performed in a macOS + Xcode environment. First build the iOS native library from the `fiber-ffi` repository root:
+
+```sh
+make build-ios build-ios-sim
+```
+
+The current [`Makefile`](https://github.com/joii2020/fiber-ffi/blob/master/Makefile) builds the following by default:
+
+```text
+device target        = aarch64-apple-ios
+simulator target     = aarch64-apple-ios-sim
+deployment target    = iOS 15.0
+features             = sqlite
+install name         = @rpath/libfiber_ffi.dylib
+```
+
+After the build completes, sync the two dynamic libraries into the demo:
+
+```text
+target/aarch64-apple-ios/release/libfiber_ffi.dylib -> demos/ios/FiberDemo/Libs/iphoneos/libfiber_ffi.dylib
+target/aarch64-apple-ios-sim/release/libfiber_ffi.dylib -> demos/ios/FiberDemo/Libs/iphonesimulator/libfiber_ffi.dylib
+```
+
+You can also use the demo's [`Makefile`](https://github.com/joii2020/fiber-ffi/blob/master/demos/ios/Makefile) to build and copy them:
+
+```sh
+make -C demos/ios build
+make -C demos/ios build-sim
+```
+
+Then open the Xcode project:
+
+[`demos/ios/FiberDemo.xcodeproj`](https://github.com/joii2020/fiber-ffi/tree/master/demos/ios/FiberDemo.xcodeproj)
+
+Select the `FiberDemo` target and run it. Running on a real device requires configuring the development team in the target signing settings, or passing it through the command line:
+
+```sh
+make -C demos/ios build DEVELOPMENT_TEAM=YOURTEAMID
+```
+
+If you need to specify your own bundle identifier:
+
+```sh
+make -C demos/ios build DEVELOPMENT_TEAM=YOURTEAMID PRODUCT_BUNDLE_IDENTIFIER=com.yourcompany.fiberdemo
+```
+
+## Integration Steps
+
+### Prepare Files
+
+An iOS project needs the following files. The header file is available at [`include/fiber_ffi.h`](https://github.com/joii2020/fiber-ffi/blob/master/include/fiber_ffi.h):
+
+```text
+include/fiber_ffi.h
+App/Libs/iphoneos/libfiber_ffi.dylib
+App/Libs/iphonesimulator/libfiber_ffi.dylib
+App/Resources/fiber_config.yml
+```
+
+The corresponding paths in the demo are:
+
+- [`demos/ios/FiberDemo/FiberDemo-Bridging-Header.h`](https://github.com/joii2020/fiber-ffi/blob/master/demos/ios/FiberDemo/FiberDemo-Bridging-Header.h)
+- `demos/ios/FiberDemo/Libs/iphoneos/libfiber_ffi.dylib`
+- `demos/ios/FiberDemo/Libs/iphonesimulator/libfiber_ffi.dylib`
+- [`demos/ios/FiberDemo/Resources/fiber_config.yml`](https://github.com/joii2020/fiber-ffi/blob/master/demos/ios/FiberDemo/Resources/fiber_config.yml)
+
+`fiber_config.yml` must include both `fiber` and `ckb` services. The demo uses a testnet configuration, which can be referenced directly at [`demos/ios/FiberDemo/Resources/fiber_config.yml`](https://github.com/joii2020/fiber-ffi/blob/master/demos/ios/FiberDemo/Resources/fiber_config.yml).
+
+`chain` affects the invoice currency. The demo uses a `testnet` configuration, so when creating an invoice, the currency should be the testnet value `Fibt` (the FFI enum is `FIBER_INVOICE_CURRENCY_FIBT`, and in Swift it is `FiberInvoiceCurrency(2)`). If the configuration is switched to mainnet or devnet, the currency must also be changed to `Fibb` or `Fibd`; otherwise `newInvoice` will be rejected by Fiber RPC. For the demo, fixing one network and its corresponding currency is enough. A production app should choose dynamically based on the current network.
+
+### Xcode Configuration
+
+An iOS project needs four pieces of configuration:
+
+1. Let Swift find the C header.
+2. Let the linker find the `libfiber_ffi.dylib` for the current platform.
+3. Copy the dylib into the app bundle.
+4. Code sign the dylib for real-device execution.
+
+The key settings in the demo target are:
+
+```text
+HEADER_SEARCH_PATHS      = $(PROJECT_DIR)/../../include
+LIBRARY_SEARCH_PATHS     = $(PROJECT_DIR)/FiberDemo/Libs/$(PLATFORM_NAME)
+OTHER_LDFLAGS            = -lfiber_ffi
+LD_RUNPATH_SEARCH_PATHS  = @executable_path/Frameworks
+SWIFT_OBJC_BRIDGING_HEADER = FiberDemo/FiberDemo-Bridging-Header.h
+```
+
+`$(PLATFORM_NAME)` expands to `iphoneos` or `iphonesimulator` during the Xcode build, so the same target can automatically link the dylib from the corresponding directory for the current SDK.
+
+The demo also adds an `Embed Fiber FFI dylib` build phase. It copies:
+
+```text
+FiberDemo/Libs/${PLATFORM_NAME}/libfiber_ffi.dylib
+```
+
+to:
+
+```text
+${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/libfiber_ffi.dylib
+```
+
+If a signing identity is available for the current build, the script also runs:
+
+```sh
+codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY}" --timestamp=none libfiber_ffi.dylib
+```
+
+iOS cannot freely load dynamic libraries from arbitrary external paths like desktop programs can. `libfiber_ffi.dylib` must be bundled with the app at build time and placed where it can be found through `@rpath` at runtime. The dylib inside a real-device app bundle must also be signed.
+
+The current demo directly embeds a loose dylib to validate the integration path. A production SDK can further package it as an `.xcframework`, dynamic framework, or Swift Package to reduce manual search path and embed script configuration for integrators.
+
+### Swift Bridging Header
+
+Swift imports the C ABI through a bridging header:
+
+```c
+#ifndef FIBER_DEMO_BRIDGING_HEADER_H
+#define FIBER_DEMO_BRIDGING_HEADER_H
+
+#include "fiber_ffi.h"
+
+#endif
+```
+
+After configuration, Swift can directly use symbols such as `FiberStartOptions`, `FiberFfiStatus`, `fiber_start`, `fiber_stop`, and `fiber_string_free`.
+
+Business code should not call these C functions in scattered places. It is recommended to wrap all FFI details in a Swift file as a `FiberRuntime` singleton, as the demo does.
+
+### Swift Runtime
+
+[`FiberRuntime.swift`](https://github.com/joii2020/fiber-ffi/blob/master/demos/ios/FiberDemo/FiberRuntime.swift) is the iOS adapter layer: the UI calls `FiberRuntime`, and the runtime calls the C ABI in `fiber_ffi.h`. The app side usually only uses `FiberRuntime`; view controllers should not directly store `FiberHandle *`, assemble `Fiber*Options`, or handle `char **out_json`.
+
+A runtime is needed because `fiber-ffi` exports a C ABI, while iOS business code is better expressed with Swift types and iOS lifecycle concepts. The runtime converts `String`, `Bool`, amounts, and other parameters into the format required by C, holds a single `FiberHandle *`, serializes calls on the same handle, and converts returned JSON or error text into Swift `String` values.
+
+Pay special attention to memory boundaries:
+
+- Strings passed from Swift to FFI can use `withCString`. The generated pointer only needs to remain valid during this FFI call.
+- Strings returned by FFI through `char **out_*` are allocated by `libfiber_ffi.dylib`; Swift must copy them into `String` and then call `fiber_string_free`.
+- `event_json` in event callbacks is only valid during the callback. Copy it immediately after entering Swift.
+- `fiber_stop` consumes the handle. After Stop, the old handle must not be passed back to FFI.
+
+The demo handles returned JSON as follows:
+
+```swift
+private func jsonResult(status: FiberFfiStatus, json: UnsafeMutablePointer<CChar>?, action: String) -> NativeResult {
+    if status == fiberStatusOk {
+        if let json {
+            let value = String(cString: json)
+            fiber_string_free(json)
+            return .ok(value)
+        }
+        return .ok("")
+    }
+    if let json {
+        fiber_string_free(json)
+    }
+    return .failed(resultMessage(action: action, status: status))
+}
+```
+
+After a failure, read the thread-local error message on the same thread immediately after the failed call:
+
+```swift
+private func lastErrorMessage() -> String {
+    let required = fiber_last_error_message(nil, 0)
+    if required == 0 {
+        return ""
+    }
+
+    var buffer = [CChar](repeating: 0, count: required + 1)
+    let written = fiber_last_error_message(&buffer, buffer.count)
+    if written == 0 {
+        return ""
+    }
+    return String(cString: buffer)
+}
+```
+
+### Prepare Data Directories
+
+Before startup, put the configuration file at a regular file path and prepare the data directory:
+
+```text
+config_path      = Documents/fiber_config.yml
+database_prefix = Documents/fiber-data
+```
+
+The demo packages `fiber_config.yml` as a bundle resource and copies it to Documents before startup:
+
+```swift
+let bundledConfig = Bundle.main.url(forResource: "fiber_config", withExtension: "yml")
+let destination = documentsURL().appendingPathComponent("fiber_config.yml")
+try fileManager.copyItem(at: bundledConfig, to: destination)
+```
+
+Copying the bundle resource into the sandbox has two benefits: it gives you a normal readable file path, and it lets you reuse the same flow later if configuration needs to be generated per user, network, or environment. A production app can also choose `Application Support` as the data root directory. The key point is that `config_path` must be a file path that the current process can read directly, not the YAML contents themselves.
+
+The CKB private key is stored at:
+
+```text
+Documents/fiber-data/ckb/key
+```
+
+The demo writes this file through `setCkbPrivateKey`: the Swift layer normalizes the user-entered 32-byte hex private key and writes it to `ckb/key`, then sets the following before startup:
+
+```swift
+setenv("FIBER_SECRET_KEY_PASSWORD", "fiber-demo-secret-key-password", 0)
+```
+
+Distinguish the "plaintext file at import time" from the "persistent file after Fiber starts." Fiber's default logic reads `FIBER_SECRET_KEY_PASSWORD` when loading the CKB private key. If it finds that `ckb/key` is still parseable plaintext hex, it encrypts it with this password and overwrites the file in place. Later it decrypts the file with the same password. Therefore, after the first `SetCKBKey` and before the first successful `Start`, `ckb/key` may briefly remain plaintext. After a successful start, the file should have been migrated to encrypted contents.
+
+If writing `ckb/key` manually, the contents should be a 32-byte hex string without the `0x` prefix. The demo automatically removes a `0x` prefix from user input. The plaintext migration logic in the Fiber source rejects key files with a `0x` prefix.
+
+This is only a demo scheme. A production app should use its own wallet, Keychain, Secure Enclave, or key management process, and must not use the fixed `FIBER_SECRET_KEY_PASSWORD` from the demo. This password and the encrypted `ckb/key` are both required to recover the ability to sign funds. If either one is lost, the CKB private key cannot be recovered from the encrypted file.
+
+### Start and Stop
+
+Assemble `FiberStartOptions` when starting the node:
+
+```swift
+var newHandle: OpaquePointer?
+let status = configURL.path.withCString { configPath in
+    dataURL.path.withCString { databasePrefix in
+        "info".withCString { logLevel in
+            var options = FiberStartOptions()
+            options.config_path = configPath
+            options.database_prefix = databasePrefix
+            options.log_level = logLevel
+            options.event_callback = fiberEventCallback
+            options.event_callback_user_data = nil
+            return fiber_start(&options, &newHandle)
+        }
+    }
+}
+```
+
+After successful startup, save the handle:
+
+```swift
+handle = newHandle
+runningFlag = true
+```
+
+When stopping the node, call:
+
+```swift
+let currentHandle = handle
+handle = nil
+runningFlag = false
+let status = fiber_stop(currentHandle)
+```
+
+Do not start multiple nodes in the same process. For repeated Start calls, you can return already running directly. Before Stop, clear the handle in the Swift runtime first, so callbacks or concurrent calls cannot get the old pointer again. After Stop, the old handle must not be used.
+
+### Calling Features
+
+The current demo wraps the following Swift methods:
+
+| Method | Purpose |
+| --- | --- |
+| `start()` | Start the node |
+| `stop()` | Stop the node |
+| `nodeInfo()` | Read node information |
+| `listPeers()` | List peers |
+| `connectPeer(...)` | Connect a peer |
+| `listChannels()` | List channels |
+| `createChannel(...)` | Create a channel |
+| `shutdownChannel(...)` | Close a channel |
+| `newInvoice(...)` | Create an invoice |
+| `sendPayment(...)` | Pay an invoice |
+
+Pay attention to amount units:
+
+- The demo's `createChannel(...)` accepts a decimal CKB string for display, such as `1.5`. The Swift runtime converts it to shannons before filling the FFI `FiberU128`.
+- The demo's `newInvoice(...)` accepts an integer shannons string and does not accept decimal CKB.
+- Amount fields actually passed into FFI always use integer smallest units: CKB uses shannons, where 1 CKB = 100000000 shannons; UDT uses the integer smallest unit of that UDT.
+- If UDT channels or UDT invoices are added later, pass UDT parameters such as `funding_udt_type_script_json` / `udt_type_script_json`, and pass `amount` as the UDT's raw integer amount. Do not reuse the CKB `amount * 100000000` conversion.
+
+Swift has no built-in `UInt128`. The demo uses a small `UInt128Value` struct to store `low` and `high`, and finally converts it to the FFI type:
+
+```swift
+FiberU128(low: low, high: high)
+```
+
+When adding new capabilities, prefer adding methods to `FiberRuntime` and reusing the existing `withHandle`, `withOptionalCString`, `jsonResult`, amount parsing, and error handling patterns.
+
+### Handling Events
+
+Pass the native event callback during startup:
+
+```swift
+private let fiberEventCallback: fiber_event_callback = { eventJson, _ in
+    guard let eventJson else {
+        return
+    }
+    FiberRuntime.shared.emitNativeEvent(String(cString: eventJson))
+}
+```
+
+The UI layer listens for events:
+
+```swift
+runtime.setEventHandler { [weak self] eventJson in
+    DispatchQueue.main.async {
+        self?.appendLog("event: \(eventJson)")
+    }
+}
+```
+
+Event contents are JSON strings. Business code should parse the JSON first, then dispatch based on the `kind` field. Common `kind` values include:
+
+```text
+NetworkStarted
+NetworkStopped
+PeerConnected
+PeerDisConnected
+ChannelCreated
+ChannelReady
+ChannelClosed
+PreimageCreated
+```
+
+The list above is only a set of common event examples, not a complete enum. When consuming events, use the `kind` field in the callback JSON as the source of truth. If an event `kind` is not currently relevant or is added in the future, it can be logged and ignored.
+
+Do not update UI directly from the native callback thread. Switch to the main thread after receiving events. Also avoid long-running work or direct reverse calls into other FFI APIs inside the callback.
+
+### Lifecycle
+
+The iOS demo only performs minimal lifecycle cleanup: when a scene disconnects or the app terminates, it calls the same stop helper:
+
+```swift
+FiberRuntime.shared.stopIfRunning()
+```
+
+Recommended handling:
+
+- Do not execute potentially blocking FFI calls directly on the UI main thread.
+- Start, Stop, and calls on the same handle must be serialized.
+- Execute Stop when the user logs out, switches accounts, or explicitly closes the node.
+- When switching network, account, or data directory, call Stop first, then restart the app process.
+- Use different `database_prefix` values for different users, accounts, and networks.
+- Background execution, disconnection recovery, push, wallet-hosted nodes, or server-assisted designs must be designed by production app developers according to product shape and iOS background capabilities. The demo does not attempt to implement a persistent background node.
+
+A normal iOS app has limited execution time after entering the background. Long-lived P2P connections, channel negotiation, and on-chain monitoring may all be suspended by the system. The current demo is meant to validate the in-process embedding path while the app is active. It is not equivalent to a complete persistent background node.
+
+## Build
+
+- The current demo prepares one dylib for `iphoneos` and one for `iphonesimulator`. Real devices use `aarch64-apple-ios`, and Apple Silicon simulators use `aarch64-apple-ios-sim`.
+- The demo's simulator build fixes `ARCHS=arm64`, so it needs the arm64 simulator dylib generated by `make build-ios-sim`.
+- iOS builds currently enable only the `sqlite` feature to avoid making RocksDB a default mobile storage dependency.
+- `IOS_DEPLOYMENT_TARGET` defaults to `15.0`. If the Xcode target deployment target is changed to another version, pass the same value when building the Rust dylib.
+- `IOS_RUSTFLAGS` sets `-Wl,-install_name,@rpath/libfiber_ffi.dylib`. Do not change it to an absolute path, or the app may fail to find the embedded dylib at runtime.
+- The dylib in a real-device app bundle must be signed. The demo embed script re-signs the dylib with the current target's signing identity.
+
+Example for changing the deployment target:
+
+```sh
+make -C demos/ios build IOS_DEPLOYMENT_TARGET=16.0
+make -C demos/ios build-sim IOS_DEPLOYMENT_TARGET=16.0
+```
+
+## Demo Operations
+
+1. `SetCKBKey`: enter the CKB private key.
+2. `Start`: start the node.
+3. `NodeInfo`: read the node address and pubkey.
+4. `Peers`: view or connect peers.
+5. `Invoice`: create an invoice or pay an invoice.
+6. `Channels`: list, create, or close channels.
+7. `Stop`: stop the node.
+
+## Q&A
+
+### `Library not loaded: @rpath/libfiber_ffi.dylib`
+
+Check whether `libfiber_ffi.dylib` is under `FiberDemo/Libs/<PLATFORM_NAME>/`, whether the target links `-lfiber_ffi`, whether `LD_RUNPATH_SEARCH_PATHS` contains `@executable_path/Frameworks`, and whether the embed script has copied the dylib into the app bundle's `Frameworks` directory.
+
+### Real-device startup fails with a dylib signing error
+
+Check the development team, bundle identifier, and signing identity. `libfiber_ffi.dylib` inside the real-device app bundle must be signed together with the app. The demo embed script re-signs the dylib when `EXPANDED_CODE_SIGN_IDENTITY` exists.
+
+### Simulator link fails or runtime reports an architecture mismatch
+
+Confirm that the current simulator is arm64 and that you are using:
+
+```text
+target/aarch64-apple-ios-sim/release/libfiber_ffi.dylib
+```
+
+Do not put the real-device `aarch64-apple-ios` dylib into the `iphonesimulator` directory.
+
+### Swift cannot find `fiber_start` or `FiberStartOptions`
+
+Check whether `SWIFT_OBJC_BRIDGING_HEADER` points to the correct bridging header, whether `HEADER_SEARCH_PATHS` includes the directory containing [`include/fiber_ffi.h`](https://github.com/joii2020/fiber-ffi/blob/master/include/fiber_ffi.h), and whether the bridging header contains:
+
+```c
+#include "fiber_ffi.h"
+```
+
+### Startup fails and says the configuration file is unreadable
+
+Do not pass only YAML contents. `fiber_start` requires `config_path` to be a real file path. The demo copies `fiber_config.yml` from the bundle into Documents before passing it in.
+
+### Startup fails and says the CKB private key is not set
+
+The demo requires running `SetCKBKey` first. The key is a 32-byte hex string, with or without a `0x` prefix. The demo normalizes it and writes it to `Documents/fiber-data/ckb/key`. During the first successful `Start`, Fiber uses `FIBER_SECRET_KEY_PASSWORD` to migrate this plaintext key into an encrypted file. Later starts must continue using the same password to decrypt it.
+
+### Can the node stay online after the app enters the background?
+
+The current demo does not guarantee persistent background execution. A normal iOS app is suspended by the system after entering the background, so P2P connections and event processing may pause. If background capabilities are needed, first clarify the product scenario, then evaluate Background Modes, push, wallet-hosted nodes, or server-assisted designs.

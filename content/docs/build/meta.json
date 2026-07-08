@@ -4,6 +4,7 @@
     "toolchain",
     "api-reference",
     "sdk",
+    "ffi",
     "simple-game"
   ]
 }
