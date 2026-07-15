@@ -255,11 +255,11 @@ export const showcaseProjects: ShowcaseProject[] = [
     id: "fiber-studio",
     title: "Fiber Studio",
     description:
-      "Desktop UI that wraps the official FNN binary, letting users run a Nervos CKB payment-channel node without touching the terminal.",
+      "Native desktop app for Fiber Network on Nervos CKB — run a local node, manage channels, and send or receive payments without the terminal.",
     githubUrl: "https://github.com/chukwuma619/fiber-studio",
-    demoUrl: "https://fiber-desktop.vercel.app/",
+    demoUrl: "https://getfiberstudio.com",
     category: "Dev Tools",
-    tags: ["Node Setup", "Dashboard UI"],
+    tags: ["Desktop App", "Node Setup", "Payments"],
     language: "TypeScript",
   },
   {
