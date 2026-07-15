@@ -46,6 +46,22 @@ Use the native node when you need full control, persistent storage, and the abil
 
 → [Run a Native Node](/docs/quick-start/run-a-node/rust)
 
+### Deploy the Native Node with Docker
+
+If you prefer not to install the Rust toolchain or compile from source, you can deploy the same native `fnn` binary using the official Docker image. A single `docker run` command gives you a fully functional native node — it mounts a local data directory for configuration, keys, and channel state, and exposes the P2P and RPC ports just like a locally built binary.
+
+| Aspect | Details |
+|--------|--------|
+| **Runtime** | Docker container (Linux, macOS, Windows) |
+| **Best for** | Quick native node deployment without build tools, CI/CD pipelines |
+| **Storage** | Mounted local volume (RocksDB/SQLite) |
+| **Network exposure** | Public IP recommended for routing; private nodes can connect through public relay nodes |
+| **Interaction** | `docker exec fnn-cli` or raw JSON-RPC |
+
+Use Docker when you want a fast, reproducible native node deployment without installing build dependencies — ideal for server setups and automated environments.
+
+→ [Run a Native Node (Docker)](/docs/quick-start/run-a-node/docker)
+
 ### WASM Node (`fiber-js`)
 
 `fiber-js` compiles the same node logic to WebAssembly so it can run inside a browser or a `Node.js` process. It stores data in IndexedDB (via a WASM worker) and is designed for client-side applications that do not want to operate a backend server.
@@ -120,7 +136,7 @@ Testnet is the recommended place to start. Once you are comfortable with channel
 
 At a minimum, you need a **CKB private key**. You can generate one with [`ckb-cli`](https://github.com/nervosnetwork/ckb-cli) or export it from a CKB wallet.
 
-The detailed prerequisites — CKB RPC endpoints, `config.yml`, how much CKB to reserve, and whether a one-way channel lets the other side join without depositing CKB — are covered in the native and WASM guides linked below.
+The detailed prerequisites — CKB RPC endpoints, `config.yml`, how much CKB to reserve, and whether a one-way channel lets the other side join without depositing CKB — are covered in the native ([build from source](/docs/quick-start/run-a-node/rust) or [Docker](/docs/quick-start/run-a-node/docker)) and [WASM](/docs/quick-start/run-a-node/fiberjs) guides.
 
 <Callout type="warning">
 Keep your node data directory, especially `fiber/store` and the `ckb/key` file, backed up and secure. Losing channel state can mean losing funds.
@@ -130,8 +146,8 @@ Keep your node data directory, especially `fiber/store` and the `ckb/key` file, 
 
 | I want to... | Recommended node |
 |--------------|------------------|
-| Run a routing node and earn fees | [Native Node](/docs/quick-start/run-a-node/rust) |
-| Build a server-side payment service | [Native Node](/docs/quick-start/run-a-node/rust) |
+| Run a routing node and earn fees | [Native Node](/docs/quick-start/run-a-node/rust) ([or via Docker](/docs/quick-start/run-a-node/docker)) |
+| Build a server-side payment service | [Native Node](/docs/quick-start/run-a-node/rust) ([or via Docker](/docs/quick-start/run-a-node/docker)) |
 | Add Fiber to a browser wallet or web game | [WASM Node](/docs/quick-start/run-a-node/fiberjs) |
 | Try Fiber without hosting infrastructure | [WASM Node](/docs/quick-start/run-a-node/fiberjs) or Native Node behind public relays |
 | Learn the protocol locally | [Native Node on Testnet](/docs/quick-start/run-a-node/rust) |
