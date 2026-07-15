@@ -1,0 +1,202 @@
+---
+title: "Run a Native Node (Docker)"
+description: "Deploy the native Fiber Network Node using Docker"
+date: 2026-07-15
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+## TL;DR
+
+Pull the image, mount a data directory with your CKB private key, and start the container. In under a minute you'll have a Fiber node running on Testnet — no Rust toolchain required.
+
+```bash
+docker run --rm -d \
+  --name fiber-node \
+  -e FIBER_SECRET_KEY_PASSWORD='YOUR_PASSWORD' \
+  -v "$(pwd)/fiber-node:/fiber" \
+  -p 8228:8228 \
+  nervos/fiber:0.9.0-rc7
+```
+
+## Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) (v20.10 or newer) installed and running
+- A CKB private key (generate one with [`ckb-cli`](https://github.com/nervosnetwork/ckb-cli) or export from an existing wallet)
+- Basic understanding of command line operations
+
+## Running Your Node
+
+### 1. Pull the Docker Image
+
+The Fiber image is published to two registries:
+
+| Registry | Image | |
+|----------|-------|-|
+| Docker Hub | `nervos/fiber:<release-tag>` | Default, widely used |
+| GitHub Container Registry | `ghcr.io/nervosnetwork/fiber:<release-tag>` | Alternative if Docker Hub is unavailable |
+
+```bash
+# From Docker Hub
+docker pull nervos/fiber:0.9.0-rc7
+
+# Or from GHCR
+docker pull ghcr.io/nervosnetwork/fiber:0.9.0-rc7
+```
+
+Check [Docker Hub](https://hub.docker.com/r/nervos/fiber/tags) or [GHCR](https://github.com/nervosnetwork/fiber/pkgs/container/fiber) for available tags. For production, pin a specific version tag (e.g. `0.9.0-rc7`) to avoid unexpected upgrades.
+
+### 2. Prepare the Data Directory
+
+Create a local directory to hold the node's configuration, database, and key material:
+
+```bash
+mkdir -p ./fiber-node/ckb
+```
+
+Place your CKB private key at `./fiber-node/ckb/key`. If you already have a key exported by `ckb-cli`, copy the first line of the extended privkey file:
+
+```bash
+head -n 1 ./ckb/exported-key > ./fiber-node/ckb/key
+```
+
+<Callout type="info" title="Private Key Format">
+The key file must contain a **raw 64-character hex string WITHOUT the `0x` prefix**. If you are using a key exported by `ckb-cli`, make sure to remove the `0x` prefix before saving it to `./fiber-node/ckb/key`.
+</Callout>
+
+<Callout type="info" title="First-Run Behavior">
+If no `config.yml` exists in the data directory on first start, the container automatically copies the bundled Testnet configuration template. You can then edit `./fiber-node/config.yml` and restart the container to apply changes.
+</Callout>
+
+### 3. Run the Container
+
+Start the node with the following command:
+
+```bash
+mkdir -p ./fiber-node/ckb
+# Place your CKB private key in ./fiber-node/ckb/key
+
+docker run --rm -it \
+  --name fiber-node \
+  -e FIBER_SECRET_KEY_PASSWORD='YOUR_PASSWORD' \
+  -e RUST_LOG='info' \
+  -v "$(pwd)/fiber-node:/fiber" \
+  -p 8228:8228 \
+  nervos/fiber:0.9.0-rc7
+```
+
+| Port | Purpose | Exposure |
+|------|---------|----------|
+| `8228` | P2P networking | Mapped to the host; must be reachable for public nodes |
+| `8227` | JSON-RPC | Listens on `127.0.0.1` inside the container by default (not mapped) |
+
+> **Expected Output:** You should see log lines indicating the node is starting, connecting to bootnodes, and syncing with the Testnet. Press `Ctrl+C` to stop the node (add `-d` instead of `-it` to run in detached mode).
+
+<Callout type="info" title="Key Auto-Encryption on First Run">
+On first run, the node will automatically encrypt the plaintext key file using the password provided via `FIBER_SECRET_KEY_PASSWORD`. After this, the `ckb/key` file will be in encrypted binary format. This is normal and expected behavior.
+</Callout>
+
+### 4. Environment Variables
+
+The container reads its configuration through the following environment variables:
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `FIBER_SECRET_KEY_PASSWORD` | Password to encrypt/decrypt the CKB private key | Yes |
+| `RUST_LOG` | Log level (e.g. `info`, `debug`) | No |
+| `FIBER_CONFIG_TEMPLATE` | Path to config template inside container | No |
+| `FIBER_CONFIG` | Path to custom config file | No |
+| `FIBER_HOME` | Base directory (default: `/fiber`) | No |
+
+### 5. Use Mainnet Configuration
+
+By default the container starts on Testnet. To run on Mainnet, point `FIBER_CONFIG_TEMPLATE` to the bundled mainnet template:
+
+```bash
+docker run --rm -it \
+  --name fiber-node \
+  -e FIBER_SECRET_KEY_PASSWORD='YOUR_PASSWORD' \
+  -e FIBER_CONFIG_TEMPLATE='/usr/local/share/fiber/config/mainnet/config.yml' \
+  -v "$(pwd)/fiber-node:/fiber" \
+  -p 8228:8228 \
+  nervos/fiber:0.9.0-rc7
+```
+
+<Callout type="info">
+On first run with the mainnet template, a `config.yml` is generated from the template in the data directory. Review and adjust the CKB RPC endpoint and other settings before funding channels with real value.
+</Callout>
+
+### 6. Interact with the Node
+
+Use `docker exec` to run `fnn-cli` commands inside the running container:
+
+```bash
+# Check node info
+docker exec -it fiber-node fnn-cli info
+
+# List channels
+docker exec -it fiber-node fnn-cli channel list_channels
+
+# Interactive mode
+docker exec -it fiber-node fnn-cli
+```
+
+### 7. Expose RPC (Advanced)
+
+By default the RPC endpoint listens on `127.0.0.1:8227` inside the container and is not mapped to the host. If you need external access, edit `config.yml` in your data directory to set `rpc.listening_addr` to `0.0.0.0:8227`, then map the port when starting the container:
+
+```bash
+docker run --rm -it \
+  --name fiber-node \
+  -e FIBER_SECRET_KEY_PASSWORD='YOUR_PASSWORD' \
+  -v "$(pwd)/fiber-node:/fiber" \
+  -p 8228:8228 \
+  -p 8227:8227 \
+  nervos/fiber:0.9.0-rc7
+```
+
+Once the RPC port is mapped, you can call the JSON-RPC interface directly from the host:
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"node_info"}' \
+  http://127.0.0.1:8227/
+```
+
+<Callout type="warning" title="Security Risk">
+Exposing the RPC port to the public internet allows anyone to control your node — including opening channels, sending payments, and accessing your keys. Only map port `8227` on a trusted network, or protect it with a reverse proxy that adds authentication and TLS.
+</Callout>
+
+### 8. Build the Image Locally
+
+If you want to build from source — for example to test an unreleased branch — clone the repository and build the image:
+
+```bash
+git clone https://github.com/nervosnetwork/fiber.git
+cd fiber
+docker build -f docker/Dockerfile -t fiber:local .
+```
+
+Then run the locally built image using `fiber:local` instead of `nervos/fiber:0.9.0-rc7`.
+
+### 9. Data Migration
+
+When upgrading from older versions that require explicit storage migration, run the migration tool against your data directory:
+
+```bash
+docker run --rm -it \
+  -v "$(pwd)/fiber-node:/fiber" \
+  nervos/fiber:<0.8.x-release-tag> \
+  fnn-migrate -d /fiber
+```
+
+Replace `<0.8.x-release-tag>` with the exact version you are upgrading from (no `v` prefix, e.g. `0.8.0`). After migration completes, start the node with the new image as usual.
+
+<Callout type="info">
+Starting from 0.9.0-rc1, storage migration is handled automatically by FNN on startup. No separate migration step is needed when upgrading between 0.9.x releases.
+</Callout>
+
+## Next Steps
+
+- [Basic Transfer](/docs/quick-start/basic-transfer) — send your first payment
+- [Config Reference](/docs/guide/node-operator/config-reference) — full configuration options
