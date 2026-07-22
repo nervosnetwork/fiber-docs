@@ -10,6 +10,37 @@ import { Callout } from 'fumadocs-ui/components/callout';
 
 Use `@nervosnetwork/fiber-js` to run a Fiber node inside a browser app. Install the package, serve a Fiber YAML config, create a `Fiber` instance on a cross-origin isolated page, and call `start()`; application code should not depend on the internal `fiber-wasm` package directly.
 
+<div className="not-prose my-8 rounded-2xl border border-fd-border bg-fd-card p-6">
+  <p className="mb-2 text-sm font-medium uppercase tracking-widest text-fd-muted-foreground">Interactive Quick Start</p>
+  <h2 className="mb-3 text-2xl font-semibold">Run a real Fiber node in this browser</h2>
+  <p className="mb-6 max-w-2xl text-fd-muted-foreground">Start Fiber WASM, complete a real WSS peer handshake, derive this browser's Testnet CKB address, open a channel, and send a keysend payment. The lab is isolated from the docs page because Fiber WASM requires SharedArrayBuffer.</p>
+  <a className="inline-flex rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-neutral-200" href="/labs/browser-node">Open Browser Node Lab →</a>
+</div>
+
+## Try It Before You Integrate It
+
+The lab runs the node locally in your browser; it is not a UI that remotely controls a hosted Fiber node. Browsers cannot open raw TCP sockets, so the WASM node connects outbound to a native public node through WSS:
+
+```text
+Your browser                      Fiber Testnet
+┌──────────────────────┐          ┌──────────────────────────┐
+│ Fiber WASM node      │   WSS    │ Public native node       │
+│ IndexedDB state      │ ───────► │ Payment channel peer     │
+│ Browser-local key    │          │ Fiber network            │
+└──────────────────────┘          └──────────────────────────┘
+```
+
+The interactive flow uses `fiber-testnet-public-bottle` from [Network Resources](/docs/quick-start/network-resources). It verifies each stage with live SDK state:
+
+1. Start the WASM node and wait until `listPeers()` confirms the WSS handshake.
+2. Display the browser node's CKB address and query its Testnet balance.
+3. Fund that address and open a real Testnet channel with the public node.
+4. Enter an amount and send an invoice-free keysend payment after the channel reaches `Ready`.
+
+<Callout type="warning" title="Testnet identity and funding">
+The lab stores one Testnet identity in the current browser so the funding address survives refreshes. Different browser profiles receive different addresses, and clearing site data creates a new one. Do not send Mainnet funds to the lab address. The public node's current channel threshold is listed in [Network Resources](/docs/quick-start/network-resources), and additional CKB is required for transaction fees.
+</Callout>
+
 ## What is fiber-js?
 
 `fiber-js` is a JavaScript/TypeScript wrapper around the Fiber WebAssembly (WASM) node. It runs in browser-based applications and provides common Fiber node operations without running a separate backend service.
@@ -186,6 +217,7 @@ For the full API reference see [Build -> js](/docs/build/sdk/js).
 
 ## Next Steps
 
+- [Open Browser Node Lab](/labs/browser-node) — run the complete browser flow
 - [Basic Transfer](/docs/quick-start/basic-transfer) — learn the channel and payment flow
 - [JavaScript Overview](/docs/build/sdk/js) — browser runtime, security headers, and API details
 - [Build a Game with Fiber](/docs/build/simple-game) — end-to-end example with Fiber payments

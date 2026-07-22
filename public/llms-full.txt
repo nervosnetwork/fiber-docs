@@ -144,6 +144,8 @@ Source: https://www.fiber.world/docs/quick-start/basic-transfer
 
 Set up two local nodes, open a channel between them, and send a CKB payment from one to the other. The whole process takes about 10 minutes.
 
+This page is the native, two-terminal workflow. To start a WASM node directly in your browser and connect it to a public node over WSS, see Run a WASM Node.
+
 ## Overview
 
 This guide walks you through setting up and executing a basic token (CKB) transfer between two nodes on the Fiber Testnet.
@@ -203,6 +205,8 @@ View complete config.yml example
 ### 1. Start Both Nodes
 
 [sh code block]
+
+Keep both terminal processes running while you complete the remaining steps.
 
 ### 2. Connect the Nodes
 
