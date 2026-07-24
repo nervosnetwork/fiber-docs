@@ -15,7 +15,7 @@ import FeaturedProjects from '@/components/featured-projects';
 import StackedCards from '@/components/stacked-cards';
 import Section from '@/components/section';
 import Divider from '@/components/divider';
-import QuickStartSection from '@/components/quick-start-section';
+// import QuickStartSection from '@/components/quick-start-section';
 
 export default function HomePage() {
   const [isMobile, setIsMobile] = useState(false);
@@ -42,7 +42,7 @@ export default function HomePage() {
         <HeroTitle />
         <NetworkStats />
         <HowItWorks />
-        <QuickStartSection />
+        {/* <QuickStartSection /> */}
         {/* <LiveSimulation /> */}
         <NetworkComparison />
         <RocketAnimationSection />
