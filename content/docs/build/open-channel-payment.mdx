@@ -1,0 +1,192 @@
+---
+title: "Tutorial: Open a Fiber Channel and Send a Payment"
+description: "Fund a Fiber WASM browser node, open a real Testnet channel, and send a CKB keysend payment from React"
+date: 2026-07-27
+full: true
+---
+
+## Overview
+
+This tutorial continues from
+[Connect to Fiber with a WASM Node](/docs/build/connect-wasm-node). You will
+reuse the same browser-local Testnet identity, fund its CKB address, open a
+channel to a public Fiber peer, and send a keysend payment.
+
+Starting and connecting the node do not move funds. Opening a channel submits
+a real CKB Testnet transaction, and sending a payment changes the channel
+balance. Both actions require separate, explicit button clicks in the
+interactive preview.
+
+## Before you begin
+
+The React page needs the same Fiber WASM setup as the first tutorial:
+
+- `@fiber-pay/sdk` installed
+- COOP and COEP response headers on the node route
+- A persistent browser identity
+- A running Fiber browser node
+- An explicit WSS connection to the selected public Testnet peer
+
+If the page is reached through client-side documentation navigation, it
+automatically reloads once so the browser can apply this route's COOP and COEP
+headers before Fiber WASM starts.
+
+The code panel includes `lib/fiber.ts` so this tutorial is complete on its own.
+That file deliberately keeps startup and connection separate: `startFiber()`
+starts the local WASM runtime with an empty bootnode list, while
+`connectToRouter()` makes the public WSS connection only after the user clicks
+Connect. It uses the same `fiber-docs:wasm-quickstart-profile-v1` storage key as
+the first tutorial, so both pages restore the same browser identity.
+
+The public Testnet node used here auto-accepts CKB channels funded with at least
+499 CKB. Keep additional Testnet CKB available for the funding transaction
+fee. Each side also reserves 99 CKB for the channel contracts and shutdown.
+
+## 1. Derive and fund the CKB address
+
+After starting the browser node, convert its default funding lock script into a
+Testnet address:
+
+```ts
+const { scriptToAddress } = await import('@fiber-pay/sdk/browser');
+const info = await node.getNodeInfo();
+const fundingAddress = scriptToAddress(
+  info.default_funding_lock_script,
+  'testnet',
+);
+```
+
+Send Testnet CKB from the [CKB Testnet faucet](https://faucet.nervos.org) to
+this address. The identity is stored in the browser, so clearing site data
+creates a different address and loses access to the previous browser-local
+identity unless it was backed up.
+
+Faucet transactions can take a few minutes to appear. Poll the on-chain
+balance while the page is visible and unlock the channel button as soon as the
+funding amount is available. The interactive preview checks every five seconds
+and also keeps a manual Refresh action.
+
+```ts
+const check = async () => {
+  if (document.visibilityState !== 'visible') return;
+  setBalance(await queryCkbBalance(info.default_funding_lock_script));
+};
+
+void check();
+const timer = window.setInterval(check, 5_000);
+return () => window.clearInterval(timer);
+```
+
+## 2. Convert CKB to hexadecimal shannons
+
+Fiber RPC amounts are hexadecimal shannons. One CKB is 100,000,000 shannons.
+Use `BigInt` to preserve all eight decimal places:
+
+```ts
+const SHANNONS_PER_CKB = 100_000_000n;
+
+export function ckbToHex(value: string) {
+  if (!/^\d+(\.\d{1,8})?$/.test(value)) {
+    throw new Error('Enter a valid CKB amount');
+  }
+
+  const [whole, fraction = ''] = value.split('.');
+  const shannons =
+    BigInt(whole) * SHANNONS_PER_CKB +
+    BigInt(fraction.padEnd(8, '0'));
+
+  if (shannons <= 0n) throw new Error('Amount must be positive');
+  return `0x${shannons.toString(16)}` as `0x${string}`;
+}
+```
+
+## 3. Open the channel
+
+Open a public channel after the peer connection is live and the funding
+address has enough Testnet CKB:
+
+```ts
+const result = await node.openChannel({
+  pubkey: routerPubkey,
+  funding_amount: ckbToHex('499'),
+  public: true,
+});
+```
+
+`openChannel()` returns a temporary channel ID when negotiation starts. It does
+not mean the channel can carry a payment yet.
+
+## 4. Wait for the channel to become ready
+
+Poll `listChannels()` for as long as the node is running. Render each new
+`state_name` and enable the payment button only after a channel reaches a ready
+state:
+
+```ts
+let active = true;
+
+const poll = async () => {
+  while (active) {
+    const { channels } = await node.listChannels();
+    const latest = channels.at(-1);
+    if (latest) setChannelState(latest.state.state_name);
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+  }
+};
+
+void poll();
+return () => {
+  active = false;
+};
+```
+
+The normal opening sequence is `NegotiatingFunding` →
+`CollaboratingFundingTx` → `SigningCommitment` → `AwaitingTxSignatures` →
+`AwaitingChannelReady` → `ChannelReady`. Some transitions may complete between
+polls. The interactive preview keeps a history of every distinct state it
+observes and resumes polling when the page becomes visible again.
+
+## 5. Send a keysend payment
+
+Keysend is the smallest direct payment example because the recipient does not
+need to create an invoice:
+
+```ts
+const submitted = await node.sendPayment({
+  target_pubkey: routerPubkey,
+  amount: ckbToHex('1'),
+  keysend: true,
+});
+```
+
+If the first response is not terminal, wait for the final payment result:
+
+```ts
+const result =
+  submitted.status === 'Success' || submitted.status === 'Failed'
+    ? submitted
+    : await node.waitForPayment(submitted.payment_hash, {
+        timeout: 30_000,
+        interval: 1_000,
+      });
+```
+
+Display `result.status` in React. A production UI should also surface routing
+errors, fees, timeouts, and current outbound channel liquidity.
+
+## Do you need a backend?
+
+Not for this direct Testnet keysend flow. The Fiber node, channel state, and
+payment can all run in the browser.
+
+A merchant checkout normally adds a backend to create invoices, associate
+payments with orders, keep private business state, and grant access only after
+server-side payment verification. Production browser nodes also need encrypted
+key storage, backup and recovery, account switching, and a deliberate policy
+for clearing site data.
+
+## Next steps
+
+Continue with [Channels](/docs/concept/channels),
+[Payments](/docs/concept/payments), or the
+[full Browser Node Lab](/labs/browser-node).

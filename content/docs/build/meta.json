@@ -5,6 +5,8 @@
     "api-reference",
     "sdk",
     "ffi",
-    "simple-game"
+    "simple-game",
+    "connect-wasm-node",
+    "open-channel-payment"
   ]
 }
