@@ -1,0 +1,112 @@
+---
+title: fiber-checkout
+description: Community-maintained React components and hooks for Fiber invoice checkout flows
+date: 2026-08-02
+dependencies:
+  - name: fiber-checkout
+    minVersion: "0.1.2"
+    link: "https://www.npmjs.com/package/fiber-checkout"
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+[`fiber-checkout`](https://github.com/salmansarwarr/Fiber-checkout) is a
+community-maintained React library for invoice-based Fiber checkout flows. It
+can create an invoice, render its QR code, poll the invoice status, detect
+expiry, and report payment success through one component or lower-level hooks.
+
+<Callout type="warning" title="Compatibility and support">
+  `fiber-checkout` is a community project delivered through the Spark Program
+  and is now in stable maintenance. Its published peer dependency targets
+  `@nervosnetwork/fiber-js` v0.7.x, while Fiber continues to evolve. Verify the
+  current upstream compatibility notes and test your exact Fiber Node version
+  before production use.
+</Callout>
+
+## When to use it
+
+Use `fiber-checkout` when a merchant or service needs to **receive** a Fiber
+payment with a ready-made React checkout. If you need a browser-local node,
+passkey wallet, channel management, or a broader RPC client, consider
+[fiber-pay](/docs/build/community-sdk/fiber-pay) or the
+[JavaScript SDK](/docs/build/sdk/js) instead.
+
+## Install
+
+```bash
+npm install fiber-checkout
+```
+
+The package supports React 18 and 19. Its RPC-only mode does not require the
+Fiber WASM runtime.
+
+## Add a checkout component
+
+```tsx
+import { FiberCheckout, ckbToShannonHex } from "fiber-checkout";
+
+export default function CheckoutPage() {
+  return (
+    <FiberCheckout
+      amount={ckbToShannonHex(1)}
+      asset="CKB"
+      nodeUrl="/api/fiber-rpc"
+      description="Order #1234"
+      onSuccess={(paymentHash) => {
+        console.log("Payment confirmed:", paymentHash);
+      }}
+      onExpired={() => console.log("Invoice expired")}
+      onError={(error) => console.error(error.code, error.message)}
+    />
+  );
+}
+```
+
+The component uses `new_invoice` to create the invoice and `get_invoice` to
+observe its status. For a custom UI, the package also exports
+`useFiberInvoice()` and `useFiberPayment()`.
+
+## Put an RPC proxy in front of your node
+
+In production, do not expose a Fiber node RPC endpoint directly to browsers.
+Route checkout requests through a server endpoint that:
+
+- keeps the node address and credentials on the server;
+- accepts only the RPC methods required by the checkout;
+- applies your authentication, rate limits, and request validation; and
+- serves the public application over HTTPS without browser CORS or mixed-content
+  failures.
+
+The expected request path is:
+
+```text
+Browser -> your HTTPS RPC proxy -> your Fiber node
+```
+
+At minimum, allow only `new_invoice` and `get_invoice` for this checkout flow.
+Validate the JSON-RPC payload before forwarding it instead of passing arbitrary
+methods and parameters to the node.
+
+<Callout type="warning" title="Direct RPC is for local development only">
+  The `dangerouslyAllowDirectRpc` option is intended for a trusted local setup.
+  Enabling it in production exposes the node RPC surface and its network address
+  to every browser user.
+</Callout>
+
+## Assets and WASM mode
+
+The built-in component accepts CKB and RUSD and can be extended with a custom
+asset registry. Confirm every UDT type script against the issuer's official
+deployment before accepting payment.
+
+If an application already runs a browser node with
+`@nervosnetwork/fiber-js`, `FiberWasmBackend` can reuse that instance instead of
+calling a remote RPC proxy. Review the upstream peer-dependency and Fiber Node
+compatibility before choosing this mode.
+
+## Resources
+
+- [Source and full component reference](https://github.com/salmansarwarr/Fiber-checkout)
+- [npm package](https://www.npmjs.com/package/fiber-checkout)
+- [Spark completion report](https://talk.nervos.org/t/spark-program-fiber-checkout-a-stripe-style-react-payment-library-for-fiber-network/10045/1)
+- [Maintenance updates](https://talk.nervos.org/t/fiber-checkout-a-stripe-style-payment-library-for-fiber-network-post-grant-updates/10337)

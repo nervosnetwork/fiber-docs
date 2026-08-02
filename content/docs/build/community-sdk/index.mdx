@@ -1,0 +1,56 @@
+---
+title: Community SDK
+description: Community-maintained libraries and toolchains for building Fiber applications
+date: 2026-08-02
+url: /docs/build/community-sdk
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+Community SDKs add higher-level application patterns on top of Fiber. They can
+shorten common integration work such as running a browser node, adding passkey
+authentication, or rendering a checkout flow.
+
+<Callout type="warning" title="Community-maintained software">
+  The projects in this section are maintained by their respective community
+  authors. They are not official Fiber releases or support commitments. Review
+  the upstream license, security model, release notes, and Fiber Node
+  compatibility before using one in production.
+</Callout>
+
+## Available projects
+
+| Project | Best for | Current status |
+| --- | --- | --- |
+| [fiber-pay](/docs/build/community-sdk/fiber-pay) | Typed RPC clients, browser WASM nodes, passkeys, React payment UI, and operator automation | Actively maintained; v0.3.0 targets Fiber v0.9.0-rc7 |
+| [fiber-checkout](/docs/build/community-sdk/fiber-checkout) | Adding an invoice-based checkout component or custom checkout hooks to a React app | Spark grant completed; stable maintenance |
+
+## How projects are selected
+
+This section focuses on community projects that have:
+
+- a usable, published implementation rather than only a proposal;
+- public source code and documentation;
+- a clear Fiber-specific developer use case;
+- evidence of testing, releases, or ongoing maintenance; and
+- enough compatibility information for developers to evaluate adoption risk.
+
+Inclusion is a discovery aid, not an endorsement. Projects can be updated or
+removed when their maintenance or compatibility status changes.
+
+Building a reusable Fiber SDK? Share the repository, package, supported Fiber
+versions, and a reproducible example on the
+[Nervos Talk forum](https://talk.nervos.org/latest) so the community can review
+it.
+
+## Which SDK should I choose?
+
+- Use the [JavaScript SDK](/docs/build/sdk/js) when you want the CCC-based,
+  typed Fiber RPC interface documented by this site.
+- Use **fiber-pay** when you want a broader application toolchain, especially a
+  browser-local Fiber node, passkey credentials, React components, or CLI
+  automation.
+- Use **fiber-checkout** when your main requirement is an embeddable React
+  checkout that creates invoices and observes their payment status.
+- Use the [Fiber RPC reference](/docs/api-reference) directly when you need
+  complete control or do not want another SDK dependency.

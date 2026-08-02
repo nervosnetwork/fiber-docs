@@ -144,8 +144,6 @@ Source: https://www.fiber.world/docs/quick-start/basic-transfer
 
 Set up two local nodes, open a channel between them, and send a CKB payment from one to the other. The whole process takes about 10 minutes.
 
-This page is the native, two-terminal workflow. To start a WASM node directly in your browser and connect it to a public node over WSS, see Run a WASM Node.
-
 ## Overview
 
 This guide walks you through setting up and executing a basic token (CKB) transfer between two nodes on the Fiber Testnet.
@@ -205,8 +203,6 @@ View complete config.yml example
 ### 1. Start Both Nodes
 
 [sh code block]
-
-Keep both terminal processes running while you complete the remaining steps.
 
 ### 2. Connect the Nodes
 
@@ -595,6 +591,215 @@ Either party can initiate a close. The channel must be in ChannelReady state.
 | Force (force: true)        | Counterparty is unresponsive | After timelock (~4 hours) | No                   |
 
   Force-closing imposes a timelock before you can spend your funds. Always try a cooperative close first — it's faster and cheaper.
+
+---
+
+## Community SDK
+
+Source: https://www.fiber.world/docs/build/community-sdk
+
+Community SDKs add higher-level application patterns on top of Fiber. They can
+shorten common integration work such as running a browser node, adding passkey
+authentication, or rendering a checkout flow.
+
+  The projects in this section are maintained by their respective community
+  authors. They are not official Fiber releases or support commitments. Review
+  the upstream license, security model, release notes, and Fiber Node
+  compatibility before using one in production.
+
+## Available projects
+
+| Project | Best for | Current status |
+| --- | --- | --- |
+| fiber-pay | Typed RPC clients, browser WASM nodes, passkeys, React payment UI, and operator automation | Actively maintained; v0.3.0 targets Fiber v0.9.0-rc7 |
+| fiber-checkout | Adding an invoice-based checkout component or custom checkout hooks to a React app | Spark grant completed; stable maintenance |
+
+## How projects are selected
+
+This section focuses on community projects that have:
+
+- a usable, published implementation rather than only a proposal;
+- public source code and documentation;
+- a clear Fiber-specific developer use case;
+- evidence of testing, releases, or ongoing maintenance; and
+- enough compatibility information for developers to evaluate adoption risk.
+
+Inclusion is a discovery aid, not an endorsement. Projects can be updated or
+removed when their maintenance or compatibility status changes.
+
+Building a reusable Fiber SDK? Share the repository, package, supported Fiber
+versions, and a reproducible example on the
+Nervos Talk forum so the community can review
+it.
+
+## Which SDK should I choose?
+
+- Use the JavaScript SDK when you want the CCC-based,
+  typed Fiber RPC interface documented by this site.
+- Use fiber-pay when you want a broader application toolchain, especially a
+  browser-local Fiber node, passkey credentials, React components, or CLI
+  automation.
+- Use fiber-checkout when your main requirement is an embeddable React
+  checkout that creates invoices and observes their payment status.
+- Use the Fiber RPC reference directly when you need
+  complete control or do not want another SDK dependency.
+
+---
+
+## fiber-pay
+
+Source: https://www.fiber.world/docs/build/community-sdk/fiber-pay
+
+fiber-pay is a community-maintained
+TypeScript toolchain for building and operating Fiber applications. It provides
+typed RPC clients, browser and Node.js entrypoints, React components, local node
+lifecycle helpers, and an automation-friendly CLI.
+
+  fiber-pay is maintained independently of the official Fiber repository.
+  Version 0.3.0 targets Fiber v0.9.0-rc7. Check the upstream release notes when
+  using a different Fiber Node version.
+
+## Choose an integration surface
+
+| Package | Use it when you need |
+| --- | --- |
+| @fiber-pay/sdk | Typed RPC access and shared application primitives |
+| @fiber-pay/sdk/browser | A browser WASM node, browser credentials, or a browser-safe RPC client |
+| @fiber-pay/sdk/node | Node.js APIs and server-side L402 helpers |
+| @fiber-pay/react | Hooks and components for passkey-based browser payment flows |
+| @fiber-pay/cli | Node, channel, invoice, payment, and automation workflows from a terminal or agent |
+
+The separate @fiber-pay/agent package is experimental and is not recommended
+by its maintainer for production use.
+
+## Connect to a Fiber Node
+
+Install the core SDK:
+
+[bash code block]
+
+Create a typed RPC client that points to a node you control:
+
+[typescript code block]
+
+Keep privileged Biscuit tokens on a trusted server. Do not embed them in a
+browser bundle.
+
+## Add a browser payment UI
+
+For a browser-local Fiber node and React components, install the React layer and
+the Fiber WASM runtime:
+
+[bash code block]
+
+The quickest starting point is FiberPayQuickCard:
+
+[tsx code block]
+
+For a shared node session and more control, compose useFiberNode,
+ConnectButton, and FiberPayQuickCard:
+
+[tsx code block]
+
+## Browser requirements
+
+The multithreaded WASM runtime uses SharedArrayBuffer. Serve every route that
+loads it with these response headers in both development and production:
+
+[text code block]
+
+  The Fiber WASM runtime is much larger than a typical UI dependency. Load
+  WASM-dependent payment features lazily or behind an explicit user action so
+  the rest of your application does not pay the startup cost.
+
+## Resources
+
+- Documentation and examples
+- Source repository
+- Nervos Talk discussion
+- npm: @fiber-pay/sdk
+- npm: @fiber-pay/react
+
+---
+
+## fiber-checkout
+
+Source: https://www.fiber.world/docs/build/community-sdk/fiber-checkout
+
+fiber-checkout is a
+community-maintained React library for invoice-based Fiber checkout flows. It
+can create an invoice, render its QR code, poll the invoice status, detect
+expiry, and report payment success through one component or lower-level hooks.
+
+  fiber-checkout is a community project delivered through the Spark Program
+  and is now in stable maintenance. Its published peer dependency targets
+  @nervosnetwork/fiber-js v0.7.x, while Fiber continues to evolve. Verify the
+  current upstream compatibility notes and test your exact Fiber Node version
+  before production use.
+
+## When to use it
+
+Use fiber-checkout when a merchant or service needs to receive a Fiber
+payment with a ready-made React checkout. If you need a browser-local node,
+passkey wallet, channel management, or a broader RPC client, consider
+fiber-pay or the
+JavaScript SDK instead.
+
+## Install
+
+[bash code block]
+
+The package supports React 18 and 19. Its RPC-only mode does not require the
+Fiber WASM runtime.
+
+## Add a checkout component
+
+[tsx code block]
+
+The component uses newinvoice to create the invoice and getinvoice to
+observe its status. For a custom UI, the package also exports
+useFiberInvoice() and useFiberPayment().
+
+## Put an RPC proxy in front of your node
+
+In production, do not expose a Fiber node RPC endpoint directly to browsers.
+Route checkout requests through a server endpoint that:
+
+- keeps the node address and credentials on the server;
+- accepts only the RPC methods required by the checkout;
+- applies your authentication, rate limits, and request validation; and
+- serves the public application over HTTPS without browser CORS or mixed-content
+  failures.
+
+The expected request path is:
+
+[text code block]
+
+At minimum, allow only newinvoice and getinvoice for this checkout flow.
+Validate the JSON-RPC payload before forwarding it instead of passing arbitrary
+methods and parameters to the node.
+
+  The dangerouslyAllowDirectRpc option is intended for a trusted local setup.
+  Enabling it in production exposes the node RPC surface and its network address
+  to every browser user.
+
+## Assets and WASM mode
+
+The built-in component accepts CKB and RUSD and can be extended with a custom
+asset registry. Confirm every UDT type script against the issuer's official
+deployment before accepting payment.
+
+If an application already runs a browser node with
+@nervosnetwork/fiber-js, FiberWasmBackend can reuse that instance instead of
+calling a remote RPC proxy. Review the upstream peer-dependency and Fiber Node
+compatibility before choosing this mode.
+
+## Resources
+
+- Source and full component reference
+- npm package
+- Spark completion report
+- Maintenance updates
 
 ---
 

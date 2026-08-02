@@ -1,0 +1,131 @@
+---
+title: fiber-pay
+description: Community toolchain for Fiber RPC, browser nodes, passkeys, React payment flows, and automation
+date: 2026-08-02
+dependencies:
+  - name: "@fiber-pay/sdk"
+    minVersion: "0.3.0"
+    link: "https://www.npmjs.com/package/@fiber-pay/sdk"
+  - name: Fiber Node
+    minVersion: "0.9.0-rc7"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0-rc7"
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+[`fiber-pay`](https://github.com/RetricSu/fiber-pay) is a community-maintained
+TypeScript toolchain for building and operating Fiber applications. It provides
+typed RPC clients, browser and Node.js entrypoints, React components, local node
+lifecycle helpers, and an automation-friendly CLI.
+
+<Callout type="warning" title="Community SDK">
+  `fiber-pay` is maintained independently of the official Fiber repository.
+  Version 0.3.0 targets Fiber v0.9.0-rc7. Check the upstream release notes when
+  using a different Fiber Node version.
+</Callout>
+
+## Choose an integration surface
+
+| Package | Use it when you need |
+| --- | --- |
+| `@fiber-pay/sdk` | Typed RPC access and shared application primitives |
+| `@fiber-pay/sdk/browser` | A browser WASM node, browser credentials, or a browser-safe RPC client |
+| `@fiber-pay/sdk/node` | Node.js APIs and server-side L402 helpers |
+| `@fiber-pay/react` | Hooks and components for passkey-based browser payment flows |
+| `@fiber-pay/cli` | Node, channel, invoice, payment, and automation workflows from a terminal or agent |
+
+The separate `@fiber-pay/agent` package is experimental and is not recommended
+by its maintainer for production use.
+
+## Connect to a Fiber Node
+
+Install the core SDK:
+
+```bash
+npm install @fiber-pay/sdk
+```
+
+Create a typed RPC client that points to a node you control:
+
+```typescript
+import { FiberRpcClient } from "@fiber-pay/sdk";
+
+const client = new FiberRpcClient({
+  url: "http://127.0.0.1:8227",
+  biscuitToken: process.env.FIBER_RPC_BISCUIT_TOKEN,
+});
+
+const info = await client.nodeInfo();
+console.log(info.pubkey);
+```
+
+Keep privileged Biscuit tokens on a trusted server. Do not embed them in a
+browser bundle.
+
+## Add a browser payment UI
+
+For a browser-local Fiber node and React components, install the React layer and
+the Fiber WASM runtime:
+
+```bash
+npm install @fiber-pay/react @nervosnetwork/fiber-js
+```
+
+The quickest starting point is `FiberPayQuickCard`:
+
+```tsx
+import { FiberPayQuickCard } from "@fiber-pay/react";
+
+export function PaymentPanel() {
+  return <FiberPayQuickCard network="testnet" />;
+}
+```
+
+For a shared node session and more control, compose `useFiberNode`,
+`ConnectButton`, and `FiberPayQuickCard`:
+
+```tsx
+import {
+  ConnectButton,
+  FiberPayQuickCard,
+  useFiberNode,
+} from "@fiber-pay/react";
+
+export function PaymentPanel() {
+  const fiber = useFiberNode({
+    network: "testnet",
+    walletId: "my-app-wallet",
+  });
+
+  return (
+    <>
+      <ConnectButton fiber={fiber} strategy="passkey" />
+      <FiberPayQuickCard fiber={fiber} network="testnet" />
+    </>
+  );
+}
+```
+
+## Browser requirements
+
+The multithreaded WASM runtime uses `SharedArrayBuffer`. Serve every route that
+loads it with these response headers in both development and production:
+
+```text
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+<Callout type="info" title="Plan for a large browser chunk">
+  The Fiber WASM runtime is much larger than a typical UI dependency. Load
+  WASM-dependent payment features lazily or behind an explicit user action so
+  the rest of your application does not pay the startup cost.
+</Callout>
+
+## Resources
+
+- [Documentation and examples](https://retricsu.github.io/fiber-pay/)
+- [Source repository](https://github.com/RetricSu/fiber-pay)
+- [Nervos Talk discussion](https://talk.nervos.org/t/fiber-pay-an-ai-friendly-cli-for-fiber-network/9974)
+- [npm: `@fiber-pay/sdk`](https://www.npmjs.com/package/@fiber-pay/sdk)
+- [npm: `@fiber-pay/react`](https://www.npmjs.com/package/@fiber-pay/react)
