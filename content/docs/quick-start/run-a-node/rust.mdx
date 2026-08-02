@@ -1,109 +1,195 @@
 ---
 title: "Run a Native Node"
-description: "Run a native Fiber Network Node (FNN) binary on your local machine or server"
-date: 2026-06-09
+description: "Install and run a native Fiber Network Node (FNN) on your local machine or server"
+date: 2026-08-02
 dependencies:
   - name: Fiber Node
-    minVersion: "0.9.0-rc5"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0-rc5"
+    minVersion: "0.9.0-rc7"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0-rc7"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
 ## TL;DR
 
-Download the FNN binary, set up a private key, configure `config.yml`, and start the node. In 5 minutes you'll have a Fiber node running on Testnet.
+The Fiber installer downloads the FNN release bundle and `ckb-cli`, prepares the selected network configuration, guides you through key setup, and creates a reusable startup script.
 
-## Prerequisites
+<Callout type="warn" title="Installer release status">
+The installer was merged into Fiber's `develop` branch in [PR #1262](https://github.com/nervosnetwork/fiber/pull/1262), after `v0.9.0-rc7` was published. It is not part of a Fiber release yet. The preview below is for Testnet evaluation only; use [manual installation](#manual-installation) for a release-only setup, and do not use the preview with Mainnet funds.
+</Callout>
 
-- [Git](https://git-scm.com/) (if building from source)
-- [Rust](https://www.rust-lang.org/) and [Cargo](https://doc.rust-lang.org/cargo/) (if building from source)
-- Basic understanding of command line operations
-- [ckb-cli](https://github.com/nervosnetwork/ckb-cli) tool for key management
+## Choose an Installation Method
 
-## Building and Setting Up Your Node
+| Method | Best for | Status |
+|--------|----------|--------|
+| [Automated installer preview](#automated-installer-preview) | Evaluating the simplified setup on Testnet | Merged, not released |
+| [Manual installation](#manual-installation) | Current releases and custom builds | Available now |
+| [Docker](/docs/quick-start/run-a-node/docker) | Reproducible deployments without local binaries | Available now |
+
+## Automated Installer Preview
+
+The installer supports Linux, macOS, and 64-bit Windows. On Linux and macOS it recognizes `x86_64` and ARM64 release bundles; Windows currently uses the `x86_64` bundle.
+
+### Linux and macOS
+
+Run the bootstrap step. The explicit `develop` ref is required while the installer remains unreleased:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/nervosnetwork/fiber/develop/tools/install/install.sh \
+  | INSTALL_REF=develop FNN_VERSION=0.9.0-rc7 bash
+```
+
+This non-interactive step installs the release bundle and `ckb-cli` into `~/.fiber`, writes the Testnet configuration, and saves the guided installer. It does not create or import your CKB key.
+
+Run the guided step to set up the key and startup script:
+
+```bash
+~/.fiber/tools/install/install.sh ~/.fiber testnet
+```
+
+The guided installer can create a new CKB account or import an existing account. Save the wallet password and the `FIBER_SECRET_KEY_PASSWORD` securely; they protect different operations and may be different values.
+
+When setup finishes, accept the prompt to start FNN or start it later with:
+
+```bash
+cd ~/.fiber
+./start-node.sh
+```
+
+### Windows PowerShell
+
+The Windows installer performs the guided setup in one pass. Use Windows PowerShell 5.1 or newer:
+
+```powershell
+$env:INSTALL_REF = "develop"
+$env:FNN_VERSION = "0.9.0-rc7"
+$env:NETWORK = "testnet"
+$env:INSTALL_DIR = "$HOME\.fiber"
+irm https://raw.githubusercontent.com/nervosnetwork/fiber/develop/tools/install/install.ps1 | iex
+```
+
+After stopping the node, restart it with:
+
+```powershell
+cd $HOME\.fiber
+.\start-node.ps1
+```
+
+You can also run `start-node.bat` from Command Prompt or double-click it in the install directory.
+
+### What the Installer Creates
+
+The install directory contains the complete node state and tools:
+
+| Path | Purpose |
+|------|---------|
+| `fnn` / `fnn.exe` | Fiber node binary |
+| `fnn-cli` / `fnn-cli.exe` | CLI for the local RPC endpoint |
+| `config.yml` | Active network configuration |
+| `ckb/key` | CKB private key, encrypted after the first successful start |
+| `fiber/` | Node identity and channel database |
+| `start-node.sh` / `start-node.ps1` | Reusable startup command |
+
+<Callout type="warning" title="Keep the password with your backup">
+Every restart requires the same `FIBER_SECRET_KEY_PASSWORD` that encrypted `ckb/key`. If either the encrypted key or its password is lost, the key cannot be recovered from that file. Back up the entire install directory and store the password separately in a password manager.
+</Callout>
+
+### Mainnet Requirements
+
+Start on Testnet. A Mainnet installation additionally requires a trusted CKB RPC endpoint. The installer validates that the endpoint is reachable and belongs to the selected network; non-interactive Mainnet setup requires `CKB_RPC_URL` explicitly.
+
+Use a separate install directory for each network. The installer records the selected network and refuses to reuse a directory containing another network's data.
+
+<Callout type="warn">
+Wait for a Fiber release that includes PR #1262 before using the installer on Mainnet. After that release, pin production automation to the released installer and FNN version instead of the moving `develop` branch.
+</Callout>
+
+## Manual Installation
+
+Use this path with current Fiber releases or when you need to build FNN yourself.
+
+### Prerequisites
+
+- Basic command-line experience
+- [`ckb-cli`](https://github.com/nervosnetwork/ckb-cli) for key management
+- [Git](https://git-scm.com/), [Rust](https://www.rust-lang.org/), and [Cargo](https://doc.rust-lang.org/cargo/) only when building from source
 
 ### 1. Obtain the FNN Binary
 
-You can either download a pre-built binary from the [Fiber GitHub Releases](https://github.com/nervosnetwork/fiber/releases) page or build it from source:
+Download a pre-built bundle from [Fiber Releases](https://github.com/nervosnetwork/fiber/releases), or build from source:
 
-```sh
+```bash
 git clone https://github.com/nervosnetwork/fiber.git
 cd fiber
+git checkout v0.9.0-rc7
 cargo build --release
 ```
 
-This document used the [v0.9.0-rc5 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0-rc5) throughout the guide.
+The examples below use `v0.9.0-rc7`. Keep the binary and configuration from the same release. Omit the checkout step only when you intentionally want to test unreleased source.
 
 <Callout type="info" title="macOS Security">
-If you're using macOS, the downloaded binary may be blocked by Gatekeeper. To resolve this, remove the quarantine attribute:
-```sh
+If Gatekeeper blocks a downloaded binary, remove its quarantine attribute:
+
+```bash
 xattr -d com.apple.quarantine fnn fnn-cli
 ```
 </Callout>
 
-### 2. Create Node Directory
+### 2. Create the Node Directory
 
-Create a dedicated directory for your node and copy the necessary files:
+Create a dedicated directory and copy the binaries and Testnet configuration into it:
 
-```sh
-mkdir /folder-to/my-fnn
-# If using released binary, replace target/release/fnn with the path to your downloaded binary
+```bash
+mkdir -p /folder-to/my-fnn
 cp target/release/fnn /folder-to/my-fnn
-# Copy additional tools (v0.8.0+)
 cp target/release/fnn-cli /folder-to/my-fnn
 cp config/testnet/config.yml /folder-to/my-fnn
 cd /folder-to/my-fnn
 ```
 
-### 3. Set Up Node Keys
+When using a release bundle, copy its `fnn`, `fnn-cli`, and matching `config/testnet/config.yml` instead of the `target/release` files.
 
-FNN includes built-in wallet functionality for signing funding transactions. You'll need to create or import a private key:
+### 3. Create or Import the Node Key
 
-create a new ckb account and get the `lock_arg` of the new account
+FNN's built-in wallet signs channel funding transactions. Create an account and save its `lock_arg`:
 
-```sh
+```bash
 ckb-cli account new
-
-# example output
-# address
-#   mainnet: ckb1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsqtp83cu4pk8nysm9dngxezw546dyr5w8esx7rlyt
-#   testnet: ckt1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsqtp83cu4pk8nysm9dngxezw546dyr5w8esgvgswn
-# lock_arg: 0x613c71ca86c79921b2b6683644ea574d20e8e3e6
-# lock_hash: 0x1c506178212949e961f5949c916f70f5ba0f3b89b14ce2608f02201a41eb3ef7
 ```
 
-Then export the existing key
+Export the selected account into the node directory:
 
-```sh
-mkdir ckb
-# Export an existing key using ckb-cli
-ckb-cli account export --lock-arg <lock_arg> --extended-privkey-path ./ckb/exported-key
-# Extract just the private key (FNN only needs this part)
+```bash
+mkdir -p ckb
+ckb-cli account export \
+  --lock-arg <lock_arg> \
+  --extended-privkey-path ./ckb/exported-key
 head -n 1 ./ckb/exported-key > ./ckb/key
+rm ./ckb/exported-key
+chmod 600 ./ckb/key
 ```
+
+The key is plaintext until FNN starts successfully for the first time. Keep the directory private during setup.
 
 ### 4. Start the Node
 
-Launch your node with logging enabled:
+Use a strong, unique password. FNN encrypts a plaintext `ckb/key` on first start and requires the same password on every later start:
 
-(You need to set a `FIBER_SECRET_KEY_PASSWORD` environment variable in the startup command to encrypt your wallet private key file. I used 123 here for demo purposes, but I recommend using a strong password.)
-
-```sh
-FIBER_SECRET_KEY_PASSWORD='123' RUST_LOG=info ./fnn -c config.yml -d .
+```bash
+FIBER_SECRET_KEY_PASSWORD='YOUR_STRONG_PASSWORD' \
+  RUST_LOG=info \
+  ./fnn -c config.yml -d .
 ```
 
-> **Expected Output:** You should see log lines indicating the node is starting, connecting to bootnodes, and syncing with the Testnet. The RPC server will be available at `http://127.0.0.1:8227`.
+You should see logs for the RPC service, P2P listener, and bootnode connections. The local RPC endpoint is `http://127.0.0.1:8227` by default.
 
-## Interacting with Your Node
+## Interact with Your Node
 
-Once your node is running, you can interact with it using the RPC interface or the CLI tool.
+Open another terminal in the install directory.
 
-### Using the CLI Tool (v0.8.0+)
+### Use `fnn-cli`
 
-v0.8.0 introduces `fnn-cli`, a command-line interface that provides a convenient way to manage your node without writing raw JSON-RPC requests:
-
-```sh
+```bash
 # View node information
 ./fnn-cli info
 
@@ -117,68 +203,51 @@ v0.8.0 introduces `fnn-cli`, a command-line interface that provides a convenient
 ./fnn-cli --help
 ```
 
-> **Expected Output:** `./fnn-cli info` should return your node's pubkey, alias, and chain info. If you see a connection error, ensure the node is running and `NO_PROXY` is set for local addresses.
+The CLI connects to `http://127.0.0.1:8227` by default.
 
-The CLI connects to the node's RPC endpoint (default: `http://127.0.0.1:8227`).
+<Callout type="info" title="HTTP proxy issues">
+If local CLI calls return `503 Service Unavailable`, exclude loopback addresses from your proxy:
 
-<Callout type="info" title="HTTP Proxy Issues">
-If you encounter a `503 Service Unavailable` error, check if your system has an HTTP proxy configured. The CLI may attempt to route requests through the proxy, which can fail for local addresses.
-
-**Solution:** Set `NO_PROXY` to exclude local addresses:
-```sh
+```bash
 export NO_PROXY=127.0.0.1,localhost
 ./fnn-cli info
 ```
 </Callout>
 
-### Using JSON-RPC Directly
+### Use JSON-RPC
 
-You can also interact with the node using any HTTP client:
-
-```sh
+```bash
 curl -X POST -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"node_info"}' \
   http://127.0.0.1:8227/
 ```
 
-## Version Compatibility and Upgrades
+## Stop and Restart
 
-FNN is under active development, and protocol/storage format changes may occur between versions. Here's how to handle upgrades:
+Press `Ctrl+C` in the FNN terminal to stop the node cleanly.
 
-<Callout type="warn" title="v0.8.0 Breaking Changes">
-v0.8.0 introduces several RPC changes that may affect existing integrations:
+For an installer-created node, use the generated startup script and enter the original `FIBER_SECRET_KEY_PASSWORD` when prompted:
 
-| Change | v0.7.1 | v0.8.0 |
-|--------|--------|--------|
-| Node identifier | `peer_id` (base58) | `pubkey` (hex-encoded secp256k1) |
-| `node_info` response field | `node_id` | `pubkey` |
-| JSON enum format | PascalCase | snake_case (e.g., `CkbHash` → `ckb_hash`) |
-| `ChannelState` format | Regular | SCREAMING_SNAKE_CASE with pipe separator |
-
-Affected RPC methods: `open_channel`, `list_channels`, `disconnect_peer`, `connect_peer`, `node_info`.
-
-New RPC methods in v0.8.0:
-- `open_channel_with_external_funding` - For hardware wallet/external signing
-- `submit_signed_funding_tx` - Submit externally signed transactions
-- `list_payments` - Query payment sessions
-</Callout>
-
-### Safe Upgrade Process
-
-1. Close all active channels before upgrading
-2. Stop the node and clean the storage:
-
-```sh
-rm -rf /folder-to/my-fnn/fiber/store
+```bash
+cd ~/.fiber
+./start-node.sh
 ```
 
-3. Replace the FNN binary and restart
+For a manual installation, rerun the original `fnn` command with the same data directory, configuration, and password.
 
-### Storage Migration
+## Upgrades and Storage Migration
 
-Starting from v0.9.0-rc1, storage migration is handled automatically by FNN on startup. When upgrading, simply start FNN normally and it will detect and apply any necessary migrations to preserve your channel state. No separate migration tool is needed.
+Back up the entire node directory before every upgrade. Starting with `v0.9.0-rc1`, FNN detects supported database versions and performs required migration during startup.
+
+For databases too old for the current binary, use the migration tool from the appropriate older release first. See [Fiber Node Backup](/docs/operate/backup#cross-version-restore) for the version-specific process.
+
+<Callout type="warning">
+Do not delete `fiber/store` as a routine upgrade step. It contains channel state, and losing channel state can put funds at risk.
+</Callout>
 
 ## Next Steps
 
 - [Basic Transfer](/docs/quick-start/basic-transfer) — send your first payment
-- [Config Reference](/docs/guide/node-operator/config-reference) — full configuration options
+- [Connect to Nodes](/docs/operate/connect-nodes) — connect to Fiber peers
+- [Configuration Reference](/docs/operate/config-reference) — review all node settings
+- [Back Up Your Node](/docs/operate/backup) — protect keys, identity, and channel state

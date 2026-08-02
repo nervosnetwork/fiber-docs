@@ -1,7 +1,7 @@
 ---
 title: Fiber Node Backup
 description: "How to backup and restore Fiber node data"
-date: 2026-06-09
+date: 2026-08-02
 author: "gpBlockchain"
 authorUrl: "https://github.com/gpBlockchain"
 dependencies:
@@ -15,6 +15,10 @@ dependencies:
 Stop the node, tar the entire node directory, store the archive and `FIBER_SECRET_KEY_PASSWORD` securely. To restore, extract the archive and start the node with the same password.
 
 This guide explains how to securely back up Fiber node data to safeguard funds, maintain node identity, and ensure smooth migration or upgrades. **Never store plaintext private keys**, as they risk theft if exposed.
+
+<Callout type="info" title="Nodes created by the installer">
+Back up the entire install directory. The Unix bootstrap installer uses `~/.fiber` by default; guided Unix and Windows installs use the directory you selected. After restoring it, run `./start-node.sh` on Linux/macOS or `.\start-node.ps1` on Windows and provide the same `FIBER_SECRET_KEY_PASSWORD`.
+</Callout>
 
 ## 1. Why Back Up?
 

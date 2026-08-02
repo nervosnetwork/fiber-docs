@@ -1,7 +1,7 @@
 ---
 title: "Overview"
 description: "What it means to run a Fiber node, the available node forms, and how to pick the right deployment for your use case"
-date: 2026-06-18
+date: 2026-08-02
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -42,7 +42,7 @@ The native Rust binary is the full production node. It runs as a standalone proc
 | **Network exposure** | Public IP recommended for routing; private nodes can connect through public relay nodes |
 | **Interaction** | `fnn-cli` or raw JSON-RPC |
 
-Use the native node when you need full control, persistent storage, and the ability to accept inbound channel requests from the public internet.
+Use the native node when you need full control, persistent storage, and the ability to accept inbound channel requests from the public internet. A guided installer is being prepared to download the release bundle, configure the selected network, set up keys, and generate a reusable startup script.
 
 → [Run a Native Node](/docs/quick-start/run-a-node/rust)
 
@@ -84,13 +84,15 @@ Use the WASM node when you want users to bring their own node inside a web app, 
 
 The fastest way to experiment. You run `fnn` locally against Fiber Testnet, fund the address from a testnet faucet, and open channels with the public Testnet relay nodes. No public IP is required because you initiate outbound connections to the public nodes.
 
-Typical flow:
+Typical flow with the upcoming installer:
 
-1. Download or build the `fnn` binary.
-2. Generate or export a CKB private key.
-3. Copy `config/testnet/config.yml` and set `FIBER_SECRET_KEY_PASSWORD`.
-4. Start the node and connect to a public Testnet node.
+1. Bootstrap the FNN bundle, `ckb-cli`, and Testnet configuration.
+2. Run the guided setup to create or import a CKB account.
+3. Save `FIBER_SECRET_KEY_PASSWORD` and back up the install directory.
+4. Start the node with the generated `start-node` script.
 5. Open a channel and try [Basic Transfer](/docs/quick-start/basic-transfer).
+
+Until a Fiber release includes the installer, follow the release-only manual path in [Run a Native Node](/docs/quick-start/run-a-node/rust#manual-installation).
 
 ### Production Public Node
 
@@ -134,9 +136,9 @@ Testnet is the recommended place to start. Once you are comfortable with channel
 
 ## Before You Start
 
-At a minimum, you need a **CKB private key**. You can generate one with [`ckb-cli`](https://github.com/nervosnetwork/ckb-cli) or export it from a CKB wallet.
+At a minimum, you need a **CKB private key**. The native installer can download `ckb-cli` and guide you through creating or importing an account; manual and Docker setups can use an existing key exported from a CKB wallet.
 
-The detailed prerequisites — CKB RPC endpoints, `config.yml`, how much CKB to reserve, and whether a one-way channel lets the other side join without depositing CKB — are covered in the native ([build from source](/docs/quick-start/run-a-node/rust) or [Docker](/docs/quick-start/run-a-node/docker)) and [WASM](/docs/quick-start/run-a-node/fiberjs) guides.
+The detailed prerequisites — CKB RPC endpoints, `config.yml`, how much CKB to reserve, and whether a one-way channel lets the other side join without depositing CKB — are covered in the native ([installer or manual setup](/docs/quick-start/run-a-node/rust) or [Docker](/docs/quick-start/run-a-node/docker)) and [WASM](/docs/quick-start/run-a-node/fiberjs) guides.
 
 <Callout type="warning">
 Keep your node data directory, especially `fiber/store` and the `ckb/key` file, backed up and secure. Losing channel state can mean losing funds.
