@@ -1507,28 +1507,28 @@
     },
     {
       "id": "chunk-215",
-      "title": "Community SDK",
+      "title": "Overview",
       "content": "import { Callout } from 'fumadocs-ui/components/callout';\n\nCommunity SDKs add higher-level application patterns on top of Fiber. They can\nshorten common integration work such as running a browser node, adding passkey\nauthentication, or rendering a checkout flow.\n\n<Callout type=\"warning\" title=\"Community-maintained software\">\n  The projects in this section are maintained by their respective community\n  authors. They are not official Fiber releases or support commitments. Review\n  the upstream license, security model, release notes, and Fiber Node\n  compatibility before using one in production.\n</Callout>\n\n## Available projects",
       "url": "/docs/build/community-sdk",
       "source": "docs/build/community-sdk/index.mdx"
     },
     {
       "id": "chunk-216",
-      "title": "Community SDK",
+      "title": "Overview",
       "content": "| Project | Best for | Current status |\n| --- | --- | --- |\n| [fiber-pay](/docs/build/community-sdk/fiber-pay) | Typed RPC clients, browser WASM nodes, passkeys, React payment UI, and operator automation | Actively maintained; v0.3.0 targets Fiber v0.9.0-rc7 |\n| [fiber-checkout](/docs/build/community-sdk/fiber-checkout) | Adding an invoice-based checkout component or custom checkout hooks to a React app | Spark grant completed; stable maintenance |\n\n## How projects are selected\n\nThis section focuses on community projects that have:",
       "url": "/docs/build/community-sdk",
       "source": "docs/build/community-sdk/index.mdx"
     },
     {
       "id": "chunk-217",
-      "title": "Community SDK",
+      "title": "Overview",
       "content": "- a usable, published implementation rather than only a proposal;\n- public source code and documentation;\n- a clear Fiber-specific developer use case;\n- evidence of testing, releases, or ongoing maintenance; and\n- enough compatibility information for developers to evaluate adoption risk.\n\nInclusion is a discovery aid, not an endorsement. Projects can be updated or\nremoved when their maintenance or compatibility status changes.\n\nBuilding a reusable Fiber SDK? Share the repository, package, supported Fiber\nversions, and a reproducible example on the\n[Nervos Talk forum](https://talk.nervos.org/latest) so the community can review\nit.\n\n## Which SDK should I choose?",
       "url": "/docs/build/community-sdk",
       "source": "docs/build/community-sdk/index.mdx"
     },
     {
       "id": "chunk-218",
-      "title": "Community SDK",
+      "title": "Overview",
       "content": "- Use the [JavaScript SDK](/docs/build/sdk/js) when you want the CCC-based,\n  typed Fiber RPC interface documented by this site.\n- Use **fiber-pay** when you want a broader application toolchain, especially a\n  browser-local Fiber node, passkey credentials, React components, or CLI\n  automation.\n- Use **fiber-checkout** when your main requirement is an embeddable React\n  checkout that creates invoices and observes their payment status.\n- Use the [Fiber RPC reference](/docs/api-reference) directly when you need\n  complete control or do not want another SDK dependency.",
       "url": "/docs/build/community-sdk",
       "source": "docs/build/community-sdk/index.mdx"
@@ -9108,5 +9108,5 @@
       "source": "specs/trampoline-routing.md"
     }
   ],
-  "generatedAt": "2026-08-02T14:54:40.164Z"
+  "generatedAt": "2026-08-03T01:05:01.900Z"
 }

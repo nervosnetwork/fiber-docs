@@ -594,7 +594,7 @@ Either party can initiate a close. The channel must be in ChannelReady state.
 
 ---
 
-## Community SDK
+## Overview
 
 Source: https://www.fiber.world/docs/build/community-sdk
 

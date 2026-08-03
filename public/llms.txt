@@ -20,7 +20,7 @@ Fiber Network Node (FNN) is the reference Rust implementation. fiber-js provides
 
 ## Guide / Community SDK
 
-- [Community SDK](https://www.fiber.world/docs/build/community-sdk): Community-maintained libraries and toolchains for building Fiber applications
+- [Overview](https://www.fiber.world/docs/build/community-sdk): Community-maintained libraries and toolchains for building Fiber applications
 - [fiber-pay](https://www.fiber.world/docs/build/community-sdk/fiber-pay): Community toolchain for Fiber RPC, browser nodes, passkeys, React payment flows, and automation
 - [fiber-checkout](https://www.fiber.world/docs/build/community-sdk/fiber-checkout): Community-maintained React components and hooks for Fiber invoice checkout flows
 
