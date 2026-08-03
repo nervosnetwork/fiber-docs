@@ -68,7 +68,15 @@ export default async function Page(props: {
   }
 
   return (
-    <DocsPage toc={page.data.toc} full={page.data.full}>
+    <DocsPage
+      toc={page.data.toc}
+      full={page.data.full}
+      footer={
+        slug === "build/interactive-tutorials"
+          ? { enabled: false }
+          : undefined
+      }
+    >
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

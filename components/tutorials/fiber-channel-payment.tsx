@@ -343,16 +343,17 @@ type CodeFocus = {
 };
 
 const sectionCode: Record<string, CodeFocus> = {
-  intro: { file: 'app', start: 15, end: 20 },
-  model: { file: 'fiber', start: 46, end: 74 },
-  fund: { file: 'balance', start: 7, end: 43 },
+  intro: { file: 'app', start: 16, end: 21 },
+  model: { file: 'fiber', start: 48, end: 71 },
+  fund: { file: 'balance', start: 7, end: 45 },
   amounts: { file: 'amounts', start: 1, end: 18 },
-  open: { file: 'channel', start: 7, end: 17 },
-  ready: { file: 'channel', start: 19, end: 38 },
+  open: { file: 'channel', start: 7, end: 19 },
+  ready: { file: 'channel', start: 21, end: 40 },
   pay: { file: 'payment', start: 4, end: 13 },
-  result: { file: 'payment', start: 15, end: 25 },
-  react: { file: 'app', start: 40, end: 66 },
-  production: { file: 'app', start: 40, end: 66 },
+  result: { file: 'payment', start: 15, end: 26 },
+  react: { file: 'app', start: 23, end: 37 },
+  'react-actions': { file: 'app', start: 39, end: 49 },
+  production: { file: 'app', start: 51, end: 67 },
 };
 
 const syntaxPattern =
@@ -589,7 +590,10 @@ type ChannelList = Awaited<
 
 export function FiberChannelPaymentTutorial() {
   const nodeRef = useRef<FiberBrowserNode | null>(null);
+  const topRef = useRef<HTMLDivElement | null>(null);
+  const demoRef = useRef<HTMLElement | null>(null);
   const articleRef = useRef<HTMLDivElement | null>(null);
+  const [activeSection, setActiveSection] = useState('intro');
   const [activeFile, setActiveFile] = useState<CodeFile['id']>('app');
   const [codeFocus, setCodeFocus] = useState<CodeFocus>(sectionCode.intro);
   const [nodeState, setNodeState] = useState<BrowserNodeState>('idle');
@@ -708,6 +712,12 @@ export function FiberChannelPaymentTutorial() {
       }
 
       const nextCode = sectionCode[next] ?? sectionCode.intro;
+      setActiveSection(next);
+      sections.forEach((section) => {
+        section.dataset.active = String(
+          section.dataset.tutorialSection === next,
+        );
+      });
       setActiveFile(nextCode.file);
       setCodeFocus(nextCode);
     };
@@ -1022,8 +1032,54 @@ export function FiberChannelPaymentTutorial() {
     }
   }, [ckbAddress]);
 
+  const sectionOrder = Object.keys(sectionCode);
+  const activeSectionIndex = Math.max(0, sectionOrder.indexOf(activeSection));
+
   return (
-    <div className={styles.shell}>
+    <div className={`${styles.shell} ${styles.paymentShell}`} ref={topRef}>
+      <header className={styles.tutorialToolbar}>
+        <a href="/docs/build/interactive-tutorials">← Interactive tutorials</a>
+        <strong>Channel and payment</strong>
+        <div className={styles.toolbarActions}>
+          <button
+            onClick={() => demoRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            type="button"
+          >
+            Run live demo ↓
+          </button>
+          <a download href="/downloads/fiber-channel-payment.zip">
+            Download ↓
+          </a>
+        </div>
+      </header>
+
+      <nav className={styles.horizontalProgress} aria-label="Tutorial progress">
+        <span
+          className={styles.progressFill}
+          style={{
+            width: `${((activeSectionIndex + 1) / sectionOrder.length) * 100}%`,
+          }}
+        />
+        {sectionOrder.map((section, index) => (
+          <button
+            aria-current={activeSection === section ? 'step' : undefined}
+            className={activeSection === section ? styles.progressActive : ''}
+            key={section}
+            onClick={() => {
+              articleRef.current
+                ?.querySelector<HTMLElement>(
+                  `[data-tutorial-section="${section}"]`,
+                )
+                ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            type="button"
+          >
+            <i>{index + 1}</i>
+            <span>{section}</span>
+          </button>
+        ))}
+      </nav>
+
       <div className={styles.article} ref={articleRef}>
         <header className={styles.hero} data-tutorial-section="intro">
           <div className={styles.eyebrow}>
@@ -1181,45 +1237,31 @@ export function FiberChannelPaymentTutorial() {
           </p>
         </section>
 
-        <section className={`${styles.section} ${styles.reactSection}`}>
+        <section className={styles.section} data-tutorial-section="react">
           <div className={styles.stepLabel}>
-            <span>7</span> Wire the controls
+            <span>7.1</span> Wire the controls
           </div>
-          <h2>Keep every state-changing action explicit</h2>
+          <h2>Start, then connect</h2>
           <p>
-            The complete React page exposes separate controls for starting,
-            connecting, opening, and paying. Each button is enabled only when
-            the previous network state is ready.
+            Starting restores local identity and channel data. Connecting is a
+            separate user action, just like the first tutorial. The code panel
+            highlights both handlers as one explicit preparation step.
           </p>
-          <div className={styles.reactSteps}>
-            <article
-              className={styles.reactStep}
-              data-tutorial-section="react"
-            >
-              <span className={styles.substepNumber}>7.1</span>
-              <div>
-                <h3>Start, then connect</h3>
-                <p>
-                  Starting restores local identity and channel data. Connecting
-                  is a separate user action, just like the first tutorial.
-                </p>
-              </div>
-            </article>
-            <article
-              className={styles.reactStep}
-              data-tutorial-section="production"
-            >
-              <span className={styles.substepNumber}>7.2</span>
-              <div>
-                <h3>Open, then pay</h3>
-                <p>
-                  The channel button requires a connected peer. The payment
-                  button remains disabled until a stored or new channel is
-                  ready.
-                </p>
-              </div>
-            </article>
+        </section>
+
+        <section
+          className={styles.section}
+          data-tutorial-section="react-actions"
+        >
+          <div className={styles.stepLabel}>
+            <span>7.2</span> Wire the controls
           </div>
+          <h2>Open, then pay</h2>
+          <p>
+            The channel button requires a connected peer. The payment button
+            remains disabled until a stored or new channel is ready, so every
+            state-changing action stays separate and explicit.
+          </p>
         </section>
 
         <section className={styles.section} data-tutorial-section="production">
@@ -1253,7 +1295,22 @@ export function FiberChannelPaymentTutorial() {
         className={`${styles.workspace} ${styles.paymentWorkspace}`}
         aria-label="Live channel preview and code"
       >
-        <section className={styles.preview}>
+        <section className={styles.preview} ref={demoRef}>
+          <div className={styles.liveDemoHeading}>
+            <div>
+              <span>Fiber Testnet</span>
+              <h2>Run the Live Demo</h2>
+              <p>Fund the browser identity, observe the channel lifecycle, and send a real Testnet payment.</p>
+            </div>
+            <button
+              onClick={() =>
+                topRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+              }
+              type="button"
+            >
+              Back to tutorial ↑
+            </button>
+          </div>
           <div className={styles.panelHeader}>
             <span>
               <i className={styles.liveDot} /> Live Testnet flow
@@ -1463,6 +1520,36 @@ export function FiberChannelPaymentTutorial() {
                   when you click them.
                 </div>
               )}
+            </div>
+
+            <div className={styles.eventPanel}>
+              <div className={styles.eventPanelHeader}>
+                <span>Runtime events and results</span>
+                <i className={styles.liveDot} />
+              </div>
+              <div className={styles.eventList}>
+                <div><time>NODE</time><code>state</code><span>{nodeState === 'running' ? 'Running' : 'Stopped'}</span></div>
+                <div><time>PEER</time><code>connection</code><span>{peerCount > 0 ? 'Connected' : 'Offline'}</span></div>
+                {channelHistory.map((state, index) => (
+                  <div key={`${state}-event-${index}`}>
+                    <time>CH {String(index + 1).padStart(2, '0')}</time>
+                    <code>channel_state</code>
+                    <span>{state}</span>
+                  </div>
+                ))}
+                {paymentLogs.map((log, index) => (
+                  <div key={`${log.at}-event-${index}`}>
+                    <time>{log.at}</time>
+                    <code>payment</code>
+                    <span>{log.message}</span>
+                  </div>
+                ))}
+                {error && (
+                  <div className={styles.eventError}>
+                    <time>!</time><code>error</code><span>{error}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </section>

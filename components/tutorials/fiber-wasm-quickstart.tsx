@@ -23,21 +23,13 @@ const profileKey = 'fiber-docs:wasm-quickstart-profile-v1';
 const isolationReloadKey = 'fiber-docs:wasm-isolation-reload-v1';
 
 type CodeFile = {
-  id: 'install' | 'headers' | 'fiber' | 'app';
+  id: 'headers' | 'fiber' | 'app';
   label: string;
   language: string;
   code: string;
 };
 
 const codeFiles: CodeFile[] = [
-  {
-    id: 'install',
-    label: 'Terminal',
-    language: 'shell',
-    code: `npm create next-app@latest fiber-hello
-cd fiber-hello
-npm install @fiber-pay/sdk`,
-  },
   {
     id: 'headers',
     label: 'next.config.mjs',
@@ -182,14 +174,14 @@ type CodeFocus = {
 
 const sectionCode: Record<string, CodeFocus> = {
   intro: { file: 'app', start: 1, end: 5 },
-  architecture: { file: 'fiber', start: 1, end: 10 },
-  install: { file: 'install', start: 1, end: 3 },
-  isolate: { file: 'headers', start: 1, end: 22 },
-  start: { file: 'fiber', start: 13, end: 48 },
+  architecture: { file: 'fiber', start: 6, end: 11 },
+  install: { file: 'app', start: 1, end: 5 },
+  isolate: { file: 'headers', start: 1, end: 24 },
+  start: { file: 'fiber', start: 13, end: 49 },
   'react-store': { file: 'app', start: 7, end: 11 },
   'react-connect': { file: 'app', start: 13, end: 18 },
   'react-render': { file: 'app', start: 20, end: 39 },
-  extend: { file: 'app', start: 20, end: 39 },
+  extend: { file: 'app', start: 27, end: 39 },
 };
 
 const syntaxPattern =
@@ -346,6 +338,8 @@ function CodeBlock({ file, focus }: { file: CodeFile; focus: CodeFocus }) {
 
 export function FiberWasmQuickstart() {
   const nodeRef = useRef<FiberBrowserNode | null>(null);
+  const topRef = useRef<HTMLElement | null>(null);
+  const demoRef = useRef<HTMLElement | null>(null);
   const articleRef = useRef<HTMLDivElement | null>(null);
   const [activeSection, setActiveSection] = useState('intro');
   const [activeFile, setActiveFile] = useState<CodeFile['id']>('app');
@@ -406,6 +400,11 @@ export function FiberWasmQuickstart() {
       }
 
       setActiveSection(next);
+      sections.forEach((section) => {
+        section.dataset.active = String(
+          section.dataset.tutorialSection === next,
+        );
+      });
       const nextCode = sectionCode[next] ?? sectionCode.intro;
       setActiveFile(nextCode.file);
       setCodeFocus(nextCode);
@@ -534,9 +533,57 @@ export function FiberWasmQuickstart() {
     window.setTimeout(() => setCopied(false), 1_500);
   }, [currentFile]);
 
+  const sectionOrder = Object.keys(sectionCode);
+  const activeSectionIndex = Math.max(0, sectionOrder.indexOf(activeSection));
+
   return (
     <div className={styles.shell}>
-      <div className={styles.article} ref={articleRef}>
+      <section className={styles.instructionWorkspace} ref={topRef}>
+        <header className={styles.tutorialToolbar}>
+          <a href="/docs/build/interactive-tutorials">← Interactive tutorials</a>
+          <strong>Connect a WASM node</strong>
+          <div className={styles.toolbarActions}>
+            <button
+              onClick={() => demoRef.current?.scrollIntoView({ behavior: 'smooth' })}
+              type="button"
+            >
+              Run live demo ↓
+            </button>
+            <a download href="/downloads/fiber-connect-wasm-node.zip">
+              Download ↓
+            </a>
+          </div>
+        </header>
+
+        <nav className={styles.horizontalProgress} aria-label="Tutorial progress">
+          <span
+            className={styles.progressFill}
+            style={{
+              width: `${((activeSectionIndex + 1) / sectionOrder.length) * 100}%`,
+            }}
+          />
+          {sectionOrder.map((section, index) => (
+            <button
+              aria-current={activeSection === section ? 'step' : undefined}
+              className={activeSection === section ? styles.progressActive : ''}
+              key={section}
+              onClick={() => {
+                articleRef.current
+                  ?.querySelector<HTMLElement>(
+                    `[data-tutorial-section="${section}"]`,
+                  )
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              type="button"
+            >
+              <i>{index + 1}</i>
+              <span>{section.replace('react-', '')}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className={styles.instructionGrid}>
+          <div className={styles.article} ref={articleRef}>
         <header
           className={styles.hero}
           data-tutorial-section="intro"
@@ -601,7 +648,11 @@ export function FiberWasmQuickstart() {
             Fiber WASM and provides a small node lifecycle API for React.
           </p>
           <div className={styles.inlineCode}>
-            <code>npm install @fiber-pay/sdk</code>
+            <div className={styles.commandList}>
+              <code>npm create next-app@latest fiber-hello</code>
+              <code>cd fiber-hello</code>
+              <code>npm install @fiber-pay/sdk</code>
+            </div>
             <span>Terminal</span>
           </div>
         </section>
@@ -643,59 +694,47 @@ export function FiberWasmQuickstart() {
           </div>
         </section>
 
-        <section className={`${styles.section} ${styles.reactSection}`}>
+        <section
+          className={styles.section}
+          data-tutorial-section="react-store"
+        >
           <div className={styles.stepLabel}>
-            <span>4</span> Wire it into React
+            <span>4.1</span> Wire it into React
           </div>
-          <h2>Connect the node in three small steps</h2>
+          <h2>Keep the node between renders</h2>
           <p>
-            Each step below selects and highlights the exact lines it adds to
-            the React page.
+            Store the node in a ref and keep status, pubkey, and peer count in
+            React state. This is the first of three small React steps, and the
+            code panel highlights only the lines added here.
           </p>
+        </section>
 
-          <div className={styles.reactSteps}>
-            <article
-              className={styles.reactStep}
-              data-tutorial-section="react-store"
-            >
-              <span className={styles.substepNumber}>4.1</span>
-              <div>
-                <h3>Keep the node between renders</h3>
-                <p>
-                  Store the node in a ref and keep status, pubkey, and peer
-                  count in React state.
-                </p>
-              </div>
-            </article>
-
-            <article
-              className={styles.reactStep}
-              data-tutorial-section="react-connect"
-            >
-              <span className={styles.substepNumber}>4.2</span>
-              <div>
-                <h3>Start the WASM node</h3>
-                <p>
-                  The first button starts Fiber and reads the browser node
-                  pubkey. It does not make a network connection.
-                </p>
-              </div>
-            </article>
-
-            <article
-              className={styles.reactStep}
-              data-tutorial-section="react-render"
-            >
-              <span className={styles.substepNumber}>4.3</span>
-              <div>
-                <h3>Connect only when requested</h3>
-                <p>
-                  Enable the second button after startup. Its handler connects
-                  to the public WSS peer and then renders the peer count.
-                </p>
-              </div>
-            </article>
+        <section
+          className={styles.section}
+          data-tutorial-section="react-connect"
+        >
+          <div className={styles.stepLabel}>
+            <span>4.2</span> Wire it into React
           </div>
+          <h2>Start the WASM node</h2>
+          <p>
+            The first button starts Fiber and reads the browser node pubkey. It
+            does not make a network connection.
+          </p>
+        </section>
+
+        <section
+          className={styles.section}
+          data-tutorial-section="react-render"
+        >
+          <div className={styles.stepLabel}>
+            <span>4.3</span> Wire it into React
+          </div>
+          <h2>Connect only when requested</h2>
+          <p>
+            Enable the second button after startup. Its handler connects to the
+            public WSS peer and then renders the peer count.
+          </p>
         </section>
 
         <section className={styles.section} data-tutorial-section="extend">
@@ -728,92 +767,9 @@ export function FiberWasmQuickstart() {
           <span>Fiber Network</span>
           <span>Browser quickstart complete</span>
         </footer>
-      </div>
-
-      <aside className={styles.workspace} aria-label="Live preview and code">
-        <section className={styles.preview}>
-          <div className={styles.panelHeader}>
-            <span>
-              <i className={styles.liveDot} /> Live preview
-            </span>
-            <span>Testnet</span>
           </div>
 
-          <div className={styles.previewStage}>
-            <div className={styles.nodeCard}>
-              <div className={styles.nodeCardTop}>
-                <div className={styles.nodeMark}>F</div>
-                <div>
-                  <span>YOUR BROWSER NODE</span>
-                  <strong>{friendlyState(nodeState)}</strong>
-                </div>
-                <i
-                  className={`${styles.statusDot} ${
-                    nodeState === 'running' ? styles.statusRunning : ''
-                  }`}
-                />
-              </div>
-
-              <div className={styles.nodeIdentity}>
-                <span>NODE PUBKEY</span>
-                <code>{shorten(nodeInfo?.pubkey)}</code>
-              </div>
-
-              <div className={styles.nodeStats}>
-                {logs.map(([label, value]) => (
-                  <div key={label}>
-                    <span>{label}</span>
-                    <strong title={value}>{value}</strong>
-                  </div>
-                ))}
-              </div>
-
-              <div className={styles.nodeActions}>
-                <button
-                  className={styles.startButton}
-                  disabled={
-                    busyAction !== null ||
-                    Boolean(nodeInfo)
-                  }
-                  onClick={
-                    isolationReady === false
-                      ? () => window.location.reload()
-                      : startNode
-                  }
-                  type="button"
-                >
-                  {busyAction === 'start'
-                    ? 'Starting Fiber…'
-                    : nodeInfo
-                      ? 'Node running'
-                      : isolationReady === false
-                        ? 'Reload to enable WASM'
-                        : 'Start WASM node'}
-                  <span>→</span>
-                </button>
-                <button
-                  className={styles.connectButton}
-                  disabled={
-                    busyAction !== null ||
-                    !nodeInfo ||
-                    peerCount > 0
-                  }
-                  onClick={connectPublicPeer}
-                  type="button"
-                >
-                  {busyAction === 'connect'
-                    ? 'Connecting…'
-                    : peerCount > 0
-                      ? `${peerCount} peer connected`
-                      : 'Connect public peer'}
-                  <span>→</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className={styles.codePanel}>
+          <aside className={styles.codePanel} aria-label="Tutorial project files">
           <div className={styles.fileTabs} role="tablist" aria-label="Code files">
             {codeFiles.map((file) => (
               <button
@@ -844,26 +800,102 @@ export function FiberWasmQuickstart() {
             <span>{currentFile.language}</span>
           </div>
           <CodeBlock file={currentFile} focus={codeFocus} />
-        </section>
-      </aside>
+          </aside>
+        </div>
+      </section>
 
-      <nav className={styles.progress} aria-label="Tutorial progress">
-        {Object.keys(sectionCode).map((section) => (
+      <section className={styles.liveDemo} ref={demoRef}>
+        <div className={styles.liveDemoHeading}>
+          <div>
+            <span>Fiber Testnet</span>
+            <h2>Run the Live Demo</h2>
+            <p>Start the local WASM node, then connect it to a public peer.</p>
+          </div>
           <button
-            aria-label={`Go to ${section} section`}
-            className={activeSection === section ? styles.progressActive : ''}
-            key={section}
-            onClick={() => {
-              articleRef.current
-                ?.querySelector<HTMLElement>(
-                  `[data-tutorial-section="${section}"]`,
-                )
-                ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }}
+            onClick={() => topRef.current?.scrollIntoView({ behavior: 'smooth' })}
             type="button"
-          />
-        ))}
-      </nav>
+          >
+            Back to tutorial ↑
+          </button>
+        </div>
+
+        <div className={styles.liveDemoGrid}>
+          <div className={styles.nodeCard}>
+            <div className={styles.nodeCardTop}>
+              <div className={styles.nodeMark}>F</div>
+              <div>
+                <span>Your browser node</span>
+                <strong>{friendlyState(nodeState)}</strong>
+              </div>
+              <i
+                className={`${styles.statusDot} ${
+                  nodeState === 'running' ? styles.statusRunning : ''
+                }`}
+              />
+            </div>
+            <div className={styles.nodeIdentity}>
+              <span>Node pubkey</span>
+              <code>{shorten(nodeInfo?.pubkey)}</code>
+            </div>
+            <div className={styles.nodeStats}>
+              {logs.map(([label, value]) => (
+                <div key={label}>
+                  <span>{label}</span>
+                  <strong title={value}>{value}</strong>
+                </div>
+              ))}
+            </div>
+            <div className={styles.nodeActions}>
+              <button
+                className={styles.startButton}
+                disabled={busyAction !== null || Boolean(nodeInfo)}
+                onClick={
+                  isolationReady === false
+                    ? () => window.location.reload()
+                    : startNode
+                }
+                type="button"
+              >
+                {busyAction === 'start'
+                  ? 'Starting Fiber…'
+                  : nodeInfo
+                    ? 'Node running'
+                    : isolationReady === false
+                      ? 'Reload to enable WASM'
+                      : 'Start WASM node'}
+                <span>→</span>
+              </button>
+              <button
+                className={styles.connectButton}
+                disabled={busyAction !== null || !nodeInfo || peerCount > 0}
+                onClick={connectPublicPeer}
+                type="button"
+              >
+                {busyAction === 'connect'
+                  ? 'Connecting…'
+                  : peerCount > 0
+                    ? `${peerCount} peer connected`
+                    : 'Connect public peer'}
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.eventPanel}>
+            <div className={styles.eventPanelHeader}>
+              <span>Node events</span>
+              <i className={styles.liveDot} />
+            </div>
+            <div className={styles.eventList}>
+              <div><time>01</time><code>wasm_runtime</code><span>{isolationReady ? 'ready' : 'checking'}</span></div>
+              <div><time>02</time><code>node_state</code><span>{friendlyState(nodeState)}</span></div>
+              {nodeInfo && <div><time>03</time><code>node_started</code><span>{shorten(nodeInfo.pubkey)}</span></div>}
+              {peerCount > 0 && <div><time>04</time><code>peer_connected</code><span>{peerCount} public peer</span></div>}
+              {error && <div className={styles.eventError}><time>!</time><code>error</code><span>{error}</span></div>}
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

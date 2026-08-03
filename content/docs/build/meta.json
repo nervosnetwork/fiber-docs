@@ -6,7 +6,6 @@
     "sdk",
     "ffi",
     "simple-game",
-    "connect-wasm-node",
-    "open-channel-payment"
+    "interactive-tutorials"
   ]
 }
