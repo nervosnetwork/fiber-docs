@@ -5,6 +5,7 @@
     "api-reference",
     "sdk",
     "ffi",
-    "simple-game"
+    "simple-game",
+    "interactive-tutorials"
   ]
 }

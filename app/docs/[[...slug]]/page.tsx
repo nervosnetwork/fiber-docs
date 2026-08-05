@@ -9,6 +9,8 @@ import { notFound } from "next/navigation";
 import { createRelativeLink } from "fumadocs-ui/mdx";
 import { getMDXComponents } from "@/mdx-components";
 import { VersionBadge } from "@/components/VersionBadge";
+import { FiberWasmQuickstart } from "@/components/tutorials/fiber-wasm-quickstart";
+import { FiberChannelPaymentTutorial } from "@/components/tutorials/fiber-channel-payment";
 
 export default async function Page(props: {
   params: Promise<{ slug?: string[] }>;
@@ -41,8 +43,40 @@ export default async function Page(props: {
     },
   };
 
+  if (slug === "build/connect-wasm-node") {
+    return (
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <FiberWasmQuickstart />
+      </>
+    );
+  }
+
+  if (slug === "build/open-channel-payment") {
+    return (
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <FiberChannelPaymentTutorial />
+      </>
+    );
+  }
+
   return (
-    <DocsPage toc={page.data.toc} full={page.data.full}>
+    <DocsPage
+      toc={page.data.toc}
+      full={page.data.full}
+      footer={
+        slug === "build/interactive-tutorials"
+          ? { enabled: false }
+          : undefined
+      }
+    >
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

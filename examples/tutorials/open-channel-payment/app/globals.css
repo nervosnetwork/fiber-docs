@@ -1,0 +1,6 @@
+* { box-sizing: border-box; }
+body { margin: 0; background: #090b09; color: #f3f5f2; font-family: system-ui, sans-serif; }
+main { display: grid; max-width: 760px; min-height: 100vh; align-content: center; gap: 16px; margin: auto; padding: 32px; }
+button, input { border: 1px solid #4b554b; border-radius: 8px; padding: 12px 16px; background: #171c18; color: #f3f5f2; }
+button { background: #a8f04b; color: #111710; font-weight: 800; }
+button:disabled { opacity: .45; } code { overflow-wrap: anywhere; color: #a8f04b; }
