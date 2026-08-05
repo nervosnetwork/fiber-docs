@@ -1,6 +1,8 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   type ReactNode,
   useCallback,
@@ -606,6 +608,7 @@ type ChannelList = Awaited<
 >['channels'];
 
 export function FiberChannelPaymentTutorial() {
+  const router = useRouter();
   const nodeRef = useRef<FiberBrowserNode | null>(null);
   const topRef = useRef<HTMLDivElement | null>(null);
   const demoRef = useRef<HTMLElement | null>(null);
@@ -1139,7 +1142,7 @@ export function FiberChannelPaymentTutorial() {
           {tutorialMenuOpen && (
             <div className={styles.tutorialMenu} role="menu">
               {tutorials.map((tutorial, index) => (
-                <a
+                <Link
                   aria-current={
                     index === currentTutorialIndex ? 'page' : undefined
                   }
@@ -1163,7 +1166,7 @@ export function FiberChannelPaymentTutorial() {
                       width={18}
                     />
                   )}
-                </a>
+                </Link>
               ))}
             </div>
           )}
@@ -1725,7 +1728,7 @@ export function FiberChannelPaymentTutorial() {
 
       <nav className={styles.tutorialFooter} aria-label="Tutorial navigation">
         <button
-          onClick={() => window.location.assign('/docs/build/connect-wasm-node')}
+          onClick={() => router.push('/docs/build/connect-wasm-node')}
           type="button"
         >
           <span aria-hidden="true">←</span> Previous

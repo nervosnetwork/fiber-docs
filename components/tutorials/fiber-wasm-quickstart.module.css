@@ -763,7 +763,7 @@
   display: flex;
   min-width: 0;
   align-items: stretch;
-  border-bottom: 1px solid #303731;
+  border-bottom: 1px solid #303030;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -775,7 +775,7 @@
 .fileTabs button {
   flex: 0 0 auto;
   border: 0;
-  border-right: 1px solid #272d28;
+  border-right: 1px solid #272727;
   padding: 13px 15px;
   background: transparent;
   color: #778078;
@@ -835,7 +835,7 @@
   font: 500 12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  scrollbar-color: rgb(168 240 75 / 62%) transparent;
+  scrollbar-color: #5f5f5f #151515;
   tab-size: 2;
 }
 
@@ -846,17 +846,17 @@
 
 .code::-webkit-scrollbar-track,
 .code::-webkit-scrollbar-corner {
-  background: transparent;
+  background: #151515;
 }
 
 .code::-webkit-scrollbar-thumb {
   border: 0;
   border-radius: 999px;
-  background: rgb(168 240 75 / 62%);
+  background: #5f5f5f;
 }
 
 .code::-webkit-scrollbar-thumb:hover {
-  background: rgb(168 240 75 / 86%);
+  background: #858585;
 }
 
 .codeLine {
@@ -1729,7 +1729,7 @@
 
   .instructionGrid > .codePanel {
     height: 62dvh;
-    border-top: 1px solid #303731;
+    border-top: 1px solid #303030;
   }
 
   .hero {

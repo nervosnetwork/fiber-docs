@@ -1,6 +1,8 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   type ReactNode,
   useCallback,
@@ -361,6 +363,7 @@ function CodeBlock({
 }
 
 export function FiberWasmQuickstart() {
+  const router = useRouter();
   const nodeRef = useRef<FiberBrowserNode | null>(null);
   const topRef = useRef<HTMLElement | null>(null);
   const demoRef = useRef<HTMLElement | null>(null);
@@ -655,7 +658,7 @@ export function FiberWasmQuickstart() {
             {tutorialMenuOpen && (
               <div className={styles.tutorialMenu} role="menu">
                 {tutorials.map((tutorial, index) => (
-                  <a
+                  <Link
                     aria-current={
                       index === currentTutorialIndex ? 'page' : undefined
                     }
@@ -679,7 +682,7 @@ export function FiberWasmQuickstart() {
                         width={18}
                       />
                     )}
-                  </a>
+                  </Link>
                 ))}
               </div>
             )}
@@ -1092,14 +1095,14 @@ export function FiberWasmQuickstart() {
       <nav className={styles.tutorialFooter} aria-label="Tutorial navigation">
         <button
           disabled={!previousTutorial}
-          onClick={() => previousTutorial && window.location.assign(previousTutorial.href)}
+          onClick={() => previousTutorial && router.push(previousTutorial.href)}
           type="button"
         >
           <span aria-hidden="true">←</span> Previous
         </button>
         <button
           disabled={!nextTutorial}
-          onClick={() => nextTutorial && window.location.assign(nextTutorial.href)}
+          onClick={() => nextTutorial && router.push(nextTutorial.href)}
           type="button"
         >
           Next <span aria-hidden="true">→</span>
