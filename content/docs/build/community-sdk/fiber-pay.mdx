@@ -1,7 +1,7 @@
 ---
 title: fiber-pay
 description: Community toolchain for Fiber RPC, browser nodes, passkeys, React payment flows, and automation
-date: 2026-08-02
+date: 2026-08-05
 dependencies:
   - name: "@fiber-pay/sdk"
     minVersion: "0.3.0"
@@ -14,30 +14,49 @@ dependencies:
 import { Callout } from 'fumadocs-ui/components/callout';
 
 [`fiber-pay`](https://github.com/RetricSu/fiber-pay) is a community-maintained
-TypeScript toolchain for building and operating Fiber applications. It provides
-typed RPC clients, browser and Node.js entrypoints, React components, local node
-lifecycle helpers, and an automation-friendly CLI.
+TypeScript toolchain for building and operating Fiber applications. It covers
+more than checkout: the project provides typed RPC clients, a browser-local
+Fiber node, passkey credentials, React payment and node-management components,
+local node lifecycle helpers, and an automation-friendly CLI.
 
 <Callout type="warning" title="Community SDK">
   `fiber-pay` is maintained independently of the official Fiber repository.
-  Version 0.3.0 targets Fiber v0.9.0-rc7. Check the upstream release notes when
-  using a different Fiber Node version.
+  Version 0.3.0 targets Fiber v0.9.0-rc7. Pin compatible package and node
+  versions, and rerun integration tests before upgrading either side.
 </Callout>
+
+## Where it fits
+
+Use `fiber-pay` when an application needs one or more of these capabilities:
+
+- a typed client for an existing Fiber Node;
+- a Fiber WASM node that runs inside the browser;
+- passkey- or password-backed browser credentials;
+- React UI for connecting a node, opening channels, creating invoices, and
+  sending payments;
+- repeatable node and payment operations from a terminal or automation agent;
+- server-side Biscuit authorization or payment-gated L402 endpoints.
+
+For a merchant page that only needs to create an invoice and wait for payment,
+[`fiber-checkout`](/docs/build/community-sdk/fiber-checkout) is a smaller,
+checkout-focused alternative.
 
 ## Choose an integration surface
 
-| Package | Use it when you need |
-| --- | --- |
-| `@fiber-pay/sdk` | Typed RPC access and shared application primitives |
-| `@fiber-pay/sdk/browser` | A browser WASM node, browser credentials, or a browser-safe RPC client |
-| `@fiber-pay/sdk/node` | Node.js APIs and server-side L402 helpers |
-| `@fiber-pay/react` | Hooks and components for passkey-based browser payment flows |
-| `@fiber-pay/cli` | Node, channel, invoice, payment, and automation workflows from a terminal or agent |
+| Package or entrypoint | Primary role | Runtime |
+| --- | --- | --- |
+| `@fiber-pay/sdk` | Typed Fiber RPC, invoice, routing, policy, crypto, and UDT helpers | Browser or Node.js |
+| `@fiber-pay/sdk/browser` | Browser WASM node, credentials, CCC external funding, and browser-safe RPC | Browser |
+| `@fiber-pay/sdk/node` | Node-only exports, including L402 middleware | Node.js |
+| `@fiber-pay/react` | Hooks and UI for browser-node and payment flows | React 18 or 19 |
+| `@fiber-pay/node` | Download and manage a local `fnn` process | Node.js |
+| `@fiber-pay/runtime` | Polling, monitoring, retry, and background jobs | Node.js |
+| `@fiber-pay/cli` | Human- and machine-readable node, channel, invoice, and payment commands | Node.js 20+ |
 
-The separate `@fiber-pay/agent` package is experimental and is not recommended
-by its maintainer for production use.
+The separate `@fiber-pay/agent` package is experimental. Its maintainer does
+not recommend it for production use.
 
-## Connect to a Fiber Node
+## Connect to an existing Fiber Node
 
 Install the core SDK:
 
@@ -55,23 +74,105 @@ const client = new FiberRpcClient({
   biscuitToken: process.env.FIBER_RPC_BISCUIT_TOKEN,
 });
 
+await client.waitForReady();
+
 const info = await client.nodeInfo();
+const channels = await client.listChannels({});
+
+console.log({ pubkey: info.pubkey, channels: channels.channels.length });
+```
+
+The client exposes typed methods for the main Fiber RPC groups:
+
+| Area | Representative operations |
+| --- | --- |
+| Peers | connect, disconnect, and list peers |
+| Channels | open, externally fund, accept, list, shut down, abandon, and update |
+| Payments | send, inspect, and list payments; build and use routes |
+| Invoices | create, parse, inspect, cancel, and settle hold invoices |
+| Graph | list graph nodes and channels |
+| Node | readiness checks and node information |
+
+Use `client.call(method, params)` only when an RPC method has not yet received a
+typed wrapper. Treat raw calls as a compatibility boundary and validate their
+responses in application code.
+
+<Callout type="warning" title="Keep privileged tokens server-side">
+  A Biscuit token is sent as an authorization bearer credential. Do not embed a
+  privileged token in a public browser bundle. Issue narrowly scoped tokens or
+  proxy the required operations through your own backend.
+</Callout>
+
+## Run Fiber inside the browser
+
+The browser entrypoint wraps the Fiber WASM runtime and provides credential
+providers for passkeys, passwords, and raw keys. A minimal passkey-backed node
+looks like this:
+
+```typescript
+import {
+  FiberBrowserNode,
+  PasskeyCredentialProvider,
+} from "@fiber-pay/sdk/browser";
+
+const credential = new PasskeyCredentialProvider("my-wallet-testnet");
+
+// Call this once when the user creates the wallet.
+await credential.register("alice");
+
+const node = new FiberBrowserNode({
+  network: "testnet",
+  credential,
+});
+
+await node.start();
+const info = await node.getNodeInfo();
 console.log(info.pubkey);
 ```
 
-Keep privileged Biscuit tokens on a trusted server. Do not embed them in a
-browser bundle.
+Persist a stable `walletId` or credential identifier for the same user and
+network. Changing it creates a different local identity instead of reopening
+the previous node.
 
-## Add a browser payment UI
+### Required browser headers
 
-For a browser-local Fiber node and React components, install the React layer and
-the Fiber WASM runtime:
+The multithreaded WASM runtime uses `SharedArrayBuffer`. Serve every route that
+loads it with these response headers in development and production:
+
+```text
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+These policies also affect third-party scripts, iframes, images, and workers.
+Test analytics, wallet connectors, and other cross-origin resources after
+enabling them.
+
+<Callout type="info" title="Load the WASM runtime on demand">
+  The upstream v0.3.0 documentation measures the Fiber WASM payload at roughly
+  45.5 MB raw and 13.4 MB gzip. Lazy-load browser-node functionality behind a
+  user action so unrelated pages do not pay its download and startup cost.
+</Callout>
+
+## Add React UI
+
+Install the React layer and Fiber WASM peer dependency:
 
 ```bash
 npm install @fiber-pay/react @nervosnetwork/fiber-js
 ```
 
-The quickest starting point is `FiberPayQuickCard`:
+Choose the component level that matches the product:
+
+| API | Good starting point for |
+| --- | --- |
+| `FiberPayQuickCard` | A compact create-invoice and pay-invoice experience |
+| `ConnectButton` | App-owned UI that only needs browser-node lifecycle and credentials |
+| `FiberNodeButton` | A node workbench with peers, channels, invoices, payments, and diagnostics |
+| `NodeInfoPanel` | Read-only node metadata, live statistics, and deposit information |
+| `useFiberNode`, `useFiberPayment` | Fully custom UI and state handling |
+
+The smallest integration is one component:
 
 ```tsx
 import { FiberPayQuickCard } from "@fiber-pay/react";
@@ -81,8 +182,8 @@ export function PaymentPanel() {
 }
 ```
 
-For a shared node session and more control, compose `useFiberNode`,
-`ConnectButton`, and `FiberPayQuickCard`:
+In a real application, create one shared node session and pass it to every
+component. This prevents two widgets from starting separate browser nodes:
 
 ```tsx
 import {
@@ -100,32 +201,149 @@ export function PaymentPanel() {
   return (
     <>
       <ConnectButton fiber={fiber} strategy="passkey" />
-      <FiberPayQuickCard fiber={fiber} network="testnet" />
+      <FiberPayQuickCard
+        fiber={fiber}
+        network="testnet"
+        invoiceAmount="1"
+      />
     </>
   );
 }
 ```
 
-## Browser requirements
+`FiberNodeButton` is the broader option when users also need peer connection,
+channel operations, graph diagnostics, CKB/UDT selection, or custom tabs. For a
+narrow payment surface, prefer the quick card or the hooks rather than exposing
+the full node workbench.
 
-The multithreaded WASM runtime uses `SharedArrayBuffer`. Serve every route that
-loads it with these response headers in both development and production:
+## Fund a channel with an external CKB wallet
 
-```text
-Cross-Origin-Opener-Policy: same-origin
-Cross-Origin-Embedder-Policy: require-corp
+A browser Fiber node does not have to fund a channel from its own key. The
+browser SDK includes a resolver that lets a [CCC](https://docs.ckbccc.com/)
+signer build and sign the CKB funding transaction:
+
+```typescript
+import { ccc } from "@ckb-ccc/connector-react";
+import { createCccExternalFundingResolver } from "@fiber-pay/sdk/browser";
+
+const resolveExternalFunding = createCccExternalFundingResolver({
+  signer: cccSigner,
+  knownScripts: Object.values(ccc.KnownScript),
+  ckbRpcUrl: "https://testnet.ckbapp.dev/",
+});
 ```
 
-<Callout type="info" title="Plan for a large browser chunk">
-  The Fiber WASM runtime is much larger than a typical UI dependency. Load
-  WASM-dependent payment features lazily or behind an explicit user action so
-  the rest of your application does not pay the startup cost.
-</Callout>
+Pass the resolver to the node workbench:
 
-## Resources
+```tsx
+<FiberNodeButton
+  fiber={fiber}
+  strategy="passkey"
+  externalFunding={{
+    enabled: true,
+    resolve: resolveExternalFunding,
+  }}
+/>
+```
+
+The flow asks Fiber to prepare an externally funded channel, lets CCC resolve
+and sign the CKB transaction, and submits the signed transaction back to Fiber.
+Keep the signer network, Fiber network, address, and known-script configuration
+aligned; a mismatch should stop the flow before signing.
+
+## Automate operator workflows with the CLI
+
+The CLI is useful for local development, CI, operational scripts, and agents
+that need structured output:
+
+```bash
+npm install --global @fiber-pay/cli
+
+fiber-pay node start --daemon
+fiber-pay node ready --json
+fiber-pay runtime status --json
+
+fiber-pay peer connect <peer-multiaddr> --json
+fiber-pay channel open --peer <peer-address> --funding <CKB> --json
+fiber-pay channel watch --until CHANNEL_READY --json
+
+fiber-pay invoice create --amount <CKB> --description "Order #1234" --json
+fiber-pay payment send <invoice> --wait --json
+```
+
+Commands with `--json` return stable envelopes, while watch commands can emit
+newline-delimited JSON. Prefer these modes over scraping human-readable output.
+The `@fiber-pay/node` and `@fiber-pay/runtime` packages expose lower-level APIs
+when the same lifecycle and monitoring logic must live inside a Node.js service.
+
+## Advanced server capabilities
+
+### Scoped Biscuit authorization
+
+The SDK can render policy facts for the exact methods a service needs:
+
+```typescript
+import { renderBiscuitFactsForMethods } from "@fiber-pay/sdk";
+
+const facts = renderBiscuitFactsForMethods([
+  "list_peers",
+  "new_invoice",
+  "get_invoice",
+]);
+```
+
+Use the generated facts when issuing a restricted Biscuit token. Scope by both
+method and deployment context; a read-only dashboard and a payment worker should
+not share the same authority.
+
+### L402 payment gates
+
+The Node.js entrypoint exports `createL402Middleware` and `MacaroonService` for
+building HTTP endpoints that return an L402 payment challenge and verify the
+paid credential. These exports are intentionally absent from the root and
+browser entrypoints:
+
+```typescript
+import {
+  createL402Middleware,
+  MacaroonService,
+} from "@fiber-pay/sdk/node";
+```
+
+Use this only on a trusted server. Macaroon roots, invoice creation authority,
+and Fiber RPC credentials must never reach client code.
+
+### UDT payments
+
+The SDK and React node workbench can resolve UDTs configured by the connected
+Fiber node and validate invoice type scripts before payment. UDT amounts are raw
+integer base units, not decimal display amounts. Always verify the type script,
+network deployment, symbol, and decimals against the issuer's official data;
+node-provided names alone are not a trust anchor.
+
+## Production checklist
+
+- Pin `fiber-pay`, `fiber-js`, and Fiber Node versions and test them together.
+- Keep administrator RPC and broadly scoped Biscuit credentials off the client.
+- Lazy-load WASM and verify COOP/COEP behavior across every integrated resource.
+- Reuse one browser-node session and one persistent identity per user/network.
+- Handle node startup, channel readiness, invoice expiry, payment failure, and
+  retry states explicitly.
+- Validate CKB/UDT network and type scripts before signing or sending payment.
+- Treat external funding as a transaction-signing flow and show users the final
+  asset and amount before wallet approval.
+- Use structured CLI output and avoid making automation depend on display text.
+- Keep the experimental agent package outside production paths unless it has
+  been independently reviewed for the deployment.
+
+## Examples and resources
 
 - [Documentation and examples](https://retricsu.github.io/fiber-pay/)
 - [Source repository](https://github.com/RetricSu/fiber-pay)
+- [Minimal React connection example](https://github.com/RetricSu/fiber-pay/tree/master/examples/react-min-connect)
+- [React node workbench example](https://github.com/RetricSu/fiber-pay/tree/master/examples/react-fiber-node-button-lab)
+- [Browser SDK playground](https://github.com/RetricSu/fiber-pay/tree/master/examples/browser-sdk-playground)
+- [Node.js SDK recipes](https://github.com/RetricSu/fiber-pay/tree/master/examples/sdk-node-recipes)
 - [Nervos Talk discussion](https://talk.nervos.org/t/fiber-pay-an-ai-friendly-cli-for-fiber-network/9974)
 - [npm: `@fiber-pay/sdk`](https://www.npmjs.com/package/@fiber-pay/sdk)
 - [npm: `@fiber-pay/react`](https://www.npmjs.com/package/@fiber-pay/react)

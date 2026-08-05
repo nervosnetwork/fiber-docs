@@ -1,7 +1,7 @@
 ---
 title: fiber-checkout
 description: Community-maintained React components and hooks for Fiber invoice checkout flows
-date: 2026-08-02
+date: 2026-08-05
 dependencies:
   - name: fiber-checkout
     minVersion: "0.1.2"
@@ -11,25 +11,63 @@ dependencies:
 import { Callout } from 'fumadocs-ui/components/callout';
 
 [`fiber-checkout`](https://github.com/salmansarwarr/Fiber-checkout) is a
-community-maintained React library for invoice-based Fiber checkout flows. It
-can create an invoice, render its QR code, poll the invoice status, detect
-expiry, and report payment success through one component or lower-level hooks.
+community-maintained React library for receiving invoice-based Fiber payments.
+It can generate an invoice, render a QR code, poll for settlement, detect
+expiry, and expose success or failure through a ready-made component or
+lower-level hooks.
 
 <Callout type="warning" title="Compatibility and support">
   `fiber-checkout` is a community project delivered through the Spark Program
-  and is now in stable maintenance. Its published peer dependency targets
-  `@nervosnetwork/fiber-js` v0.7.x, while Fiber continues to evolve. Verify the
-  current upstream compatibility notes and test your exact Fiber Node version
-  before production use.
+  and is now in stable maintenance. Version 0.1.2 declares an optional peer
+  dependency on `@nervosnetwork/fiber-js` v0.7.x, while current Fiber releases
+  have moved beyond that API line. Test the exact package and node versions you
+  deploy, especially when using the browser WASM backend.
 </Callout>
 
-## When to use it
+## Where it fits
 
-Use `fiber-checkout` when a merchant or service needs to **receive** a Fiber
-payment with a ready-made React checkout. If you need a browser-local node,
-passkey wallet, channel management, or a broader RPC client, consider
-[fiber-pay](/docs/build/community-sdk/fiber-pay) or the
-[JavaScript SDK](/docs/build/sdk/js) instead.
+`fiber-checkout` is intentionally narrower than a wallet SDK. It is a good fit
+for a merchant or service that needs to **receive** a payment and show a compact
+checkout state. It does not provide peer discovery, channel management, routing
+controls, passkey wallets, or a general node dashboard.
+
+If the product needs those broader capabilities, use
+[`fiber-pay`](/docs/build/community-sdk/fiber-pay) or the
+[JavaScript SDK](/docs/build/sdk/js).
+
+## Understand the payment lifecycle
+
+The default component coordinates this sequence:
+
+```text
+Mount checkout
+    |
+    v
+Generate a random 32-byte preimage
+    |
+    v
+new_invoice -> show invoice text and QR code
+    |
+    v
+get_invoice every 2 seconds
+    |
+    +-- Open ------> pending
+    +-- Received --> processing
+    +-- Paid ------> success -> onSuccess(paymentHash)
+    +-- Cancelled -> failed
+    +-- Expired ---> expired -> onExpired()
+```
+
+After a successful invoice poll, the hook also attempts `get_payment` to obtain
+a routing fee. A receiver commonly has no outgoing payment session for that
+hash, so this lookup is optional and failure leaves `feePaid` as `null`.
+
+<Callout type="warning" title="Do not fulfill an order from a browser callback">
+  `onSuccess` is a client-side UI event, not a trusted receipt. Your backend
+  must bind the order to its payment hash, expected amount, asset, and expiry,
+  then verify settlement against a trusted Fiber Node before delivering goods
+  or changing durable order state.
+</Callout>
 
 ## Install
 
@@ -37,76 +75,315 @@ passkey wallet, channel management, or a broader RPC client, consider
 npm install fiber-checkout
 ```
 
-The package supports React 18 and 19. Its RPC-only mode does not require the
-Fiber WASM runtime.
+The package supports React 18 and 19 and ships ESM and CommonJS builds. Choose a
+backend based on the application architecture:
 
-## Add a checkout component
+| Mode | Use it when | Main trade-off |
+| --- | --- | --- |
+| HTTPS RPC proxy | A web checkout talks to a server-managed Fiber Node | Recommended for production; requires a small backend route |
+| Direct RPC | Local development against a trusted node | Exposes the node address and must never be enabled for public production clients |
+| `FiberWasmBackend` | The app already owns and runs a compatible browser Fiber instance | No remote RPC, but adds a large WASM runtime and strict version coupling |
+
+## Add the checkout component
+
+The amount is a `0x`-prefixed integer in the asset's smallest unit. Use the
+provided conversion helper rather than writing hex literals by hand:
 
 ```tsx
-import { FiberCheckout, ckbToShannonHex } from "fiber-checkout";
+import {
+  FiberCheckout,
+  ckbToShannonHex,
+  type FiberError,
+} from "fiber-checkout";
 
 export default function CheckoutPage() {
+  function handleError(error: FiberError) {
+    console.error(error.code, error.method, error.message);
+  }
+
   return (
     <FiberCheckout
       amount={ckbToShannonHex(1)}
       asset="CKB"
       nodeUrl="/api/fiber-rpc"
       description="Order #1234"
+      expirySeconds={900}
+      qrSize={240}
       onSuccess={(paymentHash) => {
-        console.log("Payment confirmed:", paymentHash);
+        // Update the UI, then ask your server to verify the order.
+        console.log("Payment observed:", paymentHash);
       }}
       onExpired={() => console.log("Invoice expired")}
-      onError={(error) => console.error(error.code, error.message)}
+      onError={handleError}
     />
   );
 }
 ```
 
-The component uses `new_invoice` to create the invoice and `get_invoice` to
-observe its status. For a custom UI, the package also exports
-`useFiberInvoice()` and `useFiberPayment()`.
+The component owns invoice creation, polling, QR rendering, copy, retry, and
+terminal-state UI. Its public props in v0.1.2 are:
 
-## Put an RPC proxy in front of your node
+| Prop | Required | Meaning |
+| --- | --- | --- |
+| `amount` | Yes | Hex integer in the selected asset's smallest unit |
+| `asset` | Yes | Built-in or custom asset identifier |
+| `nodeUrl` | Yes | Same-origin proxy path, HTTPS proxy URL, or development RPC URL |
+| `description` | No | Text embedded in the Fiber invoice |
+| `expirySeconds` | No | Invoice lifetime; defaults to 3,600 seconds |
+| `qrSize` | No | QR size in pixels; defaults to 240 |
+| `onSuccess` | No | Called with the payment hash after `Paid` is observed |
+| `onExpired` | No | Called when node or client-side expiry is observed |
+| `onError` | No | Receives a typed `FiberError` |
+| `customAssets` | No | Additional asset definitions; see the v0.1.2 limitation below |
+| `dangerouslyAllowDirectRpc` | No | Permits a bare IP or localhost RPC URL for trusted development |
 
-In production, do not expose a Fiber node RPC endpoint directly to browsers.
-Route checkout requests through a server endpoint that:
+## Put a narrow RPC proxy in front of the node
 
-- keeps the node address and credentials on the server;
-- accepts only the RPC methods required by the checkout;
-- applies your authentication, rate limits, and request validation; and
-- serves the public application over HTTPS without browser CORS or mixed-content
-  failures.
-
-The expected request path is:
+For production, point `nodeUrl` at a same-origin server route. The proxy keeps
+the Fiber Node location and credentials private and makes the public RPC surface
+explicit:
 
 ```text
-Browser -> your HTTPS RPC proxy -> your Fiber node
+Browser -> /api/fiber-rpc -> private Fiber Node RPC
 ```
 
-At minimum, allow only `new_invoice` and `get_invoice` for this checkout flow.
-Validate the JSON-RPC payload before forwarding it instead of passing arbitrary
-methods and parameters to the node.
+Here is a compact Next.js App Router example:
+
+```typescript
+// app/api/fiber-rpc/route.ts
+import { NextRequest, NextResponse } from "next/server";
+
+const ALLOWED_METHODS = new Set(["new_invoice", "get_invoice"]);
+
+type RpcRequest = {
+  jsonrpc: "2.0";
+  id: number | string | null;
+  method: string;
+  params: unknown[];
+};
+
+function rpcError(id: RpcRequest["id"], code: number, message: string) {
+  return NextResponse.json({
+    jsonrpc: "2.0",
+    id,
+    error: { code, message },
+  });
+}
+
+export async function POST(request: NextRequest) {
+  const nodeUrl = process.env.FIBER_NODE_URL;
+  if (!nodeUrl) return rpcError(null, -32603, "Proxy not configured");
+
+  let body: Partial<RpcRequest>;
+  try {
+    body = await request.json();
+  } catch {
+    return rpcError(null, -32700, "Parse error");
+  }
+
+  if (
+    body.jsonrpc !== "2.0" ||
+    typeof body.method !== "string" ||
+    !Array.isArray(body.params) ||
+    !ALLOWED_METHODS.has(body.method)
+  ) {
+    return rpcError(body.id ?? null, -32600, "Request not allowed");
+  }
+
+  try {
+    const response = await fetch(nodeUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30_000),
+      cache: "no-store",
+    });
+
+    return NextResponse.json(await response.json(), {
+      status: response.status,
+    });
+  } catch {
+    return rpcError(body.id ?? null, -32603, "Fiber Node unavailable");
+  }
+}
+```
+
+Set `FIBER_NODE_URL` only in the server environment, for example
+`http://127.0.0.1:8227`. Do not expose it through a `NEXT_PUBLIC_` variable.
+
+The component needs `new_invoice` and `get_invoice`. The hook attempts
+`get_payment` after success only to populate `feePaid`; because that failure is
+non-fatal, keep it blocked unless your custom UI really displays that value. If
+you allow it, validate the request shape and restrict access to payment hashes
+belonging to the authenticated merchant.
+
+The method allowlist is only the beginning. A production proxy should also:
+
+- authenticate the merchant or checkout session;
+- validate method-specific parameters, amount, asset, description, and expiry;
+- rate-limit invoice creation and polling independently;
+- cap body size and upstream response time;
+- associate each created payment hash with the server-side order; and
+- avoid returning sensitive upstream error details to untrusted clients.
 
 <Callout type="warning" title="Direct RPC is for local development only">
-  The `dangerouslyAllowDirectRpc` option is intended for a trusted local setup.
-  Enabling it in production exposes the node RPC surface and its network address
-  to every browser user.
+  `dangerouslyAllowDirectRpc` bypasses the package's block on bare IP and
+  localhost URLs. It does not make the endpoint safe, add authentication, or
+  limit methods. Never enable it in a public production application.
 </Callout>
 
-## Assets and WASM mode
+A local-only setup can opt in explicitly:
 
-The built-in component accepts CKB and RUSD and can be extended with a custom
-asset registry. Confirm every UDT type script against the issuer's official
-deployment before accepting payment.
+```tsx
+<FiberCheckout
+  amount={ckbToShannonHex(1)}
+  asset="CKB"
+  nodeUrl="http://127.0.0.1:8227"
+  dangerouslyAllowDirectRpc
+/>
+```
 
-If an application already runs a browser node with
-`@nervosnetwork/fiber-js`, `FiberWasmBackend` can reuse that instance instead of
-calling a remote RPC proxy. Review the upstream peer-dependency and Fiber Node
-compatibility before choosing this mode.
+## Build a custom checkout with hooks
 
-## Resources
+Use `useFiberInvoice` and `useFiberPayment` when the product owns its visual
+design or needs custom polling behavior:
 
-- [Source and full component reference](https://github.com/salmansarwarr/Fiber-checkout)
+```tsx
+import {
+  ckbToShannonHex,
+  useFiberInvoice,
+  useFiberPayment,
+} from "fiber-checkout";
+
+export function CustomCheckout() {
+  const invoice = useFiberInvoice({
+    nodeUrl: "/api/fiber-rpc",
+    amount: ckbToShannonHex(1),
+    asset: "CKB",
+    expirySeconds: 900,
+    description: "Order #1234",
+  });
+
+  const payment = useFiberPayment({
+    nodeUrl: "/api/fiber-rpc",
+    paymentHash: invoice.paymentHash,
+    expiresAt: invoice.expiresAt,
+    pollIntervalMs: 2_000,
+  });
+
+  if (invoice.isLoading) return <p>Creating invoice…</p>;
+  if (invoice.error) return <button onClick={invoice.regenerate}>Retry</button>;
+
+  return (
+    <section>
+      <code>{invoice.invoiceAddress}</code>
+      <p>Status: {payment.status}</p>
+      {payment.feePaid && <p>Routing fee: {payment.feePaid}</p>}
+      <button onClick={payment.poll}>Refresh now</button>
+    </section>
+  );
+}
+```
+
+`useFiberPayment` stops polling after `success`, `failed`, or `expired`. Passing
+`expiresAt` also lets it expire the UI locally without waiting for the next node
+status transition.
+
+## Handle failures by category
+
+Every library error is a `FiberError` with a stable `code`:
+
+| Code | Typical meaning | Suggested response |
+| --- | --- | --- |
+| `RPC_ERROR` | Fiber Node returned a JSON-RPC error | Log `rpcCode` and `method`; show a safe retry or support message |
+| `DIRECT_RPC_BLOCKED` | A bare IP or localhost URL was used without explicit opt-in | Add a production proxy, or enable only for trusted local development |
+| `NETWORK_ERROR` | Proxy/node could not be reached | Retry with backoff and check service health |
+| `INVALID_RESPONSE` | Response was malformed or incomplete | Stop fulfillment and investigate proxy/node compatibility |
+| `REQUEST_TIMEOUT` | The request exceeded the default 30-second limit | Retry cautiously; invoice creation may have reached the node |
+
+Invoice creation is not automatically idempotent. After a timeout, do not assume
+that no invoice was created; reconcile the order before blindly regenerating
+multiple invoices.
+
+## Assets and amount safety
+
+Version 0.1.2 includes these registry entries:
+
+| Asset | Status in the package |
+| --- | --- |
+| CKB | Built in, 8 decimal places |
+| RUSD | Built-in testnet type script; verify it for the network you deploy |
+| SEAL | Declared but marked unsupported because its type script is unset |
+
+For CKB, `ckbToShannonHex(1)` returns `0x5f5e100`, or 100,000,000 shannons.
+For UDTs, calculate the integer using the token's verified decimal count and
+pass it as hex. Never derive trust from a token symbol alone.
+
+<Callout type="warning" title="Custom asset limitation in v0.1.2">
+  The v0.1.2 public API exposes `customAssets`, but its invoice-generation path
+  does not pass that registry into the asset lookup. Treat custom-token support
+  as unavailable in this release unless you have reviewed and patched the
+  upstream behavior. Even after that is fixed, verify the UDT type script and
+  ensure the connected Fiber Node has the asset in its whitelist.
+</Callout>
+
+## Reuse an existing browser Fiber node
+
+The hooks accept a `FiberBackend`. If the application already starts a
+compatible `Fiber` WASM instance, wrap it instead of calling an HTTP proxy:
+
+```typescript
+import { Fiber, FiberWasmBackend } from "fiber-checkout";
+
+const fiber = new Fiber();
+await fiber.start(config, keyPair, secretKey);
+
+const backend = new FiberWasmBackend(fiber);
+```
+
+Pass the same `backend` to both hooks:
+
+```tsx
+const invoice = useFiberInvoice({
+  nodeUrl: "unused-with-wasm-backend",
+  backend,
+  amount: ckbToShannonHex(1),
+  asset: "CKB",
+});
+
+const payment = useFiberPayment({
+  nodeUrl: "unused-with-wasm-backend",
+  backend,
+  paymentHash: invoice.paymentHash,
+  expiresAt: invoice.expiresAt,
+});
+```
+
+`nodeUrl` remains required by the v0.1.2 hook types but is ignored when a
+backend is provided. The high-level `FiberCheckout` component does not expose a
+`backend` prop, so WASM mode requires composing the hooks yourself.
+
+Because this mode relies on the optional `fiber-js` v0.7.x peer API, check
+browser isolation headers, bundle size, key persistence, and node version
+compatibility separately. If another library already owns a Fiber browser node,
+prefer adapting that same instance rather than starting a second node.
+
+## Production checklist
+
+- Put a method- and parameter-restricted proxy in front of a server Fiber Node.
+- Store the expected amount, asset, payment hash, and expiry with the order.
+- Verify `Paid` server-side before fulfillment; never trust UI state alone.
+- Use integer base units and verify every UDT type script and network deployment.
+- Make invoice regeneration and order reconciliation explicit after timeouts.
+- Stop polling terminal orders and rate-limit active polling sessions.
+- Test React, package, `fiber-js`, and Fiber Node versions as one release unit.
+- Keep `dangerouslyAllowDirectRpc` and raw node URLs out of production bundles.
+
+## Examples and resources
+
+- [Source and complete API reference](https://github.com/salmansarwarr/Fiber-checkout)
+- [Next.js proxy guide](https://github.com/salmansarwarr/Fiber-checkout/blob/main/docs/nextjs-guide.md)
+- [Next.js App Router and Pages Router examples](https://github.com/salmansarwarr/Fiber-checkout/tree/main/examples/nextjs-proxy)
 - [npm package](https://www.npmjs.com/package/fiber-checkout)
 - [Spark completion report](https://talk.nervos.org/t/spark-program-fiber-checkout-a-stripe-style-react-payment-library-for-fiber-network/10045/1)
 - [Maintenance updates](https://talk.nervos.org/t/fiber-checkout-a-stripe-style-payment-library-for-fiber-network-post-grant-updates/10337)
