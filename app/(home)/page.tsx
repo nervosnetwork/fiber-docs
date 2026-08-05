@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import TransactionPathVisualizer from '@/components/transaction-path-visualizer';
 import HeroTitle from '@/components/hero-title';
 import NetworkStats from '@/components/network-stats';
+import NativeNodeInstaller from '@/components/native-node-installer';
 import HowItWorks from '@/components/how-it-works';
 import LiveSimulation from '@/components/live-simulation';
 import NetworkComparison from '@/components/network-comparison';
@@ -41,6 +42,7 @@ export default function HomePage() {
       <main className="flex flex-col p-4 md:p-10">
         <HeroTitle />
         <NetworkStats />
+        <NativeNodeInstaller />
         <HowItWorks />
         {/* <QuickStartSection /> */}
         {/* <LiveSimulation /> */}
