@@ -1,6 +1,23 @@
 import styles from './interactive-tutorials.module.css';
 
-const tutorials = [
+type TutorialLevel = 'Beginner' | 'Intermediate' | 'Hard';
+
+type Tutorial = {
+  level: TutorialLevel;
+  duration: string;
+  title: string;
+  description: string;
+  tags: string[];
+  href: string;
+};
+
+const levelClassNames: Record<TutorialLevel, string> = {
+  Beginner: styles.levelBeginner,
+  Intermediate: styles.levelIntermediate,
+  Hard: styles.levelHard,
+};
+
+const tutorials: Tutorial[] = [
   {
     level: 'Beginner',
     duration: '~10 min',
@@ -32,8 +49,13 @@ export function InteractiveTutorials() {
           rel="noreferrer"
           target="_blank"
         >
+          <span aria-hidden="true" className={styles.externalArrow}>
+            ↗
+          </span>
           <div className={styles.meta}>
-            <span className={styles.level}>{tutorial.level}</span>
+            <span className={`${styles.level} ${levelClassNames[tutorial.level]}`}>
+              {tutorial.level}
+            </span>
             <span className={styles.duration}>◷ {tutorial.duration}</span>
           </div>
           <h2>{tutorial.title}</h2>
@@ -43,7 +65,6 @@ export function InteractiveTutorials() {
               <span key={tag}>{tag}</span>
             ))}
           </div>
-          <div className={styles.open}>Open playground <span>↗</span></div>
         </a>
       ))}
     </div>

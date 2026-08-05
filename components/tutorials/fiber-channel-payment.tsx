@@ -1,5 +1,8 @@
 'use client';
 
+import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   type ReactNode,
   useCallback,
@@ -21,6 +24,18 @@ const routerPubkey =
 const profileKey = 'fiber-docs:wasm-quickstart-profile-v1';
 const isolationReloadKey = 'fiber-docs:wasm-isolation-reload-v1';
 const shannonsPerCkb = 100_000_000n;
+
+const tutorials = [
+  {
+    shortTitle: 'Connect a WASM node',
+    href: '/docs/build/connect-wasm-node',
+  },
+  {
+    shortTitle: 'Open a channel and send a payment',
+    href: '/docs/build/open-channel-payment',
+  },
+] as const;
+const currentTutorialIndex = 1;
 
 type CodeFile = {
   id: 'fiber' | 'balance' | 'amounts' | 'channel' | 'payment' | 'app';
@@ -343,8 +358,6 @@ type CodeFocus = {
 };
 
 const sectionCode: Record<string, CodeFocus> = {
-  intro: { file: 'app', start: 16, end: 21 },
-  model: { file: 'fiber', start: 48, end: 71 },
   fund: { file: 'balance', start: 7, end: 45 },
   amounts: { file: 'amounts', start: 1, end: 18 },
   open: { file: 'channel', start: 7, end: 19 },
@@ -353,7 +366,6 @@ const sectionCode: Record<string, CodeFocus> = {
   result: { file: 'payment', start: 15, end: 26 },
   react: { file: 'app', start: 23, end: 37 },
   'react-actions': { file: 'app', start: 39, end: 49 },
-  production: { file: 'app', start: 51, end: 67 },
 };
 
 const syntaxPattern =
@@ -395,10 +407,17 @@ function highlightLine(line: string): ReactNode[] {
   return parts;
 }
 
-function CodeBlock({ file, focus }: { file: CodeFile; focus: CodeFocus }) {
+function CodeBlock({
+  file,
+  focus,
+}: {
+  file: CodeFile;
+  focus: CodeFocus | null;
+}) {
   const codeRef = useRef<HTMLPreElement | null>(null);
 
   useEffect(() => {
+    if (!focus) return;
     const code = codeRef.current;
     const line = code?.querySelector<HTMLElement>(`[data-line="${focus.start}"]`);
     if (!code || !line) return;
@@ -411,7 +430,7 @@ function CodeBlock({ file, focus }: { file: CodeFile; focus: CodeFocus }) {
       top: Math.max(0, lineTop - code.clientHeight * 0.28),
       behavior: 'smooth',
     });
-  }, [file.id, focus.start]);
+  }, [file.id, focus]);
 
   return (
     <pre className={styles.code} aria-label={`${file.label} code`} ref={codeRef}>
@@ -419,7 +438,7 @@ function CodeBlock({ file, focus }: { file: CodeFile; focus: CodeFocus }) {
         {file.code.split('\n').map((line, index) => {
           const lineNumber = index + 1;
           const isFocused =
-            focus.file === file.id &&
+            focus?.file === file.id &&
             lineNumber >= focus.start &&
             lineNumber <= focus.end;
 
@@ -589,13 +608,18 @@ type ChannelList = Awaited<
 >['channels'];
 
 export function FiberChannelPaymentTutorial() {
+  const router = useRouter();
   const nodeRef = useRef<FiberBrowserNode | null>(null);
   const topRef = useRef<HTMLDivElement | null>(null);
   const demoRef = useRef<HTMLElement | null>(null);
   const articleRef = useRef<HTMLDivElement | null>(null);
+  const tutorialMenuRef = useRef<HTMLDivElement | null>(null);
   const [activeSection, setActiveSection] = useState('intro');
+  const [articleProgress, setArticleProgress] = useState(0);
+  const [tutorialMenuOpen, setTutorialMenuOpen] = useState(false);
+  const [liveDemoActive, setLiveDemoActive] = useState(false);
   const [activeFile, setActiveFile] = useState<CodeFile['id']>('app');
-  const [codeFocus, setCodeFocus] = useState<CodeFocus>(sectionCode.intro);
+  const [codeFocus, setCodeFocus] = useState<CodeFocus | null>(null);
   const [nodeState, setNodeState] = useState<BrowserNodeState>('idle');
   const [nodeInfo, setNodeInfo] = useState<NodeInfoResult | null>(null);
   const [peerCount, setPeerCount] = useState(0);
@@ -668,6 +692,17 @@ export function FiberChannelPaymentTutorial() {
     channelState !== 'Open failed';
   const expectedChannelState = nextChannelState(channelState);
 
+  const syncToSection = useCallback((section: string) => {
+    setActiveSection(section);
+    const nextCode = sectionCode[section];
+    if (!nextCode) {
+      setCodeFocus(null);
+      return;
+    }
+    setActiveFile(nextCode.file);
+    setCodeFocus(nextCode);
+  }, []);
+
   useEffect(() => {
     const supported =
       window.crossOriginIsolated && typeof SharedArrayBuffer !== 'undefined';
@@ -700,6 +735,12 @@ export function FiberChannelPaymentTutorial() {
       const sections = Array.from(
         article.querySelectorAll<HTMLElement>('[data-tutorial-section]'),
       );
+      const maxScroll = article.scrollHeight - article.clientHeight;
+      setArticleProgress(
+        maxScroll <= 0
+          ? 1
+          : Math.min(1, Math.max(0, article.scrollTop / maxScroll)),
+      );
       const articleTop = article.getBoundingClientRect().top;
       let next = sections[0]?.dataset.tutorialSection ?? 'intro';
 
@@ -711,20 +752,57 @@ export function FiberChannelPaymentTutorial() {
         }
       }
 
-      const nextCode = sectionCode[next] ?? sectionCode.intro;
-      setActiveSection(next);
-      sections.forEach((section) => {
-        section.dataset.active = String(
-          section.dataset.tutorialSection === next,
-        );
-      });
-      setActiveFile(nextCode.file);
-      setCodeFocus(nextCode);
+      syncToSection(next);
     };
 
     onScroll();
     article.addEventListener('scroll', onScroll, { passive: true });
     return () => article.removeEventListener('scroll', onScroll);
+  }, [syncToSection]);
+
+  useEffect(() => {
+    articleRef.current
+      ?.querySelectorAll<HTMLElement>('[data-tutorial-section]')
+      .forEach((section) => {
+        section.dataset.active = String(
+          section.dataset.tutorialSection === activeSection,
+        );
+      });
+  }, [activeSection]);
+
+  useEffect(() => {
+    if (!tutorialMenuOpen) return;
+
+    const closeOnPointerDown = (event: PointerEvent) => {
+      if (
+        tutorialMenuRef.current &&
+        !tutorialMenuRef.current.contains(event.target as Node)
+      ) {
+        setTutorialMenuOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setTutorialMenuOpen(false);
+    };
+
+    document.addEventListener('pointerdown', closeOnPointerDown);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnPointerDown);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [tutorialMenuOpen]);
+
+  useEffect(() => {
+    const demo = demoRef.current;
+    if (!demo) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setLiveDemoActive(entry.isIntersecting),
+      { threshold: 0.2 },
+    );
+    observer.observe(demo);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -1032,55 +1110,109 @@ export function FiberChannelPaymentTutorial() {
     }
   }, [ckbAddress]);
 
-  const sectionOrder = Object.keys(sectionCode);
-  const activeSectionIndex = Math.max(0, sectionOrder.indexOf(activeSection));
+  const toggleDemo = useCallback(() => {
+    if (liveDemoActive) {
+      topRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    demoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [liveDemoActive]);
 
   return (
     <div className={`${styles.shell} ${styles.paymentShell}`} ref={topRef}>
       <header className={styles.tutorialToolbar}>
-        <a href="/docs/build/interactive-tutorials">← Interactive tutorials</a>
-        <strong>Channel and payment</strong>
-        <div className={styles.toolbarActions}>
+        <div className={styles.tutorialSelect} ref={tutorialMenuRef}>
           <button
-            onClick={() => demoRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            aria-expanded={tutorialMenuOpen}
+            aria-haspopup="menu"
+            className={styles.tutorialSelectButton}
+            onClick={() => setTutorialMenuOpen((open) => !open)}
             type="button"
           >
-            Run live demo ↓
+            <span>Tutorial: {tutorials[currentTutorialIndex].shortTitle}</span>
+            <Image
+              alt=""
+              aria-hidden="true"
+              className={styles.selectChevron}
+              height={18}
+              src="/icon-chevron-down.svg"
+              width={18}
+            />
           </button>
+          {tutorialMenuOpen && (
+            <div className={styles.tutorialMenu} role="menu">
+              {tutorials.map((tutorial, index) => (
+                <Link
+                  aria-current={
+                    index === currentTutorialIndex ? 'page' : undefined
+                  }
+                  className={
+                    index === currentTutorialIndex
+                      ? styles.tutorialMenuCurrent
+                      : undefined
+                  }
+                  href={tutorial.href}
+                  key={tutorial.href}
+                  onClick={() => setTutorialMenuOpen(false)}
+                  role="menuitem"
+                >
+                  <span>{tutorial.shortTitle}</span>
+                  {index === currentTutorialIndex && (
+                    <Image
+                      alt=""
+                      aria-hidden="true"
+                      height={18}
+                      src="/icon-checkmark.svg"
+                      width={18}
+                    />
+                  )}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+        <button
+          className={styles.runDemoAction}
+          onClick={toggleDemo}
+          type="button"
+        >
+          {liveDemoActive ? 'Back to tutorial' : 'Run live demo'}{' '}
+          <span aria-hidden="true">{liveDemoActive ? '↑' : '↓'}</span>
+        </button>
+        <div className={styles.toolbarActions}>
           <a download href="/downloads/fiber-channel-payment.zip">
-            Download ↓
+            <Image
+              alt=""
+              aria-hidden="true"
+              height={18}
+              src="/icon-download.svg"
+              width={18}
+            />
+            Download project
           </a>
+        </div>
+        <div className={styles.horizontalProgress} aria-hidden="true">
+          <span
+            className={styles.progressFill}
+            style={{
+              transform: `scaleX(${articleProgress})`,
+            }}
+          />
         </div>
       </header>
 
-      <nav className={styles.horizontalProgress} aria-label="Tutorial progress">
-        <span
-          className={styles.progressFill}
-          style={{
-            width: `${((activeSectionIndex + 1) / sectionOrder.length) * 100}%`,
-          }}
-        />
-        {sectionOrder.map((section, index) => (
-          <button
-            aria-current={activeSection === section ? 'step' : undefined}
-            className={activeSection === section ? styles.progressActive : ''}
-            key={section}
-            onClick={() => {
-              articleRef.current
-                ?.querySelector<HTMLElement>(
-                  `[data-tutorial-section="${section}"]`,
-                )
-                ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }}
-            type="button"
-          >
-            <i>{index + 1}</i>
-            <span>{section}</span>
-          </button>
-        ))}
-      </nav>
-
-      <div className={styles.article} ref={articleRef}>
+      <div
+        className={styles.article}
+        onClick={(event) => {
+          const section = (event.target as HTMLElement).closest<HTMLElement>(
+            '[data-tutorial-section]',
+          );
+          if (section?.dataset.tutorialSection) {
+            syncToSection(section.dataset.tutorialSection);
+          }
+        }}
+        ref={articleRef}
+      >
         <header className={styles.hero} data-tutorial-section="intro">
           <div className={styles.eyebrow}>
             <span>Build</span>
@@ -1144,6 +1276,7 @@ export function FiberChannelPaymentTutorial() {
             <span>Fund at least 499 CKB plus an on-chain transaction fee</span>
             <span>Use Testnet funds only</span>
           </div>
+          <small className={styles.fileReference}>lib/balance.ts · lines 7–45</small>
         </section>
 
         <section className={styles.section} data-tutorial-section="amounts">
@@ -1160,6 +1293,7 @@ export function FiberChannelPaymentTutorial() {
             <code>499 CKB = 49,900,000,000 shannons</code>
             <span>0xb9e0ab300</span>
           </div>
+          <small className={styles.fileReference}>lib/amounts.ts · lines 1–18</small>
         </section>
 
         <section className={styles.section} data-tutorial-section="open">
@@ -1181,6 +1315,7 @@ export function FiberChannelPaymentTutorial() {
               contracts and shutdown.
             </p>
           </div>
+          <small className={styles.fileReference}>lib/channel.ts · lines 7–19</small>
         </section>
 
         <section className={styles.section} data-tutorial-section="ready">
@@ -1202,6 +1337,7 @@ export function FiberChannelPaymentTutorial() {
             <span>AwaitingChannelReady: wait for confirmation and both peers</span>
             <span>ChannelReady: the channel can carry a payment</span>
           </div>
+          <small className={styles.fileReference}>lib/channel.ts · lines 21–40</small>
         </section>
 
         <section className={styles.section} data-tutorial-section="pay">
@@ -1222,6 +1358,7 @@ export function FiberChannelPaymentTutorial() {
               access after server-side verification.
             </p>
           </div>
+          <small className={styles.fileReference}>lib/payment.ts · lines 4–13</small>
         </section>
 
         <section className={styles.section} data-tutorial-section="result">
@@ -1235,6 +1372,7 @@ export function FiberChannelPaymentTutorial() {
             <code>waitForPayment()</code> and update the React UI with its
             terminal status.
           </p>
+          <small className={styles.fileReference}>lib/payment.ts · lines 15–26</small>
         </section>
 
         <section className={styles.section} data-tutorial-section="react">
@@ -1247,6 +1385,7 @@ export function FiberChannelPaymentTutorial() {
             separate user action, just like the first tutorial. The code panel
             highlights both handlers as one explicit preparation step.
           </p>
+          <small className={styles.fileReference}>app/pay/page.tsx · lines 23–37</small>
         </section>
 
         <section
@@ -1262,6 +1401,7 @@ export function FiberChannelPaymentTutorial() {
             remains disabled until a stored or new channel is ready, so every
             state-changing action stays separate and explicit.
           </p>
+          <small className={styles.fileReference}>app/pay/page.tsx · lines 39–49</small>
         </section>
 
         <section className={styles.section} data-tutorial-section="production">
@@ -1285,10 +1425,6 @@ export function FiberChannelPaymentTutorial() {
           </div>
         </section>
 
-        <footer className={styles.articleFooter}>
-          <span>Fiber Network</span>
-          <span>Channel and payment tutorial complete</span>
-        </footer>
       </div>
 
       <aside
@@ -1302,14 +1438,6 @@ export function FiberChannelPaymentTutorial() {
               <h2>Run the Live Demo</h2>
               <p>Fund the browser identity, observe the channel lifecycle, and send a real Testnet payment.</p>
             </div>
-            <button
-              onClick={() =>
-                topRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
-              }
-              type="button"
-            >
-              Back to tutorial ↑
-            </button>
           </div>
           <div className={styles.panelHeader}>
             <span>
@@ -1554,37 +1682,61 @@ export function FiberChannelPaymentTutorial() {
           </div>
         </section>
 
-        <section className={styles.codePanel}>
-          <div className={styles.fileTabs}>
+        <section className={styles.codePanel} aria-label="Tutorial project files">
+          <div className={styles.fileTabs} role="tablist" aria-label="Code files">
             {codeFiles.map((file) => (
               <button
+                aria-selected={file.id === activeFile}
                 className={file.id === activeFile ? styles.activeTab : ''}
                 key={file.id}
                 onClick={() => {
                   setActiveFile(file.id);
-                  setCodeFocus({
-                    file: file.id,
-                    start: 1,
-                    end: Math.min(8, file.code.split('\n').length),
-                  });
+                  setCodeFocus(null);
                 }}
+                role="tab"
+                type="button"
               >
                 {file.label}
               </button>
             ))}
-            <button className={styles.copyButton} onClick={copyCode}>
-              {copied ? 'Copied' : 'Copy'}
-            </button>
-          </div>
-          <div className={styles.codeMeta}>
-            <span>{currentFile.language}</span>
-            <span>
-              Lines {codeFocus.start}–{codeFocus.end}
-            </span>
           </div>
           <CodeBlock file={currentFile} focus={codeFocus} />
+          <div className={styles.codeMeta}>
+            <span>
+              {currentFile.label} <i>{currentFile.language}</i>
+            </span>
+            <button
+              aria-label={
+                copied ? `${currentFile.label} copied` : `Copy ${currentFile.label}`
+              }
+              className={styles.copyButton}
+              onClick={copyCode}
+              type="button"
+            >
+              <Image
+                alt=""
+                aria-hidden="true"
+                height={18}
+                src={copied ? '/icon-checkmark.svg' : '/icon-copy.svg'}
+                width={18}
+              />
+              {copied ? 'Copied' : 'Copy file'}
+            </button>
+          </div>
         </section>
       </aside>
+
+      <nav className={styles.tutorialFooter} aria-label="Tutorial navigation">
+        <button
+          onClick={() => router.push('/docs/build/connect-wasm-node')}
+          type="button"
+        >
+          <span aria-hidden="true">←</span> Previous
+        </button>
+        <button disabled type="button">
+          Next <span aria-hidden="true">→</span>
+        </button>
+      </nav>
     </div>
   );
 }

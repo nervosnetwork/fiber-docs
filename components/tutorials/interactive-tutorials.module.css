@@ -6,6 +6,7 @@
 }
 
 .card {
+  position: relative;
   display: flex;
   min-height: 360px;
   flex-direction: column;
@@ -19,8 +20,8 @@
 }
 
 .card:hover {
-  border-color: color-mix(in srgb, #a8f04b 48%, transparent);
-  background: color-mix(in srgb, #a8f04b 6%, transparent);
+  border-color: color-mix(in srgb, currentColor 34%, transparent);
+  background: color-mix(in srgb, currentColor 7%, transparent);
   transform: translateY(-2px);
 }
 
@@ -28,20 +29,29 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  padding-right: 40px;
   font-size: 13px;
 }
 
 .level {
+  border: 1px solid color-mix(in srgb, currentColor 38%, transparent);
   border-radius: 5px;
   padding: 5px 8px;
-  background: rgb(84 197 105 / 14%);
-  color: #73d986;
+  background: color-mix(in srgb, var(--level-accent) 14%, transparent);
+  color: color-mix(in srgb, currentColor 35%, var(--level-accent));
   font-weight: 700;
 }
 
-.card:nth-child(2) .level {
-  background: rgb(235 159 71 / 14%);
-  color: #e7a45b;
+.levelBeginner {
+  --level-accent: #4ca66a;
+}
+
+.levelIntermediate {
+  --level-accent: #c58b2a;
+}
+
+.levelHard {
+  --level-accent: #c76161;
 }
 
 .duration {
@@ -78,18 +88,13 @@
   font-size: 12px;
 }
 
-.open {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: auto;
-  border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
-  padding-top: 24px;
-  font-weight: 700;
-}
-
-.open span {
-  color: #a8f04b;
+.externalArrow {
+  position: absolute;
+  top: 34px;
+  right: 34px;
+  color: color-mix(in srgb, currentColor 65%, transparent);
+  font-size: 19px;
+  line-height: 1;
 }
 
 @media (max-width: 820px) {
@@ -100,5 +105,10 @@
   .card {
     min-height: 330px;
     padding: 28px;
+  }
+
+  .externalArrow {
+    top: 28px;
+    right: 28px;
   }
 }
