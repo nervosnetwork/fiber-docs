@@ -110,6 +110,22 @@ The `@nervosnetwork/fiber-js` API is the browser-facing integration layer. It do
 
 The `fiber-ffi` C ABI is the native embedding boundary. Host applications call functions declared in `fiber_ffi.h`, receive status codes, returned data, and event callbacks, and wrap those C-level details in a platform runtime such as an Android JNI bridge, an iOS Swift runtime, or a C/C++ integration layer.
 
+### Community application SDKs
+
+Community SDKs build higher-level application workflows on top of Fiber RPC or
+`fiber-js`. They are maintained independently from the official Fiber
+repository, so their supported Fiber versions and maintenance policies can
+differ from the core runtime.
+
+- [`fiber-pay`](/docs/build/community-sdk/fiber-pay) combines typed RPC clients,
+  a browser WASM and passkey layer, React components, and CLI automation.
+- [`fiber-checkout`](/docs/build/community-sdk/fiber-checkout) focuses on a
+  reusable React checkout flow for creating invoices and observing payment
+  status.
+
+See [Community SDK](/docs/build/community-sdk) for the current selection policy,
+status, and compatibility notes.
+
 ## Runtime-Specific Operations
 
 The native, WASM, and FFI runtimes have different operational surfaces. Native `fnn` exposes HTTP RPC and CLI-based node-maintenance tooling. `fiber-js` embeds the WASM node in browser workers, uses IndexedDB-backed storage through the WASM database worker, and presents a JS/TS API to application code. `fiber-ffi` exposes a C ABI through a dynamic library and leaves platform lifecycle, packaging, and host-language wrappers to the app. These paths share `fiber-lib` underneath, including the store version check used when each runtime opens its store.
@@ -143,6 +159,8 @@ Starting from v0.9.0, migration is built into the `fnn` binary and runs automati
 | Run a production node | [fnn](/docs/quick-start/run-a-node) + [fnn-cli](#fnn-cli) |
 | Control a node from my backend | [HTTP RPC](/docs/api-reference) |
 | Build a browser wallet | [fiber-js](/docs/build/sdk/js) |
+| Add a browser node, passkeys, or payment components | [fiber-pay](/docs/build/community-sdk/fiber-pay) |
+| Add an invoice checkout to a React app | [fiber-checkout](/docs/build/community-sdk/fiber-checkout) |
 | Embed Fiber in a non-JS native runtime | [fiber-ffi](/docs/build/ffi) |
 | Build a native Android app | [fiber-ffi Android guide](/docs/build/ffi/android-native-integration) |
 | Build a native iOS app | [fiber-ffi iOS guide](/docs/build/ffi/ios-native-integration) |

@@ -58,6 +58,19 @@ const PAGE_STRUCTURE = [
     section: "Guide / Build on Fiber",
   },
   {
+    slug: "build/community-sdk/index",
+    route: "build/community-sdk",
+    section: "Guide / Community SDK",
+  },
+  {
+    slug: "build/community-sdk/fiber-pay",
+    section: "Guide / Community SDK",
+  },
+  {
+    slug: "build/community-sdk/fiber-checkout",
+    section: "Guide / Community SDK",
+  },
+  {
     slug: "guide/developer/toolchain",
     section: "Guide / Build on Fiber",
   },
@@ -202,7 +215,10 @@ function readPage(slug) {
 
 const pages = PAGE_STRUCTURE.map((p) => {
   const page = readPage(p.slug);
-  if (page) page.section = p.section;
+  if (page) {
+    page.section = p.section;
+    if (p.route) page.url = `${BASE_URL}/${p.route}`;
+  }
   return page;
 }).filter(Boolean);
 
