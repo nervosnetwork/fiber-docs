@@ -5,7 +5,7 @@ import { source } from '@/lib/source';
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
-    <div className="bg-fd-background">
+    <div className="min-h-dvh bg-fd-background">
       <DocsLayout
         tree={source.pageTree}
         {...baseOptions}

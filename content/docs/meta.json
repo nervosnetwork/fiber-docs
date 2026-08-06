@@ -16,6 +16,7 @@
     "build/community-sdk",
     "build/ffi",
     "build/simple-game",
+    "build/interactive-tutorials",
     "---Node Operations---",
     "operate/config-reference",
     "operate/backup",

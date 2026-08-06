@@ -1,0 +1,143 @@
+---
+title: "Tutorial: Connect to Fiber with a WASM Node"
+description: "Start a real Fiber node in React and connect to Testnet without a backend"
+date: 2026-07-27
+full: true
+---
+
+## Overview
+
+In this quickstart, you will start a real Fiber node inside a React page,
+connect it to Fiber Testnet over WebSocket Secure, and read live node state.
+The application uses Fiber WASM workers and stores its local node state in
+IndexedDB.
+
+This minimal node connection does not need an application backend. A
+receiving service becomes useful when your product needs to issue invoices,
+verify merchant payments, persist shared business data, or unlock server-side
+content.
+
+## 1. Create the React app
+
+Create a Next.js application and install the Fiber browser SDK:
+
+```bash
+npm create next-app@latest fiber-hello
+cd fiber-hello
+npm install @fiber-pay/sdk
+```
+
+## 2. Enable browser isolation
+
+Fiber WASM uses workers and `SharedArrayBuffer`. Add COOP and COEP response
+headers to the route that runs the node:
+
+```js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  transpilePackages: [
+    '@fiber-pay/sdk',
+    '@nervosnetwork/fiber-js',
+  ],
+  async headers() {
+    return [{
+      source: '/fiber',
+      headers: [
+        {
+          key: 'Cross-Origin-Opener-Policy',
+          value: 'same-origin',
+        },
+        {
+          key: 'Cross-Origin-Embedder-Policy',
+          value: 'require-corp',
+        },
+      ],
+    }];
+  },
+};
+
+export default nextConfig;
+```
+
+Check `crossOriginIsolated` before creating a browser node.
+
+When this route is opened through client-side documentation navigation, the
+new response headers cannot affect the already-loaded document. Detect that
+case and perform one full-page reload so the browser can apply COOP and COEP.
+The interactive preview on this page does this automatically.
+
+## 3. Start Fiber WASM
+
+Import `FiberBrowserNode` and `RawKeyCredentialProvider` from
+`@fiber-pay/sdk/browser`. Create a Testnet credential, start the node, and make
+an outbound WSS connection to a browser-reachable public Fiber peer.
+
+Persist the same browser identity between sessions if the node will own
+channels or payment state. Production apps also need encrypted key storage,
+backup, account switching, and recovery.
+
+```ts
+const {
+  FiberBrowserNode,
+  RawKeyCredentialProvider,
+} = await import('@fiber-pay/sdk/browser');
+
+const credential = new RawKeyCredentialProvider(
+  crypto.getRandomValues(new Uint8Array(32)),
+  crypto.getRandomValues(new Uint8Array(32)),
+  crypto.randomUUID(),
+);
+
+const node = new FiberBrowserNode({
+  network: 'testnet',
+  credential,
+  nodeConfig: {
+    bootnodes: [],
+    logLevel: 'info',
+  },
+});
+
+await node.start();
+```
+
+At this point the Fiber WASM node is running locally, but it is not connected
+to the public peer. Connect only after the user explicitly requests it:
+
+```ts
+await node.connectPeer({
+  address: routerWssMultiaddr.replace(/\/p2p\/[^/]+$/, ''),
+  pubkey: routerPubkey,
+});
+```
+
+## 4. Wire it into React
+
+### 4.1 Keep the node between renders
+
+Store the node in a ref and keep status, pubkey, and peer count in React state.
+
+### 4.2 Start the WASM node
+
+The first button starts Fiber and calls `getNodeInfo()`. It does not make a
+network connection.
+
+### 4.3 Connect only when requested
+
+Enable a second button after the node starts. Connect to the public peer from
+that handler, then query the peer list:
+
+```ts
+await node.connectPeer({ address: routerAddress, pubkey: routerPubkey });
+const peerList = await node.listPeers();
+setPeers(peerList.peers.length);
+```
+
+The interactive preview on this page runs this flow with a browser-local
+Testnet identity and a public Testnet peer.
+
+## Next steps
+
+This tutorial ends after a real peer connection. Channel funding, invoices,
+and sending a payment will live in a separate follow-up tutorial. Continue
+with the [WASM Node integration guide](/docs/build/sdk/wasm-node) or use the
+[full Browser Node Lab](/labs/browser-node) for the complete browser flow.

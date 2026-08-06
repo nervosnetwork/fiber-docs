@@ -6,6 +6,7 @@
     "sdk",
     "community-sdk",
     "ffi",
-    "simple-game"
+    "simple-game",
+    "interactive-tutorials"
   ]
 }
