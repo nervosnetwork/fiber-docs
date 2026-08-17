@@ -3,11 +3,11 @@ title: "Tutorial: Build a Game"
 description: "A simple JavaScript game example with Fiber micro-payments"
 author: Retric Su
 authorUrl: https://www.pingkey.xyz/p/ce6232feaec4e6d01a4e00daa3648030c42017bdf589e34b53744fc49c5cba8a
-date: 2026-06-09
+date: 2026-08-17
 dependencies:
   - name: Fiber Node
-    minVersion: "0.7.1"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.7.1"
+    minVersion: "0.9.0"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0"
 ---
 
 ## Overview
@@ -111,6 +111,12 @@ First, install the dependencies:
 ```bash
 pnpm add @ckb-ccc/fiber@0.0.0-canary-20260505020844
 ```
+
+<Callout type="info">
+  Fiber Node and `@ckb-ccc/fiber` use independent version numbers. This
+  tutorial targets Fiber Node v0.9.0; the RPC SDK is currently published under
+  the canary version shown above rather than as `0.9.0`.
+</Callout>
 
 ### 2. Create the FiberNode Class
 

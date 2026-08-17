@@ -24,7 +24,7 @@ This demo leverages Fiber Network to enable:
 
 Before running the game, you need to set up the Fiber Network environment:
 
-1. Set up two local Fiber nodes (one for player, one for boss)
+1. Set up two local [Fiber v0.9.0](https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0) nodes (one for player, one for boss)
 2. Open a payment channel between the these two nodes
 3. Each node must deposit 500 CKB into its channel
 
