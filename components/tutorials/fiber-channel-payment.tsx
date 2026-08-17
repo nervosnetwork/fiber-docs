@@ -34,6 +34,14 @@ const tutorials = [
     shortTitle: 'Open a channel and send a payment',
     href: '/docs/build/open-channel-payment',
   },
+  {
+    shortTitle: 'Send a multi-hop invoice payment',
+    href: '/docs/build/multi-hop-invoice',
+  },
+  {
+    shortTitle: 'Open a unidirectional channel',
+    href: '/docs/build/unidirectional-channel',
+  },
 ] as const;
 const currentTutorialIndex = 1;
 
@@ -123,7 +131,7 @@ export async function startFiber(): Promise<FiberBrowserNode> {
 
 export async function connectToRouter(node: FiberBrowserNode) {
   await node.connectPeer({
-    address: routerAddress.replace(/\\/p2p\\/[^/]+$/, ''),
+    address: routerAddress,
     pubkey: routerPubkey,
   });
 }`,
@@ -970,7 +978,7 @@ export function FiberChannelPaymentTutorial() {
 
     try {
       await node.connectPeer({
-        address: routerAddress.replace(/\/p2p\/[^/]+$/i, ''),
+        address: routerAddress,
         pubkey: routerPubkey,
       });
 
@@ -1733,7 +1741,10 @@ export function FiberChannelPaymentTutorial() {
         >
           <span aria-hidden="true">←</span> Previous
         </button>
-        <button disabled type="button">
+        <button
+          onClick={() => router.push('/docs/build/multi-hop-invoice')}
+          type="button"
+        >
           Next <span aria-hidden="true">→</span>
         </button>
       </nav>

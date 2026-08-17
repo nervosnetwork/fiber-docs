@@ -11,6 +11,8 @@ import { getMDXComponents } from "@/mdx-components";
 import { VersionBadge } from "@/components/VersionBadge";
 import { FiberWasmQuickstart } from "@/components/tutorials/fiber-wasm-quickstart";
 import { FiberChannelPaymentTutorial } from "@/components/tutorials/fiber-channel-payment";
+import { FiberMultiHopInvoiceTutorial } from "@/components/tutorials/fiber-multi-hop-invoice";
+import { FiberUnidirectionalChannelTutorial } from "@/components/tutorials/fiber-unidirectional-channel";
 
 export default async function Page(props: {
   params: Promise<{ slug?: string[] }>;
@@ -63,6 +65,30 @@ export default async function Page(props: {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <FiberChannelPaymentTutorial />
+      </>
+    );
+  }
+
+  if (slug === "build/multi-hop-invoice") {
+    return (
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <FiberMultiHopInvoiceTutorial />
+      </>
+    );
+  }
+
+  if (slug === "build/unidirectional-channel") {
+    return (
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <FiberUnidirectionalChannelTutorial />
       </>
     );
   }

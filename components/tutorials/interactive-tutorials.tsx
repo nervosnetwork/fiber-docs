@@ -36,6 +36,24 @@ const tutorials: Tutorial[] = [
     tags: ['Channels', 'Payments', 'Fiber SDK'],
     href: '/docs/build/open-channel-payment',
   },
+  {
+    level: 'Hard',
+    duration: '~25 min',
+    title: 'Send a Multi-Hop Invoice Payment',
+    description:
+      'Copy an invoice between two browser nodes and pay it through one public Fiber intermediary.',
+    tags: ['Invoice', 'Multi-hop', 'WASM'],
+    href: '/docs/build/multi-hop-invoice',
+  },
+  {
+    level: 'Intermediate',
+    duration: '~20 min',
+    title: 'Open a Unidirectional Fiber Channel',
+    description:
+      'Open a private one-way channel, inspect the payer and acceptor roles, and send a forward payment.',
+    tags: ['One-way', 'Channels', 'Keysend'],
+    href: '/docs/build/unidirectional-channel',
+  },
 ];
 
 export function InteractiveTutorials() {
