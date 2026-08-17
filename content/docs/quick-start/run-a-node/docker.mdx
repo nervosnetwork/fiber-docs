@@ -1,7 +1,7 @@
 ---
 title: "Run a Native Node (Docker)"
 description: "Deploy the native Fiber Network Node using Docker"
-date: 2026-07-15
+date: 2026-08-17
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -16,7 +16,7 @@ docker run --rm -d \
   -e FIBER_SECRET_KEY_PASSWORD='YOUR_PASSWORD' \
   -v "$(pwd)/fiber-node:/fiber" \
   -p 8228:8228 \
-  nervos/fiber:0.9.0-rc7
+  nervos/fiber:0.9.0
 ```
 
 ## Prerequisites
@@ -38,13 +38,13 @@ The Fiber image is published to two registries:
 
 ```bash
 # From Docker Hub
-docker pull nervos/fiber:0.9.0-rc7
+docker pull nervos/fiber:0.9.0
 
 # Or from GHCR
-docker pull ghcr.io/nervosnetwork/fiber:0.9.0-rc7
+docker pull ghcr.io/nervosnetwork/fiber:0.9.0
 ```
 
-Check [Docker Hub](https://hub.docker.com/r/nervos/fiber/tags) or [GHCR](https://github.com/nervosnetwork/fiber/pkgs/container/fiber) for available tags. For production, pin a specific version tag (e.g. `0.9.0-rc7`) to avoid unexpected upgrades.
+Check [Docker Hub](https://hub.docker.com/r/nervos/fiber/tags) or [GHCR](https://github.com/nervosnetwork/fiber/pkgs/container/fiber) for available tags. For production, pin a specific version tag (for example, `0.9.0`) to avoid unexpected upgrades.
 
 ### 2. Prepare the Data Directory
 
@@ -57,7 +57,8 @@ mkdir -p ./fiber-node/ckb
 Place your CKB private key at `./fiber-node/ckb/key`. If you already have a key exported by `ckb-cli`, copy the first line of the extended privkey file:
 
 ```bash
-head -n 1 ./ckb/exported-key > ./fiber-node/ckb/key
+sed '1s/^0x//' ./ckb/exported-key > ./fiber-node/ckb/key
+chmod 600 ./fiber-node/ckb/key
 ```
 
 <Callout type="info" title="Private Key Format">
@@ -82,7 +83,7 @@ docker run --rm -it \
   -e RUST_LOG='info' \
   -v "$(pwd)/fiber-node:/fiber" \
   -p 8228:8228 \
-  nervos/fiber:0.9.0-rc7
+  nervos/fiber:0.9.0
 ```
 
 | Port | Purpose | Exposure |
@@ -119,7 +120,7 @@ docker run --rm -it \
   -e FIBER_CONFIG_TEMPLATE='/usr/local/share/fiber/config/mainnet/config.yml' \
   -v "$(pwd)/fiber-node:/fiber" \
   -p 8228:8228 \
-  nervos/fiber:0.9.0-rc7
+  nervos/fiber:0.9.0
 ```
 
 <Callout type="info">
@@ -151,8 +152,8 @@ docker run --rm -it \
   -e FIBER_SECRET_KEY_PASSWORD='YOUR_PASSWORD' \
   -v "$(pwd)/fiber-node:/fiber" \
   -p 8228:8228 \
-  -p 8227:8227 \
-  nervos/fiber:0.9.0-rc7
+  -p 127.0.0.1:8227:8227 \
+  nervos/fiber:0.9.0
 ```
 
 Once the RPC port is mapped, you can call the JSON-RPC interface directly from the host:
@@ -164,7 +165,7 @@ curl -X POST -H "Content-Type: application/json" \
 ```
 
 <Callout type="warning" title="Security Risk">
-Exposing the RPC port to the public internet allows anyone to control your node — including opening channels, sending payments, and accessing your keys. Only map port `8227` on a trusted network, or protect it with a reverse proxy that adds authentication and TLS.
+Exposing the RPC port to the public internet allows remote callers to control your node, including opening channels and sending payments. Keep the host-side mapping on `127.0.0.1` unless you have configured v0.9.0 RPC authentication and a secure access layer. Do not publish an unauthenticated RPC endpoint.
 </Callout>
 
 ### 8. Build the Image Locally
@@ -177,23 +178,21 @@ cd fiber
 docker build -f docker/Dockerfile -t fiber:local .
 ```
 
-Then run the locally built image using `fiber:local` instead of `nervos/fiber:0.9.0-rc7`.
+Then run the locally built image using `fiber:local` instead of `nervos/fiber:0.9.0`.
 
-### 9. Data Migration
+### 9. Upgrade an Existing Data Directory
 
-When upgrading from older versions that require explicit storage migration, run the migration tool against your data directory:
+Stop the old container and back up the complete bind-mounted directory before changing image tags:
 
 ```bash
-docker run --rm -it \
-  -v "$(pwd)/fiber-node:/fiber" \
-  nervos/fiber:<0.8.x-release-tag> \
-  fnn-migrate -d /fiber
+docker stop fiber-node
+cp -a ./fiber-node ./fiber-node.backup-before-v0.9.0
 ```
 
-Replace `<0.8.x-release-tag>` with the exact version you are upgrading from (no `v` prefix, e.g. `0.8.0`). After migration completes, start the node with the new image as usual.
+Then start `nervos/fiber:0.9.0` with the same `/fiber` mount. v0.9.0 has migration support built into `fnn`; do not delete `fiber/store` and do not run two versions against the same directory.
 
-<Callout type="info">
-Starting from 0.9.0-rc1, storage migration is handled automatically by FNN on startup. No separate migration step is needed when upgrading between 0.9.x releases.
+<Callout type="warning" title="Databases older than v0.8.x">
+v0.9.0 cannot directly migrate a pre-v0.8.x database. First use the matching v0.8.x `fnn-migrate` tool, then start v0.9.0. Follow [Backup and Restore](/docs/operate/backup) rather than guessing a migration command for valuable channel data.
 </Callout>
 
 ## Next Steps

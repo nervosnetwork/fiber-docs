@@ -1,7 +1,11 @@
 ---
 title: "Run a WASM Node"
 description: "Run a Fiber node directly in your browser app"
-date: 2026-06-16
+date: 2026-08-17
+dependencies:
+  - name: Fiber JS
+    minVersion: "0.9.0"
+    link: "https://www.npmjs.com/package/@nervosnetwork/fiber-js/v/0.9.0"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -65,19 +69,35 @@ The examples below use `npm`. If your project already uses `pnpm`, use the equiv
 ## Installation
 
 ```bash
-npm install @nervosnetwork/fiber-js
+npm install @nervosnetwork/fiber-js@0.9.0
 # or
-pnpm add @nervosnetwork/fiber-js
+pnpm add @nervosnetwork/fiber-js@0.9.0
 ```
 
-Prepare a YAML config from the Fiber source tree. For local docs development with `fiber` checked out next to `fiber-docs`:
+Download the v0.9.0 Testnet config (the same template included in the native release archives) and serve it from your app:
 
 ```bash
 mkdir -p public/fiber-config
-cp ../fiber/config/testnet/config.yml public/fiber-config/testnet.yml
+curl --fail --location \
+  --output public/fiber-config/testnet.yml \
+  https://raw.githubusercontent.com/nervosnetwork/fiber/v0.9.0/config/testnet/config.yml
 ```
 
-You can also download the config from the Fiber repository and serve it from any static path in your app.
+The native template contains TCP bootnodes, which browsers cannot reach. Edit the existing `fiber` fields in `testnet.yml` to use browser-reachable WSS peers and avoid announcing a browser-local address. For example:
+
+```yaml
+fiber:
+  listening_addr: "/ip4/127.0.0.1/tcp/0"
+  bootnode_addrs:
+    - "/dns4/bottle.fiber.channel/tcp/443/wss/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo"
+  announce_listening_addr: false
+```
+
+Keep the `chain`, `scripts`, `ckb`, and `services` sections from the downloaded template. See [Network Resources](/docs/quick-start/network-resources) for the current browser-reachable public node list.
+
+<Callout type="warning" title="Do not use the native TCP bootnodes in a browser">
+An address such as `/ip4/.../tcp/8228/p2p/...` works for native FNN but not for browser WASM. Browser peers must expose `/ws/` or `/wss/`; use WSS on HTTPS pages to avoid mixed-content blocking.
+</Callout>
 
 <Callout type="warn" title="Browser requirements">
 `new Fiber()` creates `SharedArrayBuffer` objects immediately. Only create a `Fiber` instance on a cross-origin isolated page, and make sure your deployment serves WASM and worker assets with the required CORS and isolation headers.
@@ -126,7 +146,7 @@ console.log("Node started:", info);
 console.log("Connected peers:", await fiber.listPeers());
 ```
 
-> **Expected Output:** The node initializes, connects to configured `/ws/` or `/wss/` peers, and starts syncing. `nodeInfo()` returns your node's pubkey, version, and chain info.
+> **Expected Output:** The node initializes, connects to a configured `/ws/` or `/wss/` peer, and starts syncing. `nodeInfo()` returns your node's pubkey, `version: "0.9.0"`, and chain info; `listPeers()` should report at least one peer when the selected public node is reachable.
 
 ## Common Workflows
 

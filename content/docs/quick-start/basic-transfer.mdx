@@ -1,11 +1,11 @@
 ---
 title: Basic Transfer Example
 description: Learn how to set up and execute transfers between two nodes
-date: 2026-06-23
+date: 2026-08-17
 dependencies:
   - name: Fiber Node
-    minVersion: "0.9.0-rc5"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0-rc5"
+    minVersion: "0.9.0"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -31,10 +31,12 @@ This guide walks you through setting up and executing a basic token ([CKB](https
 
 ### 1. Prepare Fiber Binary
 
-Download the latest release binary from the [Fiber GitHub Releases](https://github.com/nervosnetwork/fiber/releases) page, or build from source:
+Download and extract the v0.9.0 portable archive as described in [Run a Native Node](/docs/quick-start/run-a-node/rust). The extracted directory contains `fnn`, `fnn-cli`, and `config/testnet/config.yml`.
+
+Alternatively, build the tagged source release:
 
 ```sh
-git clone https://github.com/nervosnetwork/fiber.git
+git clone --branch v0.9.0 --depth 1 https://github.com/nervosnetwork/fiber.git
 cd fiber
 cargo build --release
 ```
@@ -57,17 +59,17 @@ export NO_PROXY=127.0.0.1,localhost
 
 ```sh
 # For Node 1
-mkdir node1
-cp target/release/fnn node1/
-cp target/release/fnn-cli node1/
-cp config/testnet/config.yml node1/
+mkdir -p node1
+cp fnn fnn-cli node1/
+cp config/testnet/config.yml node1/config.yml
 
 # For Node 2
-mkdir node2
-cp target/release/fnn node2/
-cp target/release/fnn-cli node2/
-cp config/testnet/config.yml node2/
+mkdir -p node2
+cp fnn fnn-cli node2/
+cp config/testnet/config.yml node2/config.yml
 ```
+
+If you built from source, copy `target/release/fnn` and `target/release/fnn-cli` instead.
 
 ### 3. Configure Node Keys
 
@@ -82,14 +84,16 @@ Export the keys:
 
 ```sh
 # In node1 directory
-mkdir ckb
+mkdir -p ckb
 ckb-cli account export --lock-arg <node1_lock_arg> --extended-privkey-path ./ckb/exported-key
-head -n 1 ./ckb/exported-key > ./ckb/key
+sed '1s/^0x//' ./ckb/exported-key > ./ckb/key
+chmod 600 ./ckb/key
 
 # In node2 directory
-mkdir ckb
+mkdir -p ckb
 ckb-cli account export --lock-arg <node2_lock_arg> --extended-privkey-path ./ckb/exported-key
-head -n 1 ./ckb/exported-key > ./ckb/key
+sed '1s/^0x//' ./ckb/exported-key > ./ckb/key
+chmod 600 ./ckb/key
 ```
 
 <Callout type="warning" title="Key File Format">
@@ -103,6 +107,15 @@ Get Testnet funds from [https://faucet.nervos.org](https://faucet.nervos.org/) f
 Edit `config.yml` for each node:
 - Node 1: RPC Port `8227`, P2P Port `8228`
 - Node 2: RPC Port `8237`, P2P Port `8238`
+
+Keep Node 1's release config unchanged. Change only Node 2's listening ports:
+
+```sh
+sed -i.bak 's|/ip4/0.0.0.0/tcp/8228|/ip4/127.0.0.1/tcp/8238|' node2/config.yml
+sed -i.bak 's|127.0.0.1:8227|127.0.0.1:8237|' node2/config.yml
+```
+
+The expandable block below shows the essential Testnet settings for reference. Prefer the release config as your source so deployment scripts and dependencies stay current.
 
 <details>
 <summary>View complete config.yml example</summary>
@@ -194,7 +207,10 @@ First get Node 2's pubkey, then connect from Node 1:
 cd node2 && ./fnn-cli --url http://127.0.0.1:8237 info | grep pubkey
 
 # Connect from Node 1
-cd node1 && ./fnn-cli peer connect_peer --pubkey <node2_pubkey> --address "/ip4/127.0.0.1/tcp/8238"
+cd node1 && ./fnn-cli peer connect_peer \
+  --pubkey <node2_pubkey> \
+  --address "/ip4/127.0.0.1/tcp/8238" \
+  --save false
 ```
   </Tab>
   <Tab value="RPC">
@@ -208,7 +224,7 @@ curl -s -X POST -H "Content-Type: application/json" \
 curl -s -X POST -H "Content-Type: application/json" \
   -d '{
     "id": "42", "jsonrpc": "2.0", "method": "connect_peer",
-    "params": [{"pubkey": "<node2_pubkey>", "address": "/ip4/127.0.0.1/tcp/8238"}]
+    "params": [{"pubkey": "<node2_pubkey>", "address": "/ip4/127.0.0.1/tcp/8238", "save": false}]
   }' http://localhost:8227
 ```
   </Tab>
@@ -221,7 +237,11 @@ console.log("Node 2 pubkey:", info.pubkey);
 
 // Connect from Node 1
 const sdk = new FiberSDK({ endpoint: "http://127.0.0.1:8227" });
-await sdk.connectPeer({ address: "/ip4/127.0.0.1/tcp/8238" });
+await sdk.connectPeer({
+  pubkey: "<node2_pubkey>",
+  address: "/ip4/127.0.0.1/tcp/8238",
+  save: false,
+});
 ```
   </Tab>
 </Tabs>
@@ -267,6 +287,9 @@ Check channel status — wait until `state_name` becomes `ChannelReady`:
   <Tab value="CLI">
 ```sh
 ./fnn-cli channel list_channels
+
+# Optional: show only channel-opening attempts while waiting
+./fnn-cli channel list_channels --only-pending true
 ```
   </Tab>
   <Tab value="RPC">
@@ -302,27 +325,25 @@ cd node2 && ./fnn-cli --url http://127.0.0.1:8237 invoice new_invoice \
   </Tab>
   <Tab value="RPC">
 ```sh
-# Generate a random payment_preimage first
-payment_preimage="0x$(openssl rand -hex 32)"
-
 curl -s -X POST -H "Content-Type: application/json" \
-  -d "{
-    \"id\": \"42\", \"jsonrpc\": \"2.0\", \"method\": \"new_invoice\",
-    \"params\": [{
-      \"amount\": \"0x2540be400\",
-      \"currency\": \"Fibt\",
-      \"description\": \"test invoice\",
-      \"expiry\": \"0xe10\",
-      \"payment_preimage\": \"$payment_preimage\",
-      \"hash_algorithm\": \"sha256\"
+  -d '{
+    "id": "42", "jsonrpc": "2.0", "method": "new_invoice",
+    "params": [{
+      "amount": "0x2540be400",
+      "currency": "Fibt",
+      "description": "test invoice",
+      "expiry": "0xe10"
     }]
-  }" http://localhost:8237
+  }' http://localhost:8237
 ```
   </Tab>
   <Tab value="CCC">
 ```typescript
 // amount: 0x2540be400 = 100 CKB in shannons
-const paymentPreimage = "0x" + "01".repeat(32);
+const paymentPreimage = "0x" + Array.from(
+  crypto.getRandomValues(new Uint8Array(32)),
+  (byte) => byte.toString(16).padStart(2, "0"),
+).join("");
 const { invoiceAddress } = await node2.newInvoice({
   amount: "0x2540be400",
   currency: "Fibt",
@@ -341,6 +362,9 @@ console.log("Invoice:", invoiceAddress);
   <Tab value="CLI">
 ```sh
 cd node1 && ./fnn-cli payment send_payment --invoice "fibt100000000001p..."
+
+# send_payment may initially return Created; poll with its payment_hash
+./fnn-cli payment get_payment --payment-hash <payment_hash>
 ```
   </Tab>
   <Tab value="RPC">
@@ -350,6 +374,13 @@ curl -s -X POST -H "Content-Type: application/json" \
     "id": "42", "jsonrpc": "2.0", "method": "send_payment",
     "params": [{"invoice": "fibt100000000001p..."}]
   }' http://localhost:8227
+
+# Poll the returned payment_hash until status is Success or Failed
+curl -s -X POST -H "Content-Type: application/json" \
+  -d '{
+    "id": "43", "jsonrpc": "2.0", "method": "get_payment",
+    "params": [{"payment_hash": "<payment_hash>"}]
+  }' http://localhost:8227
 ```
   </Tab>
   <Tab value="CCC">
@@ -357,9 +388,16 @@ curl -s -X POST -H "Content-Type: application/json" \
 const result = await sdk.sendPayment({ invoice: invoiceAddress });
 console.log("Payment hash:", result.paymentHash);
 console.log("Status:", result.status);
+
+const final = await sdk.getPayment({ paymentHash: result.paymentHash });
+console.log("Final status:", final.status);
 ```
   </Tab>
 </Tabs>
+
+<Callout type="warning" title="Payments are asynchronous">
+`send_payment` can return `Created` or `Inflight` before the transfer finishes. Treat the payment as complete only after `get_payment` reports `Success`; inspect `failed_error` when it reports `Failed`.
+</Callout>
 
 ### 6. Verify the Transfer
 
@@ -399,7 +437,7 @@ for (const ch of node2Channels) {
   </Tab>
 </Tabs>
 
-After sending 100 CKB from Node 1, Node 1's `local_balance` decreases by ~100 CKB and `remote_balance` increases by 100 CKB.
+After sending 100 CKB from Node 1, Node 1's `local_balance` decreases by 100 CKB and `remote_balance` increases by 100 CKB.
 
 ## Closing the Channel
 
@@ -408,7 +446,9 @@ After sending 100 CKB from Node 1, Node 1's `local_balance` decreases by ~100 CK
 ```sh
 cd node1 && ./fnn-cli channel shutdown_channel \
   --channel-id <channel_id> \
-  --force true
+  --close-script '{"code_hash":"0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8","hash_type":"type","args":"<your_lock_arg>"}' \
+  --fee-rate 1000 \
+  --force false
 ```
   </Tab>
   <Tab value="RPC">
@@ -423,7 +463,8 @@ curl -s -X POST -H "Content-Type: application/json" \
         "hash_type": "type",
         "args": "<your_lock_arg>"
       },
-      "fee_rate": "0x3FC"
+      "fee_rate": "0x3e8",
+      "force": false
     }]
   }' http://localhost:8227
 ```
@@ -432,18 +473,24 @@ curl -s -X POST -H "Content-Type: application/json" \
 ```typescript
 await sdk.shutdownChannel({
   channelId: "<channel_id>",
-  force: true,
+  closeScript: {
+    codeHash: "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+    hashType: "type",
+    args: "<your_lock_arg>",
+  },
+  feeRate: "0x3e8",
+  force: false,
 });
-console.log("Channel closed.");
+console.log("Cooperative close requested.");
 ```
   </Tab>
 </Tabs>
 
-<Callout type="info" title="CLI vs RPC for closing">
-With CLI `--force true`, `close_script` and `fee_rate` are determined automatically. With RPC, you must provide `close_script` matching your node's CKB lock script (get it from `ckb-cli account list`).
+<Callout type="info" title="Prefer a cooperative close">
+Get the complete `close_script` from `fnn-cli info` under `default_funding_lock_script`. A cooperative close (`force: false`) is fast and requires both peers to be online. Use `force: true` only when the peer is unavailable; a force close uses the channel's saved close parameters and locks funds until the commitment delay passes.
 </Callout>
 
 ## Next Steps
 
-- [Transfer Stablecoins](/docs/quick-start/transfer-stablecoin) — transfer RUSD through a multi-hop path
+- [Transfer Stablecoins](/docs/quick-start/transfer-stablecoin) — open a RUSD channel and make a direct stablecoin payment
 - [Network Resources](/docs/quick-start/network-resources) — public nodes, faucets, explorers, and more

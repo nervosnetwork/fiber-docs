@@ -1,11 +1,11 @@
 ---
 title: "Run a Native Node"
 description: "Run a native Fiber Network Node (FNN) binary on your local machine or server"
-date: 2026-06-09
+date: 2026-08-17
 dependencies:
   - name: Fiber Node
-    minVersion: "0.9.0-rc5"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0-rc5"
+    minVersion: "0.9.0"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -25,15 +25,27 @@ Download the FNN binary, set up a private key, configure `config.yml`, and start
 
 ### 1. Obtain the FNN Binary
 
-You can either download a pre-built binary from the [Fiber GitHub Releases](https://github.com/nervosnetwork/fiber/releases) page or build it from source:
+Download the archive for your operating system and CPU from the [v0.9.0 release](https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0). The portable archives are the easiest option because they include `fnn`, `fnn-cli`, and the Mainnet and Testnet configuration templates.
+
+For example, on an Apple Silicon Mac:
 
 ```sh
-git clone https://github.com/nervosnetwork/fiber.git
+curl --fail --location --remote-name --retry 5 \
+  https://github.com/nervosnetwork/fiber/releases/download/v0.9.0/fnn_v0.9.0-aarch64-darwin-portable.tar.gz
+tar -xzf fnn_v0.9.0-aarch64-darwin-portable.tar.gz
+./fnn --version
+./fnn-cli --version
+```
+
+The expected versions are `fnn Fiber v0.9.0` and `fnn-cli 0.9.0`. Replace `aarch64-darwin` with the target matching your system; the release also provides archives for Intel macOS, x86-64 and ARM64 Linux, and x86-64 Windows.
+
+Alternatively, build the tagged source release:
+
+```sh
+git clone --branch v0.9.0 --depth 1 https://github.com/nervosnetwork/fiber.git
 cd fiber
 cargo build --release
 ```
-
-This document used the [v0.9.0-rc5 binary](https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0-rc5) throughout the guide.
 
 <Callout type="info" title="macOS Security">
 If you're using macOS, the downloaded binary may be blocked by Gatekeeper. To resolve this, remove the quarantine attribute:
@@ -44,17 +56,16 @@ xattr -d com.apple.quarantine fnn fnn-cli
 
 ### 2. Create Node Directory
 
-Create a dedicated directory for your node and copy the necessary files:
+From the extracted release directory, create a dedicated directory for your node and copy the included binaries and Testnet configuration:
 
 ```sh
-mkdir /folder-to/my-fnn
-# If using released binary, replace target/release/fnn with the path to your downloaded binary
-cp target/release/fnn /folder-to/my-fnn
-# Copy additional tools (v0.8.0+)
-cp target/release/fnn-cli /folder-to/my-fnn
-cp config/testnet/config.yml /folder-to/my-fnn
-cd /folder-to/my-fnn
+mkdir -p /folder/to/my-fnn
+cp fnn fnn-cli /folder/to/my-fnn/
+cp config/testnet/config.yml /folder/to/my-fnn/config.yml
+cd /folder/to/my-fnn
 ```
+
+If you built from source, copy `target/release/fnn`, `target/release/fnn-cli`, and `config/testnet/config.yml` from the cloned repository instead.
 
 ### 3. Set Up Node Keys
 
@@ -79,21 +90,28 @@ Then export the existing key
 mkdir ckb
 # Export an existing key using ckb-cli
 ckb-cli account export --lock-arg <lock_arg> --extended-privkey-path ./ckb/exported-key
-# Extract just the private key (FNN only needs this part)
-head -n 1 ./ckb/exported-key > ./ckb/key
+# Extract the private key and remove a leading 0x if present
+sed '1s/^0x//' ./ckb/exported-key > ./ckb/key
+chmod 600 ./ckb/key
 ```
+
+<Callout type="warning" title="Private Key Format">
+The key file must contain one raw 64-character hex private key without a `0x` prefix. Keep the file private and never reuse a documentation or Testnet key on Mainnet.
+</Callout>
 
 ### 4. Start the Node
 
 Launch your node with logging enabled:
 
-(You need to set a `FIBER_SECRET_KEY_PASSWORD` environment variable in the startup command to encrypt your wallet private key file. I used 123 here for demo purposes, but I recommend using a strong password.)
+Set `FIBER_SECRET_KEY_PASSWORD` to a strong password. On the first start, FNN encrypts the plaintext `ckb/key` file in place.
 
 ```sh
-FIBER_SECRET_KEY_PASSWORD='123' RUST_LOG=info ./fnn -c config.yml -d .
+FIBER_SECRET_KEY_PASSWORD='REPLACE_WITH_A_STRONG_PASSWORD' \
+  RUST_LOG=info \
+  ./fnn -c config.yml -d .
 ```
 
-> **Expected Output:** You should see log lines indicating the node is starting, connecting to bootnodes, and syncing with the Testnet. The RPC server will be available at `http://127.0.0.1:8227`.
+> **Expected Output:** You should see the node start, migrate the key to its encrypted format, listen on P2P port `8228`, connect to the Testnet bootnodes, and create an initial backup under `fiber/backups`. The RPC server will be available at `http://127.0.0.1:8227`.
 
 ## Interacting with Your Node
 
@@ -165,18 +183,16 @@ New RPC methods in v0.8.0:
 
 ### Safe Upgrade Process
 
-1. Close all active channels before upgrading
-2. Stop the node and clean the storage:
+1. Stop the old node cleanly. Never run two FNN processes against the same data directory.
+2. Back up the complete node directory, including `ckb`, `fiber/store`, `fiber/sk`, and `config.yml`.
+3. Replace both `fnn` and `fnn-cli` with the v0.9.0 binaries.
+4. Start FNN against the existing directory and review any migration confirmation before proceeding.
 
-```sh
-rm -rf /folder-to/my-fnn/fiber/store
-```
-
-3. Replace the FNN binary and restart
+Do **not** delete `fiber/store` during an upgrade. It contains channel state, and losing it can put funds at risk. See [Backup and Restore](/docs/operate/backup) for backup contents, validation, and recovery steps.
 
 ### Storage Migration
 
-Starting from v0.9.0-rc1, storage migration is handled automatically by FNN on startup. When upgrading, simply start FNN normally and it will detect and apply any necessary migrations to preserve your channel state. No separate migration tool is needed.
+Starting from v0.9.0, storage migration is built into FNN. A v0.8.x database can be migrated when the new node starts; databases older than v0.8.x must first be upgraded with the matching v0.8.x `fnn-migrate` tool. Do not skip the backup, and do not bypass an unexpected migration error by deleting the store.
 
 ## Next Steps
 

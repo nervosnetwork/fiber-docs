@@ -1,7 +1,7 @@
 ---
 title: Configuration Reference
 description: Reference for Fiber Node config.yml fields, supported overrides, and defaults
-date: 2026-06-18
+date: 2026-08-17
 ---
 
 Fiber Node is mainly configured by `config.yml`. Many fields in this file can also be set from command-line flags or environment variables when starting `fnn`.
@@ -32,6 +32,7 @@ These options affect native `fnn` startup. They are not `config.yml` fields.
 | `-d, --dir <BASE_DIR>` | Set `BASE_DIR`; also changes the implicit config path to `$BASE_DIR/config.yml` when `--config` is not provided. |
 | `-s, --services <services>` | Services to start. When present, this replaces the `services` list from `config.yml`. Values are comma-separated or space-separated. |
 | `--check-validate` | Validate the Fiber store database and exit without starting services. |
+| `--restore <BACKUP_PATH>` | Restore the Fiber database and node keys from a v0.9.0 timestamped backup directory, then exit. See the [native v0.9.0 restore requirements](/docs/operate/backup#restore-a-v090-online-backup). |
 
 ## Top-Level Fields
 
@@ -190,7 +191,7 @@ If `disable_built_in_watchtower` is `true`, `standalone_watchtower_rpc_url` must
 
 Default modules are `cch`, `channel`, `graph`, `payment`, `info`, `invoice`, and `peer`. Builds with the `watchtower` feature also enable `watchtower` by default.
 
-Available module names include `cch`, `channel`, `graph`, `payment`, `info`, `invoice`, `peer`, `pubsub`, `watchtower`, `dev` in debug builds, and `prof` when built with the `pprof` feature.
+Available module names include `cch`, `channel`, `graph`, `payment`, `info`, `invoice`, `peer`, `admin`, `pubsub`, `watchtower`, `dev` in debug builds, and `prof` when built with the `pprof` feature. The `admin` module provides the native-node `backup` RPC and is not enabled by default.
 
 If `listening_addr` is public, `biscuit_public_key` is required. Without auth, the RPC server refuses to bind public addresses such as `0.0.0.0:8227`.
 
@@ -243,9 +244,9 @@ Each UDT `cell_deps` entry must contain exactly one of:
 | `lnd_macaroon_path` | string | — | Path to Macaroon file |
 | `wrapped_btc_type_script_args` | string | **required** | Wrapped BTC UDT type script args |
 | `order_expiry_delta_seconds` | u64 | `129600` (36h) | Cross-chain order expiry time |
-| `base_fee_sats` | u64 | `0` | Base fee per order (satoshis) |
-| `fee_rate_per_million_sats` | u64 | `1` | Proportional fee per million satoshis |
-| `max_outgoing_fee_percentage` | u64 | `100` | Max percentage of the collected CCH fee that may be used as outgoing Fiber routing fee budget. Must be `1..=100`. |
+| `base_fee_sats` | u64 | `100` | Base fee per order (satoshis) |
+| `fee_rate_per_million_sats` | u64 | `3000` | Proportional fee per million satoshis (0.3%) |
+| `max_outgoing_fee_percentage` | u64 | `80` | Max percentage of the collected CCH fee that may be used as outgoing Fiber routing fee budget. Must be `1..=100`; the default leaves at least 20% for the operator. |
 | `btc_final_tlc_expiry_delta_blocks` | u64 | `360` | Final TLC relative expiry in BTC blocks |
 | `ckb_final_tlc_expiry_delta_seconds` | u64 | `216000` (60h) | Final TLC relative expiry for CKB Fiber payments |
 | `min_outgoing_invoice_expiry_delta_seconds` | u64 | `21600` (6h) | Minimum acceptable relative expiry for outgoing invoices |
@@ -399,4 +400,4 @@ services:
   - ckb
 ```
 
-> **Tip**: Use the config files from the [Fiber repository](https://github.com/nervosnetwork/fiber/tree/main/config) as starting points. They include current script hashes, cell deps, UDT whitelist entries, and bootnode addresses for each network.
+> **Tip**: Use the config files from the [Fiber v0.9.0 release](https://github.com/nervosnetwork/fiber/tree/v0.9.0/config) as starting points. They include the matching script hashes, cell deps, UDT whitelist entries, and bootnode addresses for each network.

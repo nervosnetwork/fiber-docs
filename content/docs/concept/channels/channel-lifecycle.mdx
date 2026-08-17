@@ -1,14 +1,14 @@
 ---
 title: Channel Lifecycle
 description: Understand the ChannelState values used during a Fiber payment channel lifecycle
-date: 2026-06-11
+date: 2026-08-17
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
 ## Overview
 
-A Fiber channel undergoes several states: [`NegotiatingFunding`](#negotiatingfunding), [`CollaboratingFundingTx`](#collaboratingfundingtx), [`SigningCommitment`](#signingcommitment), [`AwaitingTxSignatures`](#awaitingtxsignatures), [`AwaitingChannelReady`](#awaitingchannelready), [`ChannelReady`](#channelready), [`ShuttingDown`](#shuttingdown), and [`Closed`](#closed). RPC responses report the current state through the `ChannelState` enum.
+A Fiber channel undergoes several states: [`NegotiatingFunding`](#negotiatingfunding), [`CollaboratingFundingTx`](#collaboratingfundingtx), [`SigningCommitment`](#signingcommitment), [`AwaitingTxSignatures`](#awaitingtxsignatures), [`AwaitingChannelReady`](#awaitingchannelready), [`ChannelReady`](#channelready), [`ShuttingDown`](#shuttingdown), and [`Closed`](#closed). After restoring a backup, a channel may temporarily appear as [`Stale`](#stale). RPC responses report the current state through the `ChannelState` enum.
 
 The following sections show the complete Fiber channel lifecycle in its actual state order.
 
@@ -76,6 +76,17 @@ The following sections show the complete Fiber channel lifecycle in its actual s
   limits are not met, too many TLCs are already in flight, or no route can be
   found.
 </Callout>
+
+## Stale
+
+`Stale` means the restored channel data may be older than the peer's latest
+state. Fiber v0.9.0 marks channels that could carry penalty risk as `Stale`
+after a database restore and waits for a passive audit with the peer before
+resuming normal channel operations. This state has no `state_flags`.
+
+Keep the node online and connected to the channel peer. Do not send payments,
+force close, or otherwise treat the restored channel as current until the
+audit completes and its state advances.
 
 ## ShuttingDown
 
