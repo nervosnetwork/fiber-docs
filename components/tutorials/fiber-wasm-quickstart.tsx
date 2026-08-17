@@ -39,6 +39,16 @@ const tutorials = [
     shortTitle: 'Open a channel and send a payment',
     href: '/docs/build/open-channel-payment',
   },
+  {
+    title: 'Send a Multi-Hop Invoice Payment',
+    shortTitle: 'Send a multi-hop invoice payment',
+    href: '/docs/build/multi-hop-invoice',
+  },
+  {
+    title: 'Open a Unidirectional Fiber Channel',
+    shortTitle: 'Open a unidirectional channel',
+    href: '/docs/build/unidirectional-channel',
+  },
 ] as const;
 
 const currentTutorialIndex = tutorials.findIndex(
@@ -140,7 +150,7 @@ export async function startFiber(
 
 export async function connectToRouter(node: FiberBrowserNode) {
   await node.connectPeer({
-    address: router.replace(/\\/p2p\\/[^/]+$/, ''),
+    address: router,
     pubkey: routerPubkey,
   });
 }`,
@@ -588,7 +598,7 @@ export function FiberWasmQuickstart() {
 
     try {
       await node.connectPeer({
-        address: routerAddress.replace(/\/p2p\/[^/]+$/i, ''),
+        address: routerAddress,
         pubkey: routerPubkey,
       });
 

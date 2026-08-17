@@ -22,7 +22,7 @@ export async function startFiber(onState: (state: BrowserNodeState) => void) {
 
 export async function connectToRouter(node: FiberBrowserNode) {
   await node.connectPeer({
-    address: router.replace(/\/p2p\/[^/]+$/, ''),
+    address: router,
     pubkey: routerPubkey,
   });
 }

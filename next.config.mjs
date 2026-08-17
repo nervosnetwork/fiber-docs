@@ -29,10 +29,29 @@ const config = {
           { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
         ],
       },
+      {
+        source: '/docs/build/multi-hop-invoice',
+        headers: [
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
+        ],
+      },
+      {
+        source: '/docs/build/unidirectional-channel',
+        headers: [
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
+        ],
+      },
     ];
   },
   async redirects() {
     return [
+      {
+        source: '/docs/build/channel-rebalancing',
+        destination: '/docs/build/unidirectional-channel',
+        permanent: false,
+      },
       {
         source: '/docs/build/wasm-dapp',
         destination: '/docs/build/connect-wasm-node',
