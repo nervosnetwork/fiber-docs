@@ -1,14 +1,14 @@
 ---
 title: fiber-pay
 description: Community toolchain for Fiber RPC, browser nodes, passkeys, React payment flows, and automation
-date: 2026-08-05
+date: 2026-08-17
 dependencies:
   - name: "@fiber-pay/sdk"
-    minVersion: "0.3.0"
+    minVersion: "0.3.1"
     link: "https://www.npmjs.com/package/@fiber-pay/sdk"
   - name: Fiber Node
-    minVersion: "0.9.0-rc7"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0-rc7"
+    minVersion: "0.9.0"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -21,8 +21,9 @@ local node lifecycle helpers, and an automation-friendly CLI.
 
 <Callout type="warning" title="Community SDK">
   `fiber-pay` is maintained independently of the official Fiber repository.
-  Version 0.3.0 targets Fiber v0.9.0-rc7. Pin compatible package and node
-  versions, and rerun integration tests before upgrading either side.
+  Version 0.3.1 declares compatibility with the stable Fiber WASM package
+  `@nervosnetwork/fiber-js ~0.9.0`. Pin compatible package and node versions,
+  and rerun integration tests before upgrading either side.
 </Callout>
 
 ## Where it fits
@@ -149,7 +150,7 @@ Test analytics, wallet connectors, and other cross-origin resources after
 enabling them.
 
 <Callout type="info" title="Load the WASM runtime on demand">
-  The upstream v0.3.0 documentation measures the Fiber WASM payload at roughly
+  The upstream v0.3.1 documentation measures the Fiber WASM payload at roughly
   45.5 MB raw and 13.4 MB gzip. Lazy-load browser-node functionality behind a
   user action so unrelated pages do not pay its download and startup cost.
 </Callout>

@@ -637,7 +637,7 @@ authentication, or rendering a checkout flow.
 
 | Project | Best for | Current status |
 | --- | --- | --- |
-| fiber-pay | Typed RPC clients, browser WASM nodes, passkeys, React payment UI, and operator automation | Actively maintained; v0.3.0 targets Fiber v0.9.0-rc7 |
+| fiber-pay | Typed RPC clients, browser WASM nodes, passkeys, React payment UI, and operator automation | Actively maintained; v0.3.1 targets stable Fiber v0.9.0 |
 | fiber-checkout | Adding an invoice-based checkout component or custom checkout hooks to a React app | Spark grant completed; stable maintenance |
 
 ## How projects are selected
@@ -683,8 +683,9 @@ Fiber node, passkey credentials, React payment and node-management components,
 local node lifecycle helpers, and an automation-friendly CLI.
 
   fiber-pay is maintained independently of the official Fiber repository.
-  Version 0.3.0 targets Fiber v0.9.0-rc7. Pin compatible package and node
-  versions, and rerun integration tests before upgrading either side.
+  Version 0.3.1 declares compatibility with the stable Fiber WASM package
+  @nervosnetwork/fiber-js ~0.9.0. Pin compatible package and node versions,
+  and rerun integration tests before upgrading either side.
 
 ## Where it fits
 
@@ -769,7 +770,7 @@ These policies also affect third-party scripts, iframes, images, and workers.
 Test analytics, wallet connectors, and other cross-origin resources after
 enabling them.
 
-  The upstream v0.3.0 documentation measures the Fiber WASM payload at roughly
+  The upstream v0.3.1 documentation measures the Fiber WASM payload at roughly
   45.5 MB raw and 13.4 MB gzip. Lazy-load browser-node functionality behind a
   user action so unrelated pages do not pay its download and startup cost.
 

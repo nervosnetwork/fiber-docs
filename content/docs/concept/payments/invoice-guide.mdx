@@ -1,7 +1,7 @@
 ---
 title: Invoice
 description: How to create, send, parse, and manage invoices in the Fiber network
-date: 2026-06-17
+date: 2026-08-17
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -176,7 +176,7 @@ All numeric fields in the RPC are hex-encoded. The `amount` is in shannons (`0x3
 | `payment_hash` | `Hash256` | No | Payment hash only (creates a [hold invoice](/docs/concept/payments/hold-invoice)). The caller supplies the hash; the preimage must be provided later via `settle_invoice`. Mutually exclusive with `payment_preimage` |
 | `expiry` | `u64` (hex) | No | Invoice validity period in seconds |
 | `fallback_address` | `string` | No | CKB on-chain fallback address |
-| `final_expiry_delta` | `u64` (hex) | No | Final TLC expiry delta in milliseconds (min ~160 minutes, max 14 days) |
+| `final_expiry_delta` | `u64` (hex) | No | Final TLC expiry delta in milliseconds (min ~160 minutes, max 14 days). `new_invoice` defaults to the minimum; v0.9.0 treats an externally encoded invoice that omits the attribute as 24 hours. |
 | `udt_type_script` | `Script` | No | CKB type script for UDT (non-CKB) assets |
 | `hash_algorithm` | `HashAlgorithm` | No | `ckb_hash` (default) or `sha256` |
 | `allow_mpp` | `bool` | No | Enable multi-part payments |

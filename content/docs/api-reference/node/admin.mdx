@@ -1,0 +1,45 @@
+---
+title: Module `Admin`
+description: Node administration RPC methods
+date: 2026-08-17
+---
+
+## Module `Admin`
+
+The `admin` module contains privileged node-administration operations. It is
+available on native v0.9.0 nodes but is not enabled by default. Add `admin` to
+`rpc.enabled_modules` and protect any non-local RPC listener with Biscuit
+authentication before using it.
+
+### Method `backup`
+
+Creates an immediate online backup of the Fiber store and node key files.
+The backup is written to `$BASE_DIR/fiber/backups/<timestamp>`.
+
+#### Params
+
+None. Send an empty params array.
+
+#### Returns
+
+None (`null` in the JSON-RPC response).
+
+#### Example
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "backup",
+  "params": []
+}
+```
+
+The equivalent command is:
+
+```bash
+fnn-cli admin backup
+```
+
+See [Fiber Node Backup](/docs/operate/backup) for module configuration,
+automatic backups, and restore instructions.

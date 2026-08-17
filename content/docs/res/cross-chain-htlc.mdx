@@ -1,7 +1,7 @@
 ---
 title: Cross-Chain HTLC
 description: Atomic cross-chain payments between CKB (Fiber) and Bitcoin (Lightning) networks — architecture, mechanics, and developer guide
-date: 2026-06-16
+date: 2026-08-17
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -184,8 +184,9 @@ cch:
   lnd_cert_path: "/path/to/tls.cert"
   lnd_macaroon_path: "/path/to/admin.macaroon"
   wrapped_btc_type_script_args: "0x..."
-  base_fee_sats: 0
-  fee_rate_per_million_sats: 1
+  base_fee_sats: 100
+  fee_rate_per_million_sats: 3000
+  max_outgoing_fee_percentage: 80
 ```
 
 | Config Key | Default | Description |
@@ -199,8 +200,9 @@ cch:
 | `btc_final_tlc_expiry_delta_blocks` | 360 (~60h) | Final hop CLTV expiry for outgoing Lightning invoices. |
 | `ckb_final_tlc_expiry_delta_seconds` | 216000 (60h) | Final hop TLC expiry for outgoing Fiber invoices. |
 | `min_outgoing_invoice_expiry_delta_seconds` | 21600 (6h) | Minimum acceptable expiry for outgoing invoices. |
-| `base_fee_sats` | 0 | Flat fee per swap. |
-| `fee_rate_per_million_sats` | 1 | Proportional fee rate (parts per million). |
+| `base_fee_sats` | 100 | Flat fee per swap. |
+| `fee_rate_per_million_sats` | 3000 | Proportional fee rate (parts per million, so 3000 = 0.3%). |
+| `max_outgoing_fee_percentage` | 80 | Maximum share of the collected fee available for the outgoing route; the default leaves at least 20% for the operator. |
 | `fiber_rpc_url` | — | When set, CCH runs as a **standalone service** talking to Fiber over HTTP/WebSocket. |
 
 ### Standalone Mode

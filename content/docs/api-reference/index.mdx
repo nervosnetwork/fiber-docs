@@ -1,7 +1,7 @@
 ---
 title: RPC Overview
 description: Technical reference for RPC endpoint format, JSON-RPC request/response structure, and authentication
-date: 2026-06-10
+date: 2026-08-17
 ---
 
 # RPC Overview
@@ -60,7 +60,7 @@ Every request is a standard JSON-RPC 2.0 object sent as an HTTP POST with `Conte
 {
   "jsonrpc": "2.0",
   "result": {
-    "version": "0.8.1",
+    "version": "0.9.0",
     "pubkey": "03a1b2c3...",
     "channel_count": "0x5"
   },
@@ -93,7 +93,7 @@ Fiber uses standard jsonrpsee error codes where applicable. In addition, authent
 
 Functionality is grouped into **modules**. You can selectively enable or disable modules via the `rpc.enabled_modules` config field.
 
-By default, the stable modules `cch`, `channel`, `graph`, `info`, `invoice`, `payment`, and `peer` are enabled. The `watchtower` module is also enabled when the node is compiled with the `watchtower` feature. The `pubsub`, `dev`, and `prof` modules are **not** enabled by default.
+By default, the stable modules `cch`, `channel`, `graph`, `info`, `invoice`, `payment`, and `peer` are enabled. The `watchtower` module is also enabled when the node is compiled with the `watchtower` feature. The `admin`, `pubsub`, `dev`, and `prof` modules are **not** enabled by default.
 
 | Module | Description |
 |--------|-------------|
@@ -104,6 +104,7 @@ By default, the stable modules `cch`, `channel`, `graph`, `info`, `invoice`, `pa
 | `invoice` | Create, parse, cancel, and settle BOLT-11 style invoices. |
 | `graph` | Query the network graph for nodes and channels. |
 | `cch` | Cross-Chain Hub operations (BTC ↔ CKB swaps). |
+| `admin` | Native-node administration, including online backups. |
 | `watchtower` | Channel monitoring and revocation data for watchtower services. |
 | `pubsub` | WebSocket subscription to store change events. |
 | `dev` | **Debug builds only.** Low-level debugging helpers. |
@@ -210,7 +211,7 @@ curl -X POST http://127.0.0.1:8227 \
 {
   "jsonrpc": "2.0",
   "result": {
-    "version": "0.8.1",
+    "version": "0.9.0",
     "commit_hash": "b5600232",
     "pubkey": "03a1b2c3d4e5f6...",
     "features": ["announcement"],
