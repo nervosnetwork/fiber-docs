@@ -21,5 +21,5 @@ export async function startFiber() {
   await node.start(); return node;
 }
 export async function connectToRouter(node: FiberBrowserNode) {
-  await node.connectPeer({ address: routerAddress.replace(/\/p2p\/[^/]+$/, ''), pubkey: routerPubkey });
+  await node.connectPeer({ address: routerAddress, pubkey: routerPubkey });
 }
