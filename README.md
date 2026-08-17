@@ -24,6 +24,20 @@ For production deployment, you'll need to set up the following environment varia
 GITHUB_TOKEN=your_github_personal_access_token_here
 ```
 
+### Google Analytics (optional)
+
+Set the GA4 measurement ID in the production deployment environment to enable
+site-wide page-view and user analytics. When the variable is unset, no Google
+Analytics script is loaded.
+
+```bash
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+```
+
+In the GA4 web data stream, keep **Enhanced measurement** enabled and make sure
+both page loads and browser-history page changes are tracked. This records
+client-side navigation in the Next.js app without custom page-view events.
+
 ## Explore
 
 In the project, you can see:
