@@ -1,13 +1,13 @@
 ---
 title: "Multi-hop Transfers"
-description: Guide to sending multi-hop payments through the Fiber Network
-date: 2026-06-17
+description: Route Testnet payments through Fiber's public relay nodes
+date: 2026-08-17
 author: "sunchengzhu"
 authorUrl: "https://github.com/sunchengzhu"
 dependencies:
   - name: Fiber Node
-    minVersion: "0.9.0-rc5"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0-rc5"
+    minVersion: "0.9.0"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -15,342 +15,328 @@ import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
 
 ## TL;DR
 
-Connect your local node to Fiber's public relay nodes, open a channel, and send multi-hop payments through the Testnet. Fiber supports two routing modes: **gossip routing** (source routing, the sender builds the full path) and **trampoline routing** (the sender delegates path-finding to a relay node). Your local node does not need a public IP.
+Run two local v0.9.0 nodes, connect each one to a different public Testnet relay, open two public channels, and pay an invoice from Node A to Node B. Neither local node needs a public IP.
 
-```
-┌───────┐        ┌───────┐        ┌───────┐
-│ nodeA │ ─────▶ │ node1 │ ─────▶ │ node2 │
-│ local │        │public │        │public │
-└───────┘        └───────┘        └───────┘
-  sender          relay            receiver
-```
+~~~text
+┌────────┐       ┌────────┐       ┌────────┐       ┌────────┐
+│ Node A │ ────▶ │ bottle │ ────▶ │ bracer │ ────▶ │ Node B │
+│ :8227  │       │ public │       │ public │       │ :8237  │
+└────────┘       └────────┘       └────────┘       └────────┘
+  sender           relay 1          relay 2          receiver
+~~~
 
-## Public Node Addresses
+Fiber supports two routing modes:
 
-### Mainnet
+- **Gossip routing**: Node A learns the network graph and builds the route.
+- **Trampoline routing**: Node A delegates route selection to a relay, useful for clients without a complete graph.
 
-| Node | Pubkey |
-|------|--------|
-| node1 | `03a8d7da8d0934363dbc17f52c872e8d833016415266eabb3527439c5dd17adc6b` |
-| node2 | `033a69e5be369dab43aefa96fa729d83c571ccb066f312136c6ab2d354fcc028f9` |
+## Prerequisites
 
-### Testnet
+- Complete [Basic Transfer](/docs/quick-start/basic-transfer) first.
+- Use the v0.9.0 <code>fnn</code>, <code>fnn-cli</code>, and <code>config/testnet/config.yml</code> files from the same [release package](https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0).
+- Fund **each** local node with at least 561 Testnet CKB: 499 CKB for the channel, about 61 CKB for a change cell, and a small transaction-fee margin.
 
-| Node | Pubkey |
-|------|--------|
-| node1 | `02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71` |
-| node2 | `0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc` |
-
-## Local Node Setup
-
-1. Download fnn from the [releases page](https://github.com/nervosnetwork/fiber/releases):
-
-   ```bash
-   mkdir tmp && cd tmp
-   tar xzvf fnn-latest.tar.gz
-   ```
-
-   <Callout type="info" title="macOS Security">
-   ```bash
-   xattr -d com.apple.quarantine fnn fnn-cli
-   ```
-   </Callout>
-
-2. Create account and export private key:
-
-   ```bash
-   mkdir -p testnet-fnn/nodeA/ckb
-   ./ckb-cli account new           # save the lock_arg
-   ./ckb-cli account export --lock-arg <YOUR_LOCK_ARG> --extended-privkey-path ./exported-key
-   head -n 1 ./exported-key > testnet-fnn/nodeA/ckb/key
-   chmod 600 testnet-fnn/nodeA/ckb/key
-   ```
-
-3. Copy config and tools:
-
-   ```bash
-   cp config/testnet/config.yml testnet-fnn/nodeA
-   cp fnn-cli testnet-fnn/nodeA
-   ```
-
-   <Callout type="info" title="HTTP Proxy Issues">
-   ```bash
-   export NO_PROXY=127.0.0.1,localhost
-   ```
-   </Callout>
-
-4. Fund nodeA's address with **10,000 CKB**:
-   - CKB: [https://faucet.nervos.org](https://faucet.nervos.org)
-
-5. Start nodeA:
-
-   ```bash
-   FIBER_SECRET_KEY_PASSWORD='123' RUST_LOG=info ./fnn -c testnet-fnn/nodeA/config.yml -d testnet-fnn/nodeA > testnet-fnn/nodeA/a.log 2>&1 &
-   ```
-
-## CKB Multi-Hop Payment (nodeA → node1 → node2)
-
-<Callout type="info">
-CLI amounts are in shannons (1 CKB = 100,000,000). RPC amounts are hex strings (e.g. `"0x5f5e100"` = 100,000,000).
+<Callout type="warning">
+Testnet CKB has no real-world value, but opening a channel still creates an on-chain transaction and temporarily locks the funds. Use throwaway Testnet accounts and close both channels when the test is complete.
 </Callout>
 
-### 1. Connect to node1
+## Public Testnet Relays
 
-First get node1's pubkey:
+| Relay | Pubkey | Native TCP address |
+|------|--------|--------------------|
+| bottle | <code>02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71</code> | <code>/dns4/bottle.fiber.channel/tcp/8119/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo</code> |
+| bracer | <code>0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc</code> | <code>/dns4/bracer.fiber.channel/tcp/8119/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC4F3p89</code> |
 
-```bash
-curl -s 'http://18.162.235.225:8227' \
-  -H 'Content-Type: application/json' \
-  -d '{"id":1,"jsonrpc":"2.0","method":"node_info"}' | grep -o '"pubkey":"[^"]*"'
-```
+Browser/WASM clients must use the corresponding <code>/tcp/443/wss/</code> addresses listed in [Network Resources](/docs/quick-start/network-resources). Native <code>fnn</code> uses the TCP addresses above.
 
-Then connect:
+## 1. Prepare Two Local Nodes
+
+Create Node A with the default ports. Create Node B from a second copy of the release config and change its ports:
+
+~~~sh
+mkdir -p nodeA/ckb nodeB/ckb
+cp config/testnet/config.yml nodeA/config.yml
+cp config/testnet/config.yml nodeB/config.yml
+
+sed -i.bak 's|/ip4/0.0.0.0/tcp/8228|/ip4/127.0.0.1/tcp/8238|' nodeB/config.yml
+sed -i.bak 's|127.0.0.1:8227|127.0.0.1:8237|' nodeB/config.yml
+~~~
+
+Export a different CKB private key into <code>nodeA/ckb/key</code> and <code>nodeB/ckb/key</code>. Each file must contain exactly 64 hex characters without a <code>0x</code> prefix and should be readable only by its owner:
+
+~~~sh
+chmod 600 nodeA/ckb/key nodeB/ckb/key
+~~~
+
+Start the nodes in separate terminals:
+
+~~~sh
+# Terminal 1
+FIBER_SECRET_KEY_PASSWORD='choose-a-strong-password-a' \
+  RUST_LOG=info ./fnn -c nodeA/config.yml -d nodeA
+
+# Terminal 2
+FIBER_SECRET_KEY_PASSWORD='choose-a-strong-password-b' \
+  RUST_LOG=info ./fnn -c nodeB/config.yml -d nodeB
+~~~
+
+If a system-wide proxy intercepts local RPC traffic, set <code>NO_PROXY=127.0.0.1,localhost</code>.
+
+## 2. Connect Each Node to a Relay
+
+Connect Node A to <code>bottle</code> and Node B to <code>bracer</code>.
+
+The CCC examples use one client for each local RPC endpoint:
+
+~~~typescript
+import { FiberSDK } from "@ckb-ccc/fiber";
+
+const nodeA = new FiberSDK({ endpoint: "http://127.0.0.1:8227" });
+const nodeB = new FiberSDK({ endpoint: "http://127.0.0.1:8237" });
+~~~
 
 <Tabs items={['CLI', 'RPC', 'CCC']}>
   <Tab value="CLI">
-```bash
-cd testnet-fnn/nodeA && ./fnn-cli peer connect_peer \
-  --pubkey 02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71
-```
+~~~sh
+# Node A → bottle
+./fnn-cli --url http://127.0.0.1:8227 peer connect_peer \
+  --address '/dns4/bottle.fiber.channel/tcp/8119/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo' \
+  --pubkey 02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71 \
+  --save true
+
+# Node B → bracer
+./fnn-cli --url http://127.0.0.1:8237 peer connect_peer \
+  --address '/dns4/bracer.fiber.channel/tcp/8119/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC4F3p89' \
+  --pubkey 0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc \
+  --save true
+~~~
   </Tab>
   <Tab value="RPC">
-```bash
-curl -s 'http://127.0.0.1:8227' \
+~~~sh
+# Node A → bottle
+curl -s http://127.0.0.1:8227 \
   -H 'Content-Type: application/json' \
   -d '{
     "id": 1, "jsonrpc": "2.0", "method": "connect_peer",
-    "params": [{"pubkey": "<node1_pubkey>"}]
+    "params": [{
+      "address": "/dns4/bottle.fiber.channel/tcp/8119/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo",
+      "pubkey": "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
+      "save": true
+    }]
   }'
-```
+
+# Node B → bracer
+curl -s http://127.0.0.1:8237 \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "id": 1, "jsonrpc": "2.0", "method": "connect_peer",
+    "params": [{
+      "address": "/dns4/bracer.fiber.channel/tcp/8119/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC4F3p89",
+      "pubkey": "0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc",
+      "save": true
+    }]
+  }'
+~~~
   </Tab>
   <Tab value="CCC">
-```typescript
-await sdk.connectPeer({
-  address: "/ip4/18.162.235.225/tcp/8119/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo",
+~~~typescript
+await nodeA.connectPeer({
+  address: "/dns4/bottle.fiber.channel/tcp/8119/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo",
+  pubkey: "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
+  save: true,
 });
-```
+
+await nodeB.connectPeer({
+  address: "/dns4/bracer.fiber.channel/tcp/8119/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC4F3p89",
+  pubkey: "0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc",
+  save: true,
+});
+~~~
   </Tab>
 </Tabs>
 
-### 2. Open a CKB Channel
+Run <code>peer list_peers</code> on both local RPC endpoints and confirm that the expected relay pubkey appears.
 
-_node1's `auto_accept_min_ckb_funding_amount` is set to 400 CKB. Here we fund 500 CKB._
+## 3. Open Both Public Channels
+
+The documented public relays auto-accept a channel funded with at least 499 CKB. In shannons, 499 CKB is <code>49900000000</code>; its RPC hex quantity is <code>0xb9e459300</code>.
 
 <Tabs items={['CLI', 'RPC', 'CCC']}>
   <Tab value="CLI">
-```bash
-cd testnet-fnn/nodeA && ./fnn-cli channel open_channel \
-  --pubkey <node1_pubkey> \
-  --funding-amount 50000000000 \
+~~~sh
+# Node A ↔ bottle
+./fnn-cli --url http://127.0.0.1:8227 channel open_channel \
+  --pubkey 02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71 \
+  --funding-amount 49900000000 \
   --public true
-```
+
+# Node B ↔ bracer
+./fnn-cli --url http://127.0.0.1:8237 channel open_channel \
+  --pubkey 0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc \
+  --funding-amount 49900000000 \
+  --public true
+~~~
   </Tab>
   <Tab value="RPC">
-```bash
-curl -s 'http://127.0.0.1:8227' \
+~~~sh
+# Node A ↔ bottle
+curl -s http://127.0.0.1:8227 \
   -H 'Content-Type: application/json' \
   -d '{
     "id": 2, "jsonrpc": "2.0", "method": "open_channel",
-    "params": [{"pubkey": "<node1_pubkey>", "funding_amount": "0xba43b7400", "public": true}]
-  }'
-```
-  </Tab>
-  <Tab value="CCC">
-```typescript
-// funding_amount: 0xba43b7400 = 500 CKB in shannons
-const tempChannelId = await sdk.openChannel({
-  pubkey: "<node1_pubkey>",
-  fundingAmount: "0xba43b7400",
-  public: true,
-});
-console.log("Temporary channel ID:", tempChannelId);
-```
-  </Tab>
-</Tabs>
-
-### 3. Wait for ChannelReady
-
-<Tabs items={['CLI', 'RPC', 'CCC']}>
-  <Tab value="CLI">
-```bash
-./fnn-cli channel list_channels
-```
-  </Tab>
-  <Tab value="RPC">
-```bash
-curl -s 'http://127.0.0.1:8227' \
-  -H 'Content-Type: application/json' \
-  -d '{"id": 3, "jsonrpc": "2.0", "method": "list_channels", "params": [{"pubkey": "<node1_pubkey>"}]}'
-```
-  </Tab>
-  <Tab value="CCC">
-```typescript
-const channels = await sdk.listChannels({ pubkey: "<node1_pubkey>" });
-for (const ch of channels) {
-  console.log(`${ch.channelId} — ${ch.state.stateName}`);
-}
-```
-  </Tab>
-</Tabs>
-
-<Callout type="warning">
-After `ChannelReady`, wait a few minutes before sending payments — the gossip protocol needs time to sync channel announcements and routing info across the network.
-</Callout>
-
-### 4. Create an Invoice on node2
-
-Generate a preimage: `payment_preimage="0x$(openssl rand -hex 32)"`
-
-<Tabs items={['CLI', 'RPC', 'CCC']}>
-  <Tab value="CLI">
-```bash
-./fnn-cli --url http://18.163.221.211:8227 invoice new_invoice \
-  --amount 100000000 \
-  --currency Fibt \
-  --description "test invoice" \
-  --expiry 3600 \
-  --payment-preimage $payment_preimage
-```
-  </Tab>
-  <Tab value="RPC">
-```bash
-curl -s 'http://18.163.221.211:8227' \
-  -H 'Content-Type: application/json' \
-  -d "{
-    \"id\": 4, \"jsonrpc\": \"2.0\", \"method\": \"new_invoice\",
-    \"params\": [{
-      \"amount\": \"0x5f5e100\",
-      \"currency\": \"Fibt\",
-      \"description\": \"test invoice\",
-      \"expiry\": \"0xe10\",
-      \"payment_preimage\": \"$payment_preimage\",
-      \"hash_algorithm\": \"sha256\"
+    "params": [{
+      "pubkey": "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
+      "funding_amount": "0xb9e459300",
+      "public": true
     }]
-  }"
-```
-  </Tab>
-  <Tab value="CCC">
-```typescript
-// Create invoice on node2 (endpoint: http://18.163.221.211:8227)
-const node2 = new FiberSDK({ endpoint: "http://18.163.221.211:8227" });
-const paymentPreimage = "0x" + "01".repeat(32);
-const { invoiceAddress } = await node2.newInvoice({
-  amount: "0x5f5e100",
-  currency: "Fibt",
-  description: "test invoice",
-  expiry: "0xe10",
-  paymentPreimage,
-  hashAlgorithm: "sha256",
-});
-console.log("Invoice:", invoiceAddress);
-```
-  </Tab>
-</Tabs>
+  }'
 
-### 5. Send Payment (nodeA → node1 → node2)
-
-Fiber supports two routing modes for multi-hop payments:
-
-#### Option A: Gossip Routing (Source Routing)
-
-The sender discovers routes via the gossip protocol and constructs the full payment path locally. No additional parameters are needed — the node automatically finds the best route to the destination.
-
-<Callout type="info">
-After `ChannelReady`, wait a few minutes for gossip to propagate channel announcements across the network before attempting gossip-routed payments.
-</Callout>
-
-<Tabs items={['CLI', 'RPC', 'CCC']}>
-  <Tab value="CLI">
-```bash
-./fnn-cli payment send_payment --invoice "<invoice_address>"
-```
-  </Tab>
-  <Tab value="RPC">
-```bash
-curl -s 'http://127.0.0.1:8227' \
-  -H 'Content-Type: application/json' \
-  -d '{"id": 6, "jsonrpc": "2.0", "method": "send_payment", "params": [{"invoice": "<invoice_address>"}]}'
-```
-  </Tab>
-  <Tab value="CCC">
-```typescript
-const result = await sdk.sendPayment({ invoice: "<invoice_address>" });
-console.log("Payment hash:", result.paymentHash);
-console.log("Status:", result.status);
-```
-  </Tab>
-</Tabs>
-
-#### Option B: Trampoline Routing
-
-The sender delegates route-finding to a relay node. This is useful when the sender doesn't have full network topology (e.g. a mobile wallet). Specify `trampoline_hops` with the relay node's pubkey.
-
-<Tabs items={['CLI', 'RPC', 'CCC']}>
-  <Tab value="CLI">
-```bash
-./fnn-cli payment send_payment --invoice "<invoice_address>" \
-  --trampoline-hops <node1_pubkey>
-```
-  </Tab>
-  <Tab value="RPC">
-```bash
-curl -s 'http://127.0.0.1:8227' \
-  -H 'Content-Type: application/json' \
-  -d '{"id": 6, "jsonrpc": "2.0", "method": "send_payment", "params": [{"invoice": "<invoice_address>", "trampoline_hops": ["<node1_pubkey>"]}]}'
-```
-  </Tab>
-  <Tab value="CCC">
-```typescript
-const result = await sdk.sendPayment({
-  invoice: "<invoice_address>",
-  trampolineHops: ["<node1_pubkey>"],
-});
-console.log("Payment hash:", result.paymentHash);
-console.log("Status:", result.status);
-```
-  </Tab>
-</Tabs>
-
-### 6. Close the Channel
-
-<Tabs items={['CLI', 'RPC', 'CCC']}>
-  <Tab value="CLI">
-```bash
-./fnn-cli channel shutdown_channel \
-  --channel-id <channel_id> \
-  --close-script '{"code_hash":"0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8","hash_type":"type","args":"<your_lock_arg>"}'
-```
-  </Tab>
-  <Tab value="RPC">
-```bash
-curl -s 'http://127.0.0.1:8227' \
+# Node B ↔ bracer
+curl -s http://127.0.0.1:8237 \
   -H 'Content-Type: application/json' \
   -d '{
-    "id": 9, "jsonrpc": "2.0", "method": "shutdown_channel",
+    "id": 2, "jsonrpc": "2.0", "method": "open_channel",
     "params": [{
-      "channel_id": "<channel_id>",
-      "close_script": {
-        "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
-        "hash_type": "type",
-        "args": "<your_lock_arg>"
-      },
-      "fee_rate": "0x3FC"
+      "pubkey": "0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc",
+      "funding_amount": "0xb9e459300",
+      "public": true
     }]
   }'
-```
+~~~
   </Tab>
   <Tab value="CCC">
-```typescript
-await sdk.shutdownChannel({
-  channelId: "<channel_id>",
-  closeScript: {
-    codeHash: "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
-    hashType: "type",
-    args: "<your_lock_arg>",
-  },
-  feeRate: "0x3FC",
+~~~typescript
+await nodeA.openChannel({
+  pubkey: "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
+  fundingAmount: "0xb9e459300",
+  public: true,
 });
-console.log("Channel closed.");
-```
+
+await nodeB.openChannel({
+  pubkey: "0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc",
+  fundingAmount: "0xb9e459300",
+  public: true,
+});
+~~~
   </Tab>
 </Tabs>
+
+Poll both nodes until their channels report <code>state.state_name: "ChannelReady"</code>:
+
+~~~sh
+./fnn-cli --url http://127.0.0.1:8227 channel list_channels
+./fnn-cli --url http://127.0.0.1:8237 channel list_channels
+~~~
+
+<Callout type="info">
+A channel can become ready before its announcement has propagated through the network. If the first payment reports <code>Failed to build route</code>, wait a few minutes and try again.
+</Callout>
+
+## 4. Create an Invoice on Node B
+
+Create a 1 CKB invoice on the receiver's local RPC endpoint. <code>100000000</code> shannons equals 1 CKB.
+
+<Tabs items={['CLI', 'RPC', 'CCC']}>
+  <Tab value="CLI">
+~~~sh
+./fnn-cli --url http://127.0.0.1:8237 invoice new_invoice \
+  --amount 100000000 \
+  --currency Fibt \
+  --description "multi-hop test" \
+  --expiry 3600
+~~~
+  </Tab>
+  <Tab value="RPC">
+~~~sh
+curl -s http://127.0.0.1:8237 \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "id": 4, "jsonrpc": "2.0", "method": "new_invoice",
+    "params": [{
+      "amount": "0x5f5e100",
+      "currency": "Fibt",
+      "description": "multi-hop test",
+      "expiry": "0xe10"
+    }]
+  }'
+~~~
+  </Tab>
+  <Tab value="CCC">
+~~~typescript
+const { invoiceAddress } = await nodeB.newInvoice({
+  amount: "0x5f5e100",
+  currency: "Fibt",
+  description: "multi-hop test",
+  expiry: "0xe10",
+  paymentPreimage: "0x" + Array.from(
+    crypto.getRandomValues(new Uint8Array(32)),
+    (byte) => byte.toString(16).padStart(2, "0"),
+  ).join(""),
+});
+console.log("Invoice:", invoiceAddress);
+~~~
+  </Tab>
+</Tabs>
+
+The CLI and RPC generate a random payment preimage when neither <code>payment_preimage</code> nor <code>payment_hash</code> is supplied.
+
+## 5. Send and Verify the Payment
+
+### Gossip routing
+
+No routing parameter is required:
+
+~~~sh
+./fnn-cli --url http://127.0.0.1:8227 payment send_payment \
+  --invoice '<invoice_address>'
+~~~
+
+### Trampoline routing
+
+To delegate route finding to <code>bottle</code>, pass its pubkey as the trampoline hop:
+
+~~~sh
+./fnn-cli --url http://127.0.0.1:8227 payment send_payment \
+  --invoice '<invoice_address>' \
+  --trampoline-hops 02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71
+~~~
+
+The equivalent RPC field is <code>"trampoline_hops": ["02b6...be71"]</code>; the CCC field is <code>trampolineHops</code>.
+
+<Callout type="warning" title="Payments are asynchronous">
+<code>send_payment</code> may return <code>Created</code> or <code>Inflight</code>. Copy its <code>payment_hash</code> and poll until the status is <code>Success</code> or <code>Failed</code>.
+</Callout>
+
+~~~sh
+./fnn-cli --url http://127.0.0.1:8227 payment get_payment \
+  --payment-hash <payment_hash>
+~~~
+
+After <code>Success</code>, compare <code>channel list_channels</code> on Node A and Node B. Node A's local balance decreases by the invoice amount plus relay fees; Node B's local balance increases by the invoice amount.
+
+## 6. Close Both Channels
+
+Get each <code>channel_id</code> from <code>list_channels</code> and each complete <code>default_funding_lock_script</code> from <code>info</code>. Request a cooperative close while both relay connections are online:
+
+~~~sh
+# Close Node A's channel on port 8227.
+./fnn-cli --url http://127.0.0.1:8227 channel shutdown_channel \
+  --channel-id <node_a_channel_id> \
+  --close-script '<node_a_default_funding_lock_script_json>' \
+  --fee-rate 1000 \
+  --force false
+
+# Close Node B's channel on port 8237.
+./fnn-cli --url http://127.0.0.1:8237 channel shutdown_channel \
+  --channel-id <node_b_channel_id> \
+  --close-script '<node_b_default_funding_lock_script_json>' \
+  --fee-rate 1000 \
+  --force false
+~~~
+
+Wait for both closing transactions to confirm before deleting either data directory. Use <code>force: true</code> only if the peer is unavailable; a force close locks funds until the commitment delay passes.
+
+## Next Steps
+
+- [Network Resources](/docs/quick-start/network-resources) — current relay addresses, faucets, explorers, and dashboards
+- [Operate a Node](/docs/operate) — backups, monitoring, and production configuration

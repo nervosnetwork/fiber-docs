@@ -160,7 +160,9 @@ This guide walks you through setting up and executing a basic token (CKB) transf
 
 ### 1. Prepare Fiber Binary
 
-Download the latest release binary from the Fiber GitHub Releases page, or build from source:
+Download and extract the v0.9.0 portable archive as described in Run a Native Node. The extracted directory contains fnn, fnn-cli, and config/testnet/config.yml.
+
+Alternatively, build the tagged source release:
 
 [sh code block]
 
@@ -173,6 +175,8 @@ If you encounter 503 errors when using fnn-cli, run:
 ### 2. Create Data Directories
 
 [sh code block]
+
+If you built from source, copy target/release/fnn and target/release/fnn-cli instead.
 
 ### 3. Configure Node Keys
 
@@ -193,6 +197,12 @@ Get Testnet funds from https://faucet.nervos.org for both nodes.
 Edit config.yml for each node:
 - Node 1: RPC Port 8227, P2P Port 8228
 - Node 2: RPC Port 8237, P2P Port 8238
+
+Keep Node 1's release config unchanged. Change only Node 2's listening ports:
+
+[sh code block]
+
+The expandable block below shows the essential Testnet settings for reference. Prefer the release config as your source so deployment scripts and dependencies stay current.
 
 View complete config.yml example
 
@@ -268,6 +278,8 @@ Create a payment invoice on Node 2 for 100 CKB:
 [typescript code block]
   
 
+sendpayment can return Created or Inflight before the transfer finishes. Treat the payment as complete only after getpayment reports Success; inspect failederror when it reports Failed.
+
 ### 6. Verify the Transfer
 
 Check channel balances to confirm the transfer:
@@ -282,7 +294,7 @@ Check channel balances to confirm the transfer:
 [typescript code block]
   
 
-After sending 100 CKB from Node 1, Node 1's localbalance decreases by ~100 CKB and remotebalance increases by 100 CKB.
+After sending 100 CKB from Node 1, Node 1's localbalance decreases by 100 CKB and remotebalance increases by 100 CKB.
 
 ## Closing the Channel
 
@@ -296,11 +308,11 @@ After sending 100 CKB from Node 1, Node 1's localbalance decreases by ~100 CKB a
 [typescript code block]
   
 
-With CLI --force true, closescript and feerate are determined automatically. With RPC, you must provide closescript matching your node's CKB lock script (get it from ckb-cli account list).
+Get the complete closescript from fnn-cli info under defaultfundinglockscript. A cooperative close (force: false) is fast and requires both peers to be online. Use force: true only when the peer is unavailable; a force close uses the channel's saved close parameters and locks funds until the commitment delay passes.
 
 ## Next Steps
 
-- Transfer Stablecoins — transfer RUSD through a multi-hop path
+- Transfer Stablecoins — open a RUSD channel and make a direct stablecoin payment
 - Network Resources — public nodes, faucets, explorers, and more
 
 ---
@@ -311,11 +323,11 @@ Source: https://www.fiber.world/docs/quick-start/transfer-stablecoin
 
 ## TL;DR
 
-Set up three nodes, open UDT (stablecoin) channels, and send a stablecoin payment through a multi-hop path. Builds on the Basic Transfer example.
+Set up two nodes, open a UDT (stablecoin) channel, and send RUSD directly between them. Builds on the Basic Transfer example.
 
 ## Overview
 
-This guide demonstrates UDT transfers using stablecoins (RUSD) across 3 nodes via multi-hop routing.
+This guide demonstrates a direct UDT transfer using Testnet RUSD. For routing through relay nodes, continue with Multi-hop Transfers after completing this guide.
 
 ## Prerequisites
 
@@ -327,15 +339,19 @@ This guide demonstrates UDT transfers using stablecoins (RUSD) across 3 nodes vi
 
 ### 1. Prepare Fiber Binary
 
-Download from GitHub Releases or build from source:
+Download the v0.9.0 package for your platform from GitHub Releases. For example, on an Apple Silicon Mac:
 
 [sh code block]
 
-[sh code block]
-
-### 2. Configure Three Nodes
+The final command should report Fiber v0.9.0. To build instead, check out the matching tag with git clone --branch v0.9.0 --depth 1 https://github.com/nervosnetwork/fiber.git before running cargo build --release.
 
 [sh code block]
+
+### 2. Configure Two Nodes
+
+[sh code block]
+
+If you built from source, copy target/release/fnn and target/release/fnn-cli instead of the release-package paths shown above.
 
 Create a CKB account for each node and export the keys:
 
@@ -345,19 +361,20 @@ ckb/key must contain only the 64-character hex private key, no 0x prefix.
 
 Get Testnet funds:
 - CKB: https://faucet.nervos.org
-- RUSD: https://testnet0815.stablepp.xyz/stablecoin (claim via JoyID wallet at testnet.joyid.dev, then transfer to node address)
+- RUSD: https://testnet0815.stablepp.xyz/faucet (claim through a wallet such as JoyID Testnet, then transfer it to the node address shown by ckb-cli util key-info --privkey-path ./ckb/key)
 
 ### 3. Configure Ports
 
 - Node 1: RPC 8227, P2P 8228
 - Node 2: RPC 8237, P2P 8238
-- Node 3: RPC 8247, P2P 8248
 
-View complete config.yml example
+Keep Node 1's release config unchanged. Change only Node 2's listening ports:
 
-[yaml code block]
+[sh code block]
 
-### 4. Start All Nodes
+The v0.9.0 Testnet config already contains the current RUSD type script and cell dependency. Its local autoacceptamount is 10 RUSD; this guide funds 20 RUSD to match the minimum accepted by the official Testnet public nodes.
+
+### 4. Start Both Nodes
 
 [sh code block]
 
@@ -375,7 +392,7 @@ View complete config.yml example
 [typescript code block]
   
 
-Get Node 2's peer ID and pubkey: cd node2 && ./fnn-cli --url http://127.0.0.1:8237 info
+Get Node 2's pubkey: cd node2 && ./fnn-cli --url http://127.0.0.1:8237 info. save: false avoids persisting a local address that includes no routable /p2p/... suffix.
 
 ### 2. Open a Stablecoin Channel (Node 1 → Node 2)
 
@@ -391,7 +408,9 @@ The fundingudttypescript identifies the RUSD token:
 [typescript code block]
   
 
-Opening a UDT channel also requires ~99 CKB in the node's wallet to cover on-chain cell capacity and shutdown fees. Make sure each node has sufficient CKB balance from the faucet.
+Opening a UDT channel reserves about 99 CKB from each participant for on-chain cell capacity and shutdown fees. Fund both node accounts with CKB, and fund Node 1 with at least 20 RUSD. The 20 RUSD amount also meets the official Testnet public nodes' current auto-accept threshold.
+
+Fiber passes UDT amounts through as raw unsigned integers and does not apply the token's display decimals. Therefore, --funding-amount 10 is valid, but for this 8-decimal Testnet RUSD deployment it funds 10 base units (0.00000010 RUSD), not 10 RUSD.
 
 ### 3. Monitor Channel Status
 
@@ -406,8 +425,6 @@ Wait until state.statename becomes "ChannelReady":
   
 [typescript code block]
   
-
-Repeat steps 1–3 to connect Node 2 and Node 3 (using ports 8247/8248).
 
 ## Generating Invoices and Making Payments
 
@@ -437,6 +454,10 @@ The paymentpreimage is auto-generated by both CLI and RPC. You can optionally pr
 [typescript code block]
   
 
+After a successful 1 RUSD payment, Node 1's local RUSD balance decreases by 100000000 base units and Node 2's local RUSD balance increases by the same amount.
+
+sendpayment can initially return Created or Inflight. Poll getpayment with the returned paymenthash until the status is Success or Failed before treating the transfer as complete.
+
 ### 3. Check Channel Balance
 
   
@@ -461,15 +482,20 @@ The paymentpreimage is auto-generated by both CLI and RPC. You can optionally pr
 [typescript code block]
   
 
-Get args from fnn-cli info under defaultfundinglockscript.args. The feerate (shannons/KW) is optional and defaults to 1000. You can also use --force (CLI) or "force": true (RPC) to force-close a channel unilaterally, in which case closescript and feerate are ignored.
+Get args from fnn-cli info under defaultfundinglockscript.args. The feerate (shannons/KW) is optional and defaults to 1000. You can also use --force (CLI) or "force": true (RPC) to force-close a channel unilaterally, in which case closescript and fee_rate are ignored.
 
 ## Important Notes
 
-- RUSD amounts: CLI uses base units (e.g. 10 = 10 RUSD); RPC uses hex strings (e.g. "0xa" = 10)
+- RUSD amounts: This Testnet RUSD has 8 display decimals. CLI uses decimal base units and RPC/SDK examples use hex quantities: 100000000 = "0x5f5e100" = 1 RUSD, while 2000000000 = "0x77359400" = 20 RUSD.
+- CKB and shannons: CKB independently uses 8 decimal places (1 CKB = 100000000 shannons). The numeric multipliers happen to match, but RUSD base units are not shannons.
 - Invoice currency: Use "Fibt" for testnet, not "RUSD"
-- **autoacceptamount: Channels with funding below this value require manual acceptance
+- **autoacceptamount: This field is also expressed in raw UDT base units. The official Testnet public-node value is 2000000000 ("0x77359400" over RPC), which represents 20 RUSD. Setting it to decimal 20 would mean only 20 base units (0.00000020 RUSD). Channels below the configured raw value require manual acceptance.
 - Channel state format**: The listchannels response returns state as a nested object: state.statename (e.g. "ChannelReady") and state.state_flags (e.g. ["PublicChannel"])
-- Gossip sync time: After starting nodes, wait for the gossip protocol to fully sync the network graph before attempting multi-hop payments. This may take several minutes depending on network conditions.
+
+## Next Steps
+
+- Multi-hop Transfers — route a payment through public relay nodes
+- Network Resources — find public nodes, faucets, and explorers
 
 ---
 

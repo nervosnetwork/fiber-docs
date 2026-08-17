@@ -1,12 +1,12 @@
 ---
 title: Network Resources
 description: All Fiber network resources in one place — public nodes, faucets, explorers, and more
-date: 2026-06-17
+date: 2026-08-17
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
-This page is the single source of truth for Fiber network resources. All public nodes, faucets, and tools are listed here.
+This page collects the public nodes, faucets, explorers, and tools used by the v0.9.0 quick-start guides. The endpoints below were checked on 2026-08-17.
 
 <Callout type="warning">
   Testnet resources may change without notice. This page is updated to reflect the current state. If you find outdated information, please [open an issue](https://github.com/nervosnetwork/fiber-docs/issues).
@@ -16,20 +16,20 @@ This page is the single source of truth for Fiber network resources. All public 
 
 ### Mainnet
 
-| Name | Pubkey | WSS Address | Auto-accept CKB |
+| Name | Pubkey | WSS Address | Minimum channel funding |
 |------|--------|-------------|------------------|
 | fiber-mainnet-public-ca | `03a8d7da8d0934363dbc17f52c872e8d833016415266eabb3527439c5dd17adc6b` | `/dns4/ca.fiber.channel/tcp/443/wss/p2p/QmZCfzENZqWrWwifJj9BFDvxQWFyYw5GjdB4vN7Ynd4FxY` | ≥ 499 CKB |
 | fiber-mainnet-public-tokyo | `033a69e5be369dab43aefa96fa729d83c571ccb066f312136c6ab2d354fcc028f9` | `/dns4/tokyo.fiber.channel/tcp/443/wss/p2p/QmZ73KHvZ5GFxf6XhHZ3icPeKFo93rk86kZ8qauox3avJP` | ≥ 499 CKB |
 
 ### Testnet
 
-| Name | Pubkey | WSS Address | Auto-accept CKB | Auto-accept UDT |
-|------|--------|-------------|------------------|------------------|
-| fiber-testnet-public-bottle | `02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71` | `/dns4/bottle.fiber.channel/tcp/443/wss/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo` | ≥ 499 CKB | RUSD ≥ 20 |
-| fiber-testnet-public-bracer | `0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc` | `/dns4/bracer.fiber.channel/tcp/443/wss/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC4F3p89` | ≥ 499 CKB | RUSD ≥ 20 |
+| Name | Pubkey | Native TCP address | Browser WSS address | Minimum funding |
+|------|--------|--------------------|---------------------|-----------------|
+| fiber-testnet-public-bottle | `02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71` | `/dns4/bottle.fiber.channel/tcp/8119/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo` | `/dns4/bottle.fiber.channel/tcp/443/wss/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo` | 499 CKB or 20 RUSD |
+| fiber-testnet-public-bracer | `0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc` | `/dns4/bracer.fiber.channel/tcp/8119/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC4F3p89` | `/dns4/bracer.fiber.channel/tcp/443/wss/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC4F3p89` | 499 CKB or 20 RUSD |
 
 <Callout type="info">
-  Since v0.8.0, Fiber uses **pubkey** (hex-encoded secp256k1) for peer identification. Use `connect_peer` with the pubkey — the node will resolve the address automatically via gossip.
+  Since v0.8.0, Fiber RPCs identify peers by **pubkey** (hex-encoded secp256k1). A synced node can resolve a pubkey from gossip, but quick-start commands pass both the pubkey and explicit address so the first connection does not depend on graph synchronization. Native nodes use TCP; browser/WASM nodes use WSS.
 </Callout>
 
 ## Faucets
@@ -38,7 +38,7 @@ This page is the single source of truth for Fiber network resources. All public 
 |----------|-----|-------|
 | CKB Testnet Faucet | [https://faucet.nervos.org](https://faucet.nervos.org) | Get testnet CKB |
 | cWBTC Faucet | [https://faucet-cwbtc.ckb.dev](https://faucet-cwbtc.ckb.dev) | Get testnet cWBTC for CCH testing |
-| RUSD (Stablecoin) | [https://testnet0815.stablepp.xyz/stablecoin](https://testnet0815.stablepp.xyz/stablecoin) | Mint testnet RUSD stablecoin |
+| RUSD (Stablecoin) | [https://testnet0815.stablepp.xyz/faucet](https://testnet0815.stablepp.xyz/faucet) | Claim through a wallet, then transfer Testnet RUSD to the node address |
 
 ## Block Explorers
 
@@ -71,7 +71,7 @@ When opening a channel, each side must reserve **99 CKB** (98 CKB for commitment
 
 ## Node Downloads
 
-Download the latest Fiber Node binary from the [GitHub Releases page](https://github.com/nervosnetwork/fiber/releases).
+Download the pinned [Fiber Node v0.9.0 release](https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0). Choose the asset matching your operating system and CPU architecture; each archive includes `fnn`, `fnn-cli`, and network config files.
 
 ## Getting Help
 
