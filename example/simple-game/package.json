@@ -1,7 +1,9 @@
 {
-    "name": "template-vite",
+    "name": "fiber-simple-game",
     "version": "0.0.0",
+    "private": true,
     "type": "module",
+    "packageManager": "pnpm@10.34.5",
     "scripts": {
         "dev": "vite",
         "build": "tsc && vite build",
@@ -13,16 +15,20 @@
     "devDependencies": {
         "@biomejs/biome": "1.9.4",
         "@types/node": "^22.13.8",
-        "@typescript-eslint/eslint-plugin": "^8.25.0",
-        "@typescript-eslint/parser": "^8.25.0",
         "typescript": "^5.7.3",
-        "vite": "^5.4.21"
+        "vite": "^7.3.6"
     },
     "dependencies": {
-        "@ckb-ccc/core": "^1.12.3",
         "@ckb-ccc/fiber": "0.0.0-canary-20260505020844",
-        "@tailwindcss/vite": "^4.0.9",
-        "phaser": "^3.80.1",
-        "tailwindcss": "^4.0.9"
+        "@tailwindcss/vite": "^4.3.3",
+        "phaser": "^3.90.0",
+        "tailwindcss": "^4.3.3"
+    },
+    "pnpm": {
+        "overrides": {
+            "nanoid": ">=3.3.18 <4",
+            "postcss": ">=8.5.23 <9",
+            "ws": ">=8.21.0 <9"
+        }
     }
 }
