@@ -43,6 +43,18 @@ const config = {
           { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
         ],
       },
+      ...[
+        '/docs/build/hold-invoice',
+        '/docs/build/streaming-payments',
+        '/docs/build/rusd-payment',
+        '/docs/build/close-channel',
+      ].map((source) => ({
+        source,
+        headers: [
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
+        ],
+      })),
     ];
   },
   async redirects() {

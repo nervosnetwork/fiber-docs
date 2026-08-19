@@ -544,6 +544,7 @@ export function FiberUnidirectionalChannelTutorial() {
       demoTitle="Run the Unidirectional Channel Demo"
       downloadHref="/downloads/fiber-unidirectional-channel.zip"
       liveDemo={liveDemo}
+      nextHref="/docs/build/hold-invoice"
       previousHref="/docs/build/multi-hop-invoice"
       sectionCode={sectionCode}
     />

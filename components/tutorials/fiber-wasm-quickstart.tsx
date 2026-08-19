@@ -49,6 +49,10 @@ const tutorials = [
     shortTitle: 'Open a unidirectional channel',
     href: '/docs/build/unidirectional-channel',
   },
+  { title: 'Build a Conditional Payment with a Hold Invoice', shortTitle: 'Build a Hold Invoice payment', href: '/docs/build/hold-invoice' },
+  { title: 'Stream Payments over a One-Way Channel', shortTitle: 'Stream one-way payments', href: '/docs/build/streaming-payments' },
+  { title: 'Pay with RUSD over Fiber', shortTitle: 'Pay with RUSD', href: '/docs/build/rusd-payment' },
+  { title: 'Close a Fiber Channel and Recover Funds', shortTitle: 'Close a channel and recover funds', href: '/docs/build/close-channel' },
 ] as const;
 
 const currentTutorialIndex = tutorials.findIndex(

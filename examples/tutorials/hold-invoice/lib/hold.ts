@@ -1,0 +1,4 @@
+import type { FiberBrowserNode } from '@fiber-pay/sdk/browser'; import { bottle,ckbToHex } from './fiber';
+const toHex=(v:Uint8Array)=>`0x${Array.from(v,b=>b.toString(16).padStart(2,'0')).join('')}` as `0x${string}`;
+export async function createHoldInvoice(node:FiberBrowserNode,amount:string){const preimage=crypto.getRandomValues(new Uint8Array(32));const hash=new Uint8Array(await crypto.subtle.digest('SHA-256',preimage));const payment_hash=toHex(hash);const result=await node.newInvoice({amount:ckbToHex(amount),currency:'Fibt',payment_hash,allow_trampoline_routing:true,expiry:'0xe10'});return{...result,payment_hash,preimage:toHex(preimage)}}
+export async function payHoldInvoice(node:FiberBrowserNode,invoice:string){return node.sendPayment({invoice,trampoline_hops:[bottle.pubkey],max_fee_amount:ckbToHex('1')})}
