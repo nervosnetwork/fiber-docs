@@ -63,6 +63,11 @@ const config = {
         destination: '/docs/build/gaming/simple-game',
         permanent: true,
       },
+      {
+        source: '/docs/res/fiber-js-browser-extension',
+        destination: '/docs/build/browser-extension',
+        permanent: true,
+      },
     ];
   },
 };
