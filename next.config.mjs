@@ -57,6 +57,12 @@ const config = {
         destination: '/docs/build/connect-wasm-node',
         permanent: false,
       },
+      {
+        // Moved under Build -> Gaming
+        source: '/docs/build/simple-game',
+        destination: '/docs/build/gaming/simple-game',
+        permanent: true,
+      },
     ];
   },
 };

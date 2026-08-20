@@ -4,25 +4,88 @@
 
 Fiber Network Node (FNN) is the reference Rust implementation. fiber-js provides a WASM node for browsers. The HTTP JSON-RPC interface allows programmatic access from any language.
 
-## Introduction
+## Overview
 
 - [What is Fiber Network?](https://www.fiber.world/docs): Fiber Network is a peer-to-peer payment and swap network built on Nervos CKB. Similar to the Lightning Network, it uses 
 - [How Fiber Network Works](https://www.fiber.world/docs/how-it-works): Fiber Network uses payment channels to move frequent transfers off-chain while using CKB for settlement and enforcement.
 
 ## Quick Start
 
+- [Overview](https://www.fiber.world/docs/quick-start/run-a-node): What it means to run a Fiber node, the available node forms, and how to pick the right deployment for your use case
+- [Run a Native Node](https://www.fiber.world/docs/quick-start/run-a-node/rust): Run a native Fiber Network Node (FNN) binary on your local machine or server
+- [Run a Native Node (Docker)](https://www.fiber.world/docs/quick-start/run-a-node/docker): Deploy the native Fiber Network Node using Docker
+- [Run a WASM Node](https://www.fiber.world/docs/quick-start/run-a-node/fiberjs): Run a Fiber node directly in your browser app
 - [Basic Transfer Example](https://www.fiber.world/docs/quick-start/basic-transfer): Learn how to set up and execute transfers between two nodes
 - [Transfer Stablecoins](https://www.fiber.world/docs/quick-start/transfer-stablecoin): Learn how to transfer stablecoins between nodes
+- [Multi-hop Transfers](https://www.fiber.world/docs/quick-start/multi-hop-transfer): Route Testnet payments through Fiber's public relay nodes
+- [Network Resources](https://www.fiber.world/docs/quick-start/network-resources): All Fiber network resources in one place — public nodes, faucets, explorers, and more
 
-## Guide / Build on Fiber
+## Build
 
+- [Toolchain Overview](https://www.fiber.world/docs/build/toolchain): A complete map of the Fiber ecosystem — tools, libraries, and how they fit together
 - [JavaScript SDK](https://www.fiber.world/docs/build/sdk/js): TypeScript/JavaScript SDK for Fiber Network — channels, invoices, payments, and more
-
-## Guide / Community SDK
-
+- [WASM Node](https://www.fiber.world/docs/build/sdk/wasm-node): Run Fiber Network node using WebAssembly
 - [Overview](https://www.fiber.world/docs/build/community-sdk): Community-maintained libraries and toolchains for building Fiber applications
 - [fiber-pay](https://www.fiber.world/docs/build/community-sdk/fiber-pay): Community toolchain for Fiber RPC, browser nodes, passkeys, React payment flows, and automation
 - [fiber-checkout](https://www.fiber.world/docs/build/community-sdk/fiber-checkout): Community-maintained React components and hooks for Fiber invoice checkout flows
+- [Fiber FFI User Guide](https://www.fiber.world/docs/build/ffi/ffi-user-guide): Embed Fiber nodes through a C ABI for mobile, desktop, and other native runtimes
+- [Android Native Integration](https://www.fiber.world/docs/build/ffi/android-native-integration): Integrate fiber-ffi into an Android app through JNI and the native C ABI
+- [iOS Native Integration](https://www.fiber.world/docs/build/ffi/ios-native-integration): Integrate fiber-ffi into an iOS app through Swift and an Objective-C bridging header
+- [Tutorial: Build a Game](https://www.fiber.world/docs/build/gaming/simple-game): A simple JavaScript game example with Fiber micro-payments
+- [Game Payment Patterns](https://www.fiber.world/docs/build/gaming/payment-patterns): Three ways to attach payments to a game with Fiber — pay-as-you-play, hold-invoice stakes with a trusted oracle, and adaptor-signature oracles — and how to choose between them
+- [Interactive tutorials](https://www.fiber.world/docs/build/interactive-tutorials): Build and test Fiber dApps step by step in a live browser playground
+
+## Node Operations
+
+- [Configuration Reference](https://www.fiber.world/docs/operate/config-reference): Reference for Fiber Node config.yml fields, supported overrides, and defaults
+- [Fiber Node Backup](https://www.fiber.world/docs/operate/backup): Back up and restore Fiber v0.9.0 node data
+- [Connect Public Nodes](https://www.fiber.world/docs/operate/connect-nodes): Connect your Fiber node to public Mainnet or Testnet nodes
+
+## Concepts
+
+- [Channel Lifecycle](https://www.fiber.world/docs/concept/channels/channel-lifecycle): Understand the ChannelState values used during a Fiber payment channel lifecycle
+- [Unidirectional Channel](https://www.fiber.world/docs/concept/channels/unidirectional-channel): Open a one-way payment channel where funds can only flow from initiator to acceptor — ideal for streaming payments and merchant receiving
+- [External Funding](https://www.fiber.world/docs/concept/channels/external-funding): Open a payment channel using a funding transaction signed by an external wallet
+- [Channel Rebalancing](https://www.fiber.world/docs/concept/channels/channel-rebalancing): Shift liquidity between Fiber channels with circular payments
+- [Payment Lifecycle](https://www.fiber.world/docs/concept/payments/payment-lifecycle): Understand how payments are created, routed, settled, and failed in the Fiber network
+- [Invoice](https://www.fiber.world/docs/concept/payments/invoice-guide): How to create, send, parse, and manage invoices in the Fiber network
+- [Hold Invoice](https://www.fiber.world/docs/concept/payments/hold-invoice): Deferred settlement invoices for conditional payments in the Fiber network
+- [Multi-Hop Payments](https://www.fiber.world/docs/concept/routing/multi-hop): How Fiber routes payments through intermediate nodes using time-locked contracts and onion encryption
+- [Trampoline Routing](https://www.fiber.world/docs/concept/routing/trampoline-routing): How Fiber delegates pathfinding to trampoline nodes so lightweight clients can route payments without a full network graph
+- [Biscuit Authentication in Fiber](https://www.fiber.world/docs/concept/security/biscuit-auth): Overview of Biscuit authentication and how it's integrated into Fiber's RPC system
+- [Watchtower](https://www.fiber.world/docs/concept/security/watchtower): How Fiber watchtower monitors channels and protects your funds from fraud
+
+## RPC API Reference
+
+- [RPC Overview](https://www.fiber.world/docs/api-reference): Technical reference for RPC endpoint format, JSON-RPC request/response structure, and authentication
+- [Module `Info`](https://www.fiber.world/docs/api-reference/node/info): Node information RPC methods
+- [Module `Peer`](https://www.fiber.world/docs/api-reference/node/peer): Peer management RPC methods
+- [Module `Admin`](https://www.fiber.world/docs/api-reference/node/admin): Node administration RPC methods
+- [Module `Channel`](https://www.fiber.world/docs/api-reference/channels/channel): Channel management RPC methods
+- [Module `Invoice`](https://www.fiber.world/docs/api-reference/payments/invoice): Invoice management RPC methods
+- [Module `Payment`](https://www.fiber.world/docs/api-reference/payments/payment): Payment management RPC methods
+- [Module `Graph`](https://www.fiber.world/docs/api-reference/network/graph): Network graph RPC methods
+- [Module `Cch`](https://www.fiber.world/docs/api-reference/cross-chain/cch): Cross Chain Hub demonstration RPC methods
+- [Module `Dev`](https://www.fiber.world/docs/api-reference/dev-tooling/dev): Development-only RPC methods
+- [Module `Prof`](https://www.fiber.world/docs/api-reference/dev-tooling/prof): Performance profiling RPC methods
+- [Module `Watchtower`](https://www.fiber.world/docs/api-reference/dev-tooling/watchtower): Watchtower RPC methods
+- [Types Reference](https://www.fiber.world/docs/api-reference/types/types): Common data types used in the JSON-RPC API
+
+## FAQ
+
+- [Troubleshooting](https://www.fiber.world/docs/faq/troubleshooting): Common errors and solutions when running a Fiber node
+
+## Resources
+
+- [Fiber Network Glossary](https://www.fiber.world/docs/res/glossary): Simple and non-technical explanations of key Fiber Network terminology
+- [Fiber Cheat Code](https://www.fiber.world/docs/res/cheat-code): Quick reference for common Fiber CLI commands, RPC calls, channel operations, and configuration
+- [Fiber Network Light Paper](https://www.fiber.world/docs/res/light-paper): Fiber Network: A Lightning Network Based on CKB
+- [Fiber Architecture & Module](https://www.fiber.world/docs/res/high-level): A source code-level exploration of Fiber's architecture and key modules.
+- [What is Payment Channel Network](https://www.fiber.world/docs/res/payment-channel): Understanding Payment Channel Network - A Quick Walkthrough Guide
+- [Fiber P2P Message Protocol](https://www.fiber.world/docs/res/p2p-message): Fiber Network P2P Message Protocol
+- [Gossip Protocol](https://www.fiber.world/docs/res/gossip-protocol): Architecture, data flow, and operational notes of the Fiber gossip subsystem
+- [Cross-Chain HTLC](https://www.fiber.world/docs/res/cross-chain-htlc): Atomic cross-chain payments between CKB (Fiber) and Bitcoin (Lightning) networks — architecture, mechanics, and developer guide
+- [Using fiber-js in a Browser Extension](https://www.fiber.world/docs/res/fiber-js-browser-extension): Guide for running @nervosnetwork/fiber-js inside a Chrome browser extension using Offscreen Documents
 
 ## Optional
 

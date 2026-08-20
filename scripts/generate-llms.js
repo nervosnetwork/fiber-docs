@@ -4,6 +4,15 @@
  * llms.txt: A curated index of all documentation pages with summaries.
  * llms-full.txt: The complete text content of all documentation pages.
  *
+ * The page list and section grouping are derived from the same meta.json
+ * files that drive the docs sidebar (content/docs/meta.json and per-folder
+ * meta.json), so the output can never drift from the site navigation:
+ *
+ *   "---Section---"  -> starts a new section
+ *   "...folder"      -> expands the folder's pages inline into the section
+ *   "path/to/page"   -> a single page (or a folder reference, expanded via
+ *                       its own meta.json)
+ *
  * Usage: node scripts/generate-llms.js
  * Run this before `next build` or as part of the build pipeline.
  */
@@ -15,125 +24,121 @@ const DOCS_DIR = path.join(__dirname, "..", "content", "docs");
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
 const BASE_URL = "https://www.fiber.world/docs";
 
-// Ordered page list matching meta.json structure
-const PAGE_STRUCTURE = [
-  // Introduction
-  { slug: "", section: "Introduction" },
-  { slug: "how-it-works", section: "Introduction" },
-  // Quick Start
-  { slug: "quick-start/run-a-node", section: "Quick Start" },
-  { slug: "quick-start/basic-transfer", section: "Quick Start" },
-  { slug: "quick-start/transfer-stablecoin", section: "Quick Start" },
-  { slug: "quick-start/connect-nodes", section: "Quick Start" },
-  // Tutorial
-  { slug: "tutorial/simple-game", section: "Tutorial" },
-  // Guide — Run a Node
-  {
-    slug: "guide/node-operator/backup",
-    section: "Guide / Run a Node",
-  },
-  {
-    slug: "guide/node-operator/biscuit-auth",
-    section: "Guide / Run a Node",
-  },
-  {
-    slug: "guide/node-operator/channel-rebalancing",
-    section: "Guide / Run a Node",
-  },
-  {
-    slug: "guide/node-operator/external-funding",
-    section: "Guide / Run a Node",
-  },
-  {
-    slug: "guide/node-operator/troubleshooting",
-    section: "Guide / Run a Node",
-  },
-  // Guide — Build on Fiber
-  {
-    slug: "guide/developer/http-rpc-guide",
-    section: "Guide / Build on Fiber",
-  },
-  {
-    slug: "build/sdk/js",
-    section: "Guide / Build on Fiber",
-  },
-  {
-    slug: "build/community-sdk/index",
-    route: "build/community-sdk",
-    section: "Guide / Community SDK",
-  },
-  {
-    slug: "build/community-sdk/fiber-pay",
-    section: "Guide / Community SDK",
-  },
-  {
-    slug: "build/community-sdk/fiber-checkout",
-    section: "Guide / Community SDK",
-  },
-  {
-    slug: "guide/developer/toolchain",
-    section: "Guide / Build on Fiber",
-  },
-  {
-    slug: "guide/developer/api-reference",
-    section: "Guide / Build on Fiber",
-  },
-  // Guide — Core Concepts
-  {
-    slug: "guide/core-concepts/glossary",
-    section: "Guide / Core Concepts",
-  },
-  {
-    slug: "guide/core-concepts/channel-lifecycle",
-    section: "Guide / Core Concepts",
-  },
-  {
-    slug: "guide/core-concepts/payment-lifecycle",
-    section: "Guide / Core Concepts",
-  },
-  {
-    slug: "guide/core-concepts/invoice-guide",
-    section: "Guide / Core Concepts",
-  },
-  {
-    slug: "guide/core-concepts/hold-invoice",
-    section: "Guide / Core Concepts",
-  },
-  // Guide — Network Resources
-  {
-    slug: "guide/network-resources",
-    section: "Guide / Network Resources",
-  },
-  // Tech Explanation
-  {
-    slug: "tech-explanation/light-paper",
-    section: "Tech Explanation",
-  },
-  {
-    slug: "tech-explanation/high-level",
-    section: "Tech Explanation",
-  },
-  {
-    slug: "tech-explanation/payment-channel",
-    section: "Tech Explanation",
-  },
-  {
-    slug: "tech-explanation/invoice-protocol",
-    section: "Tech Explanation",
-  },
-  {
-    slug: "tech-explanation/p2p-message",
-    section: "Tech Explanation",
-  },
-  {
-    slug: "tech-explanation/cross-chain-htlc",
-    section: "Tech Explanation",
-  },
-  {
-    slug: "tech-explanation/trampoline-routing",
-    section: "Tech Explanation",
-  },
-];
+const SEPARATOR_RE = /^---(.+)---$/;
+
+function readMeta(dir) {
+  const metaPath = path.join(dir, "meta.json");
+  if (!fs.existsSync(metaPath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(metaPath, "utf-8"));
+  } catch (e) {
+    console.warn(`Warning: failed to parse ${metaPath}: ${e.message}`);
+    return null;
+  }
+}
+
+/**
+ * Expand a folder into its page slugs (relative to content/docs), following
+ * the folder's meta.json pages list when present. A folder index.mdx is
+ * always included as the folder's landing page, even if the meta.json pages
+ * list omits "index" (fumadocs still renders it).
+ */
+function expandFolder(folderRel, slugs) {
+  const dir = path.join(DOCS_DIR, folderRel);
+  const meta = readMeta(dir);
+
+  if (meta && Array.isArray(meta.pages)) {
+    const entries = [...meta.pages];
+    if (
+      fs.existsSync(path.join(dir, "index.mdx")) &&
+      !entries.includes("index")
+    ) {
+      entries.unshift("index");
+    }
+    for (const entry of entries) {
+      if (SEPARATOR_RE.test(entry)) continue; // nested visual separators: ignored
+      if (entry.startsWith("...")) {
+        expandFolder(path.posix.join(folderRel, entry.slice(3)), slugs);
+      } else {
+        expandEntry(entry, folderRel, slugs);
+      }
+    }
+    return;
+  }
+
+  // No meta.json: every .mdx in the folder, index first, then alphabetical.
+  const files = fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith(".mdx"))
+    .sort((a, b) => {
+      if (a === "index.mdx") return -1;
+      if (b === "index.mdx") return 1;
+      return a.localeCompare(b);
+    });
+  for (const f of files) {
+    const name = f.replace(/\.mdx$/, "");
+    slugs.push(name === "index" ? folderRel : `${folderRel}/${name}`);
+  }
+}
+
+/**
+ * Expand one pages[] entry (a page path or a folder reference) into slugs.
+ * `prefix` is the enclosing folder's path relative to content/docs ("" at root).
+ */
+function expandEntry(entry, prefix, slugs) {
+  if (entry === "index") {
+    // The folder's own landing page; at the docs root this is the home page.
+    slugs.push(prefix || "");
+    return;
+  }
+
+  const rel = prefix ? `${prefix}/${entry}` : entry;
+  if (fs.existsSync(path.join(DOCS_DIR, `${rel}.mdx`))) {
+    slugs.push(rel);
+    return;
+  }
+  const dirPath = path.join(DOCS_DIR, rel);
+  if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
+    expandFolder(rel, slugs);
+    return;
+  }
+  console.warn(`Warning: meta.json entry not found, skipped: ${rel}`);
+}
+
+/**
+ * Build the ordered { slug, section } list from content/docs/meta.json.
+ */
+function buildPageStructure() {
+  const rootMeta = readMeta(DOCS_DIR);
+  if (!rootMeta || !Array.isArray(rootMeta.pages)) {
+    throw new Error("content/docs/meta.json is missing or has no pages array");
+  }
+
+  const structure = [];
+  const seen = new Set();
+  let section = "Documentation";
+  const push = (slug) => {
+    if (seen.has(slug)) return;
+    seen.add(slug);
+    structure.push({ slug, section });
+  };
+
+  for (const entry of rootMeta.pages) {
+    const separator = entry.match(SEPARATOR_RE);
+    if (separator) {
+      section = separator[1].trim();
+      continue;
+    }
+    const slugs = [];
+    if (entry.startsWith("...")) {
+      expandFolder(entry.slice(3), slugs);
+    } else {
+      expandEntry(entry, "", slugs);
+    }
+    slugs.forEach(push);
+  }
+  return structure;
+}
 
 /**
  * Parse frontmatter from MDX file content.
@@ -188,9 +193,15 @@ function stripToPlainText(content) {
  * Read an MDX file and return its metadata and plain text content.
  */
 function readPage(slug) {
-  const filePath = slug
+  let filePath = slug
     ? path.join(DOCS_DIR, `${slug}.mdx`)
     : path.join(DOCS_DIR, "index.mdx");
+
+  // Folder landing pages live in <slug>/index.mdx
+  if (!fs.existsSync(filePath) && slug) {
+    const indexPath = path.join(DOCS_DIR, slug, "index.mdx");
+    if (fs.existsSync(indexPath)) filePath = indexPath;
+  }
 
   if (!fs.existsSync(filePath)) {
     console.warn(`Warning: file not found: ${filePath}`);
@@ -213,7 +224,7 @@ function readPage(slug) {
 
 // ---- Main ----
 
-const pages = PAGE_STRUCTURE.map((p) => {
+const pages = buildPageStructure().map((p) => {
   const page = readPage(p.slug);
   if (page) {
     page.section = p.section;
