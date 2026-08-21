@@ -31,6 +31,7 @@ Fiber Network Node (FNN) is the reference Rust implementation. fiber-js provides
 - [Fiber FFI User Guide](https://www.fiber.world/docs/build/ffi/ffi-user-guide): Embed Fiber nodes through a C ABI for mobile, desktop, and other native runtimes
 - [Android Native Integration](https://www.fiber.world/docs/build/ffi/android-native-integration): Integrate fiber-ffi into an Android app through JNI and the native C ABI
 - [iOS Native Integration](https://www.fiber.world/docs/build/ffi/ios-native-integration): Integrate fiber-ffi into an iOS app through Swift and an Objective-C bridging header
+- [Using fiber-js in a Browser Extension](https://www.fiber.world/docs/build/browser-extension): Guide for running @nervosnetwork/fiber-js inside a Chrome browser extension using Offscreen Documents
 - [Tutorial: Build a Game](https://www.fiber.world/docs/build/gaming/simple-game): A simple JavaScript game example with Fiber micro-payments
 - [Game Payment Patterns](https://www.fiber.world/docs/build/gaming/payment-patterns): Three ways to attach payments to a game with Fiber — pay-as-you-play, hold-invoice stakes with a trusted oracle, and adaptor-signature oracles — and how to choose between them
 - [Interactive tutorials](https://www.fiber.world/docs/build/interactive-tutorials): Build and test Fiber dApps step by step in a live browser playground
@@ -85,7 +86,6 @@ Fiber Network Node (FNN) is the reference Rust implementation. fiber-js provides
 - [Fiber P2P Message Protocol](https://www.fiber.world/docs/res/p2p-message): Fiber Network P2P Message Protocol
 - [Gossip Protocol](https://www.fiber.world/docs/res/gossip-protocol): Architecture, data flow, and operational notes of the Fiber gossip subsystem
 - [Cross-Chain HTLC](https://www.fiber.world/docs/res/cross-chain-htlc): Atomic cross-chain payments between CKB (Fiber) and Bitcoin (Lightning) networks — architecture, mechanics, and developer guide
-- [Using fiber-js in a Browser Extension](https://www.fiber.world/docs/res/fiber-js-browser-extension): Guide for running @nervosnetwork/fiber-js inside a Chrome browser extension using Offscreen Documents
 
 ## Optional
 

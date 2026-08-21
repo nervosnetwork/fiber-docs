@@ -6199,78 +6199,78 @@
       "id": "chunk-885",
       "title": "Using fiber-js in a Browser Extension",
       "content": "## Introduction\n\nThis demo verifies whether `@nervosnetwork/fiber-js` can run inside a browser extension.\n\n( fiber-js is a JavaScript wrapper around the Fiber WebAssembly runtime. It starts a Fiber node inside browser workers and exposes JavaScript methods for controlling that node.)\n\nProject repository:\n\nhttps://github.com/joii2020/fiber-browser-extension-demo\n\nCurrent support status:\n\n- Chrome / Chromium-based browsers: supported\n- Firefox: not supported for now\n- Safari (macOS): not supported for now\n\nThe current demo is mainly designed for Chrome / Chromium Manifest V3 extensions.\n\n---\n\n## Overall Extension Structure\n\nIn this demo, `fiber-js` runs inside a hidden Offscreen Document instead of the popup or a normal web page.\n\nThe recommended structure is:",
-      "url": "/docs/res/fiber-js-browser-extension",
-      "source": "docs/res/fiber-js-browser-extension.mdx"
+      "url": "/docs/build/browser-extension",
+      "source": "docs/build/browser-extension/index.mdx"
     },
     {
       "id": "chunk-886",
       "title": "Using fiber-js in a Browser Extension",
       "content": "```\npopup / extension page\n↓\nbackground service worker\n↓\nOffscreen Document\n↓\nfiber-js\n```\n\nIn simple terms:\n\n- popup / extension page: handles the user interface;\n- background service worker: receives requests and forwards messages;\n- Offscreen Document: runs `fiber-js`;\n- `fiber-js`: starts the Fiber node and handles related operations.\n\n---\n\n## Why Use an Offscreen Document\n\nThe main reason for using an Offscreen Document is to keep `fiber-js` running in the extension background.\n\nIf `fiber-js` runs in the popup, a normal extension page, or a web page, it may be interrupted when that page is closed. For payments and channel operations, being interrupted midway may cause abnormal states and may even affect transaction results.",
-      "url": "/docs/res/fiber-js-browser-extension",
-      "source": "docs/res/fiber-js-browser-extension.mdx"
+      "url": "/docs/build/browser-extension",
+      "source": "docs/build/browser-extension/index.mdx"
     },
     {
       "id": "chunk-887",
       "title": "Using fiber-js in a Browser Extension",
       "content": "An Offscreen Document is not shown to the user, but it can stay alive in the background for a relatively long time. This makes it a better container for running `fiber-js`.\n\nIt also provides a normal page-like `window` / `document` environment, which makes it easier to load WASM, Workers, and other resources.\n\n---\n\n## What the Offscreen Document Does\n\nThe Offscreen Document is mainly responsible for:\n\n- loading `@nervosnetwork/fiber-js`;\n- initializing WASM;\n- creating the Fiber instance;\n- calling `fiber.start()`;\n- storing Fiber runtime state;\n- receiving requests forwarded by the background;\n- returning execution results or error messages.\n\nYou can think of it as the background runtime page for `fiber-js` inside the browser extension.\n\n---\n\n## Extension Call Flow",
-      "url": "/docs/res/fiber-js-browser-extension",
-      "source": "docs/res/fiber-js-browser-extension.mdx"
+      "url": "/docs/build/browser-extension",
+      "source": "docs/build/browser-extension/index.mdx"
     },
     {
       "id": "chunk-888",
       "title": "Using fiber-js in a Browser Extension",
       "content": "The call flow for using `fiber-js` in the extension is roughly as follows:\n\n```\n1. The user opens the popup or extension page\n2. The page sends a request to the background service worker\n3. The background checks whether the Offscreen Document already exists\n4. If it does not exist, the background creates the Offscreen Document\n5. The Offscreen Document loads fiber-js\n6. A Fiber instance is created\n7. fiber.start() is called\n8. Later Fiber-related operations are sent to the Offscreen Document through messages\n```\n\nIn other words, the popup does not directly hold the Fiber instance.\n\nThe popup only sends requests, for example:\n\n- start Fiber;\n- query status;\n- connect to a peer.",
-      "url": "/docs/res/fiber-js-browser-extension",
-      "source": "docs/res/fiber-js-browser-extension.mdx"
+      "url": "/docs/build/browser-extension",
+      "source": "docs/build/browser-extension/index.mdx"
     },
     {
       "id": "chunk-889",
       "title": "Using fiber-js in a Browser Extension",
       "content": "If invoice creation, invoice payment, channel opening, channel closing, and other operations are supported later, the same structure should be used: the popup sends messages, and the Offscreen Document handles the actual `fiber-js` calls.\n\n---\n\n## Required Configuration\n\n### 1. Chrome Version and Manifest V3\n\nOffscreen Document requires Chrome 109+ and Manifest V3.\n\nIf you write the manifest directly, you can declare the minimum Chrome version:\n\n```json\nminimum_chrome_version: \"109\"\n```\n\nThe current demo only targets Chrome / Chromium MV3 extensions. It does not apply to Firefox or Safari.\n\n### 2. Offscreen Permission\n\nBecause an Offscreen Document is used, the following permission needs to be declared in the manifest:\n\n```json\npermissions: [\"offscreen\"]\n```\n\n---",
-      "url": "/docs/res/fiber-js-browser-extension",
-      "source": "docs/res/fiber-js-browser-extension.mdx"
+      "url": "/docs/build/browser-extension",
+      "source": "docs/build/browser-extension/index.mdx"
     },
     {
       "id": "chunk-890",
       "title": "Using fiber-js in a Browser Extension",
       "content": "### 3. WASM and Worker Permissions\n\n`fiber-js` loads WASM and also uses Workers, so CSP needs to be configured:\n\n```json\ncontent_security_policy: {\n  extension_pages: \"script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; object-src 'self';\"\n}\n```\n\nWhere:\n\n- `wasm-unsafe-eval`: allows WASM to run;\n- `worker-src 'self'`: allows Workers inside the extension package to be loaded.\n\n---\n\n### 4. Cross-Origin Isolation Configuration\n\n`fiber-js` needs to use `SharedArrayBuffer` in the browser.\n\nIn Chrome / Chromium extensions, the following fields need to be added to the manifest:\n\n```json\ncross_origin_embedder_policy: {\n  value: \"require-corp\"\n},\n\ncross_origin_opener_policy: {\n  value: \"same-origin\"\n}\n```\n\nYou can use the following code to check whether the environment meets the requirements:",
-      "url": "/docs/res/fiber-js-browser-extension",
-      "source": "docs/res/fiber-js-browser-extension.mdx"
+      "url": "/docs/build/browser-extension",
+      "source": "docs/build/browser-extension/index.mdx"
     },
     {
       "id": "chunk-891",
       "title": "Using fiber-js in a Browser Extension",
       "content": "```js\nwindow.crossOriginIsolated === true\ntypeof SharedArrayBuffer === \"function\"\n```\n\nIf these two conditions are not met, `fiber-js` may fail to start properly.\n\n---\n\n### 5. Fiber Key Storage\n\nThe current demo generates a Fiber key inside the Offscreen Document and stores it in that page's own `localStorage`.\n\nThe storage key is:\n\n```\nfiber-extension-demo:fiber-key\n```\n\nOn subsequent startups, the demo reads this key first to avoid generating a new Fiber node identity every time the popup is opened.\n\nIf this key changes on the next startup, `fiber-js` will treat it as a different node identity. Fiber state, channels, and other data associated with the old key may no longer be usable and may not be recoverable.\n\n---\n\n## Example Manifest Configuration\n\nFull configuration example:",
-      "url": "/docs/res/fiber-js-browser-extension",
-      "source": "docs/res/fiber-js-browser-extension.mdx"
+      "url": "/docs/build/browser-extension",
+      "source": "docs/build/browser-extension/index.mdx"
     },
     {
       "id": "chunk-892",
       "title": "Using fiber-js in a Browser Extension",
       "content": "```json\nmanifest: {\n  minimum_chrome_version: \"109\",\n\n  permissions: [\"offscreen\"],\n\n  content_security_policy: {\n    extension_pages: \"script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; object-src 'self';\"\n  },\n\n  cross_origin_embedder_policy: {\n    value: \"require-corp\"\n  },\n\n  cross_origin_opener_policy: {\n    value: \"same-origin\"\n  }\n}\n```\n\n---\n\n## Build Notes\n\nDuring packaging, make sure that:\n\n- the `.wasm` file has been included in the extension package;\n- the Worker file can be loaded by extension pages;\n- the manifest includes the `offscreen` permission;\n- the manifest includes the WASM, Worker, and cross-origin isolation configurations.\n\nIf the `.wasm` file is missing, the extension may still be installed, but `fiber-js` may fail to start.",
-      "url": "/docs/res/fiber-js-browser-extension",
-      "source": "docs/res/fiber-js-browser-extension.mdx"
+      "url": "/docs/build/browser-extension",
+      "source": "docs/build/browser-extension/index.mdx"
     },
     {
       "id": "chunk-893",
       "title": "Using fiber-js in a Browser Extension",
       "content": "When publishing the demo, it is recommended to clearly mark it as:\n\n```\nChrome / Chromium MV3 only\n```\n\nDo not mark Firefox and Safari as supported targets.\n\n---\n\n## Memory Usage\n\nUse the browser's built-in memory tools to inspect the Offscreen Document page.\n\nCurrent simple test results:\n\n- initial memory usage is about 135 MB;\n- no obvious memory leak was observed in idle state.\n\nOnly the idle scenario has been tested so far.\n\nFurther testing is still needed for:\n\n- long-running usage;\n- repeated starts and stops;\n- repeated connections;\n- channel opening and closing;\n- recovery after abnormal disconnection.\n\n---\n\n## Firefox and Safari (macOS)",
-      "url": "/docs/res/fiber-js-browser-extension",
-      "source": "docs/res/fiber-js-browser-extension.mdx"
+      "url": "/docs/build/browser-extension",
+      "source": "docs/build/browser-extension/index.mdx"
     },
     {
       "id": "chunk-894",
       "title": "Using fiber-js in a Browser Extension",
       "content": "Currently, `fiber-js` cannot run in Firefox or Safari as a browser extension. For normal web pages, if COOP/COEP can make `crossOriginIsolated=true`, then the `SharedArrayBuffer` requirement can be satisfied.\n\nThe reason is that the browser implementation of `fiber-js` depends on `SharedArrayBuffer` to share memory between Workers, and uses `Atomics` for synchronization. The Web platform only exposes `SharedArrayBuffer` when `crossOriginIsolated=true`.\n\nIn Chrome / Chromium extensions, cross-origin isolation can be enabled through the extra manifest fields `cross_origin_embedder_policy` and `cross_origin_opener_policy`.",
-      "url": "/docs/res/fiber-js-browser-extension",
-      "source": "docs/res/fiber-js-browser-extension.mdx"
+      "url": "/docs/build/browser-extension",
+      "source": "docs/build/browser-extension/index.mdx"
     },
     {
       "id": "chunk-895",
       "title": "Using fiber-js in a Browser Extension",
       "content": "MDN's WebExtension manifest key list does not include descriptions for `cross_origin_embedder_policy` / `cross_origin_opener_policy`. Firefox and Safari also do not currently provide equivalent extension manifest fields like Chrome / Chromium does. Therefore, even if a normal web page can satisfy `crossOriginIsolated=true`, extension pages currently lack an equivalent configuration entry.\n\nRelated Firefox community issues:\n\n- https://bugzilla.mozilla.org/show_bug.cgi?id=1673477\n- https://bugzilla.mozilla.org/show_bug.cgi?id=1750654\n\nNo clearly corresponding Safari issue has been found yet.",
-      "url": "/docs/res/fiber-js-browser-extension",
-      "source": "docs/res/fiber-js-browser-extension.mdx"
+      "url": "/docs/build/browser-extension",
+      "source": "docs/build/browser-extension/index.mdx"
     },
     {
       "id": "chunk-896",
