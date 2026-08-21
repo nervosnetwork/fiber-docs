@@ -1,0 +1,118 @@
+---
+title: "Game Payment Patterns"
+description: "Three ways to attach payments to a game with Fiber — pay-as-you-play, hold-invoice stakes with a trusted oracle, and adaptor-signature oracles — and how to choose between them"
+author: Retric Su
+authorUrl: https://github.com/RetricSu
+date: 2026-08-20
+dependencies:
+  - name: Fiber Node
+    minVersion: "0.9.0"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0"
+---
+
+## Overview
+
+There are three basic ways to attach Fiber payments to a game. They differ in
+one question: **when can a losing player refuse to pay?**
+
+1. **Pay as you play** — payments happen after each game event, on the honor
+system.
+2. **Locked stakes, trusted oracle** — both players lock money before play with
+hold invoices; a game server releases it event by event.
+3. **Locked stakes, provable oracle** — the same lock-up, but the oracle proves
+each outcome with adaptor signatures instead of holding plaintext secrets.
+
+Each step down the list costs more engineering and buys more trust-safety. Pick
+based on how competitive the game is and how much you want to trust the oracle.
+
+## Tier 1: pay as you play (honor system)
+
+The [Build a Game tutorial](/docs/build/gaming/simple-game) works like this:
+
+```text
+player hits boss ──> boss node issues an invoice ──> player node pays it
+```
+
+Every game event triggers a small payment after the fact. Nothing is locked up
+front.
+
+**Trade-off:** a losing player can simply stop paying — nothing enforces the
+transfer. This is fine for cooperative or arcade games where payments are
+rewards, and broken for competitive PvP with real stakes, where refusing to pay
+*is* the winning move.
+
+## Tier 2: locked stakes with a trusted oracle
+
+Two Fiber primitives fix the refusal problem:
+
+- a **payment hash** commits to a secret preimage without revealing it;
+- a **hold invoice** locks the payer's funds against that hash — the payee can
+`settle_invoice` only once the preimage is revealed, otherwise
+`cancel_invoice` (or a timeout) returns the funds to the payer.
+
+[openstrike-fiber-arena](https://github.com/RetricSu/openstrike-fiber-arena), a
+1v1 FPS, uses them like this:
+
+```text
+before play:  the server generates preimages and publishes their hashes
+              each payee creates hold invoices for those hashes
+              each payer pays them ──> funds locked, not transferred
+during play:  on each damage event the server signs a release and reveals
+              one preimage ──> the payee settles one bucket
+after play:   unused invoices are cancelled ──> funds return
+```
+
+Money is locked before the first frame, so a player who gets hit cannot refuse
+to pay. Every release is checked by the client against the pre-published hashes
+and stays inside a per-match cap.
+
+**Trade-off:** the oracle — here the authoritative game server, which decides
+damage anyway — is trusted. It holds plaintext preimages and could in theory
+release one without a real event, though only inside the pre-authorized cap, and
+it never touches wallet keys. Best for real-time PvP that already needs an
+authoritative server.
+
+## Tier 3: locked stakes with a provable oracle
+
+[fiber-game](https://github.com/quake/fiber-demo/tree/main/fiber-game), a
+turn-based protocol, locks stakes **mutually** — each player creates a hold
+invoice payable by the *opponent's* payment hash, and both pay each other — then
+removes the oracle's plaintext secrets with **adaptor signatures**:
+
+- before play, the oracle commits to a nonce `R`; each outcome ("A wins",
+"B wins", …) gets a signature point `R + H(R ‖ O ‖ game_id ‖ outcome) · O`;
+- each player encrypts their preimage with the signature point of the outcome
+where they *lose*, and only the ciphertext is published;
+- when the oracle signs the real outcome, the winner derives the same point
+from that signature, decrypts the loser's preimage, and settles.
+
+The oracle never stores a plaintext preimage, and a signature for the wrong
+outcome does not match the pre-committed point — cheating is cryptographically
+detectable instead of "trust us".
+
+**Trade-off:** more protocol machinery (commitments, encrypted preimages,
+signature verification), and it fits discrete win/lose/draw outcomes better
+than a stream of real-time events. Best for turn-based games — rock-paper-
+scissors, guess-the-number, card games.
+
+## Which one should you pick?
+
+|                        | Tier 1: pay-as-you-play | Tier 2: trusted oracle                  | Tier 3: provable oracle                  |
+| ---------------------- | ----------------------- | --------------------------------------- | ---------------------------------------- |
+| When money moves       | after each event        | locked before play, released per event  | locked before play, released on result   |
+| Loser can refuse to pay | yes                    | no                                      | no                                       |
+| Oracle trust           | none                    | trusted, cap-bounded                    | cryptographically accountable            |
+| Implementation cost    | lowest                  | medium                                  | highest                                  |
+| Best for               | co-op / arcade          | real-time skill-based PvP               | turn-based / commitment games            |
+
+Rule of thumb: if payments are just rewards, stay at Tier 1. If your game
+already runs an authoritative server, Tier 2 costs almost nothing — the server
+already decides the truth, so let it sign payment releases too. If the outcome
+is discrete and you want the oracle out of the trust model entirely, go Tier 3.
+
+Both implementations are open source — see
+[openstrike-fiber-arena](https://github.com/RetricSu/openstrike-fiber-arena) for
+the real-time client-server design and
+[fiber-game](https://github.com/quake/fiber-demo/tree/main/fiber-game) for the
+adaptor-signature protocol. The hands-on starting point is the
+[Build a Game tutorial](/docs/build/gaming/simple-game).
