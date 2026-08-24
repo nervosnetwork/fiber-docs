@@ -56,21 +56,12 @@ const tutorials: Tutorial[] = [
   },
   {
     level: 'Hard',
-    duration: '~30 min',
+    duration: '~20 min',
     title: 'Build a Conditional Payment with a Hold Invoice',
     description:
-      'Hold a multi-hop Invoice at the receiver, then explicitly settle or cancel it.',
-    tags: ['Hold Invoice', 'Conditional', 'Multi-hop'],
+      'Pause an Invoice at the receiver, then explicitly settle or cancel the payment.',
+    tags: ['Hold Invoice', 'Settle', 'Cancel'],
     href: '/docs/build/hold-invoice',
-  },
-  {
-    level: 'Intermediate',
-    duration: '~20 min',
-    title: 'Stream Payments over a One-Way Channel',
-    description:
-      'Send a controlled sequence of small payments through one reusable channel.',
-    tags: ['Streaming', 'One-way', 'Keysend'],
-    href: '/docs/build/streaming-payments',
   },
   {
     level: 'Hard',

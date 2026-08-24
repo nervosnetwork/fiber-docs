@@ -44,10 +44,6 @@ const tutorials = [
     href: '/docs/build/hold-invoice',
   },
   {
-    shortTitle: 'Stream one-way payments',
-    href: '/docs/build/streaming-payments',
-  },
-  {
     shortTitle: 'Pay with RUSD',
     href: '/docs/build/rusd-payment',
   },

@@ -1,2 +1,0 @@
-import type { FiberBrowserNode } from '@fiber-pay/sdk/browser';import { bottle,ckbToHex } from './fiber';
-export async function sendTick(node:FiberBrowserNode,amount:string){const sent=await node.sendPayment({target_pubkey:bottle.pubkey,amount:ckbToHex(amount),keysend:true});return sent.status==='Success'||sent.status==='Failed'?sent:node.waitForPayment(sent.payment_hash,{timeout:60_000,interval:1_000})}

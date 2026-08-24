@@ -1552,7 +1552,7 @@
 
 .tutorialFooter {
   display: flex;
-  min-height: 82px;
+  min-height: 64px;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
@@ -1591,7 +1591,7 @@
 .paymentShell {
   display: grid;
   grid-template-columns: minmax(440px, 40%) minmax(520px, 60%);
-  grid-template-rows: 56px calc(100dvh - 56px) minmax(100dvh, auto) 82px;
+  grid-template-rows: 56px calc(100dvh - 56px) auto auto;
 }
 
 .paymentShell > .tutorialToolbar {
@@ -1613,9 +1613,12 @@
 }
 
 .paymentShell > .paymentWorkspace > .preview {
+  display: block;
   grid-column: 1 / -1;
   grid-row: 3;
+  height: max-content;
   min-height: 100dvh;
+  overflow: visible;
   border: 0;
   padding: clamp(44px, 6vw, 72px) clamp(28px, 6vw, 96px);
   padding-bottom: clamp(24px, 3vw, 40px);
@@ -1998,6 +2001,249 @@
   font: 500 9px/1.4 var(--font-inter, sans-serif);
 }
 
+.holdPayerStatus {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  border: 1px solid #465238;
+  border-radius: 7px;
+  padding: 10px;
+  background: #151b11;
+}
+
+.holdInboundRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #2b2b2b;
+  border-left: 3px solid #a3f53a;
+  padding: 12px 14px;
+  background: #151a12;
+}
+
+.holdInboundRow > div {
+  display: grid;
+  gap: 5px;
+}
+
+.holdInboundRow span {
+  color: #858b82;
+  font: 800 8px/1 var(--font-inter, sans-serif);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.holdInboundRow strong {
+  color: #f0f2ef;
+  font: 800 13px/1.2 var(--font-inter, sans-serif);
+}
+
+.holdInboundRow small {
+  color: #9da29b;
+  font: 500 9px/1.45 var(--font-inter, sans-serif);
+}
+
+.holdInboundRow button {
+  min-width: 145px;
+}
+
+.holdInboundReady {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #5d8a32;
+  border-radius: 999px;
+  padding: 0 15px;
+  background: rgb(163 245 58 / 9%);
+  color: #b7fa66;
+  font: 800 9px/1 var(--font-inter, sans-serif);
+  white-space: nowrap;
+}
+
+.holdRouteRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #2b2b2b;
+  border-left: 3px solid #626862;
+  padding: 12px 14px;
+  background: #151715;
+}
+
+.holdRouteReady {
+  border-left-color: #a3f53a;
+  background: #151a12;
+}
+
+.holdRouteRow > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.holdRouteRow span {
+  color: #858b82;
+  font: 800 8px/1 var(--font-inter, sans-serif);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.holdRouteRow strong {
+  color: #f0f2ef;
+  font: 800 13px/1.2 var(--font-inter, sans-serif);
+}
+
+.holdRouteRow small {
+  color: #9da29b;
+  font: 500 9px/1.45 var(--font-inter, sans-serif);
+}
+
+.holdRouteBadge {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #555b55;
+  border-radius: 999px;
+  padding: 0 15px;
+  color: #b7bcb5;
+  font: 800 9px/1 var(--font-inter, sans-serif);
+  white-space: nowrap;
+}
+
+.holdRouteReady .holdRouteBadge {
+  border-color: #5d8a32;
+  background: rgb(163 245 58 / 9%);
+  color: #b7fa66;
+}
+
+.holdPayerStatus > i {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  border-radius: 50%;
+  background: #a3f53a;
+  box-shadow: 0 0 0 4px rgb(163 245 58 / 10%);
+  animation: holdPayerPulse 1.7s ease-in-out infinite;
+}
+
+.holdPayerStatus div {
+  display: grid;
+  gap: 4px;
+}
+
+.holdPayerStatus strong {
+  color: #eeeeee;
+  font: 800 9px/1.2 var(--font-inter, sans-serif);
+}
+
+.holdPayerStatus span {
+  color: #9ca394;
+  font: 500 9px/1.45 var(--font-inter, sans-serif);
+}
+
+.holdPayerSuccess {
+  border-color: #41692e;
+  background: #14200f;
+}
+
+.holdPayerSuccess > i {
+  animation: none;
+}
+
+.holdPayerRejected {
+  border-color: #71423f;
+  background: #211413;
+}
+
+.holdPayerRejected > i {
+  background: #e2877e;
+  box-shadow: 0 0 0 4px rgb(226 135 126 / 10%);
+  animation: none;
+}
+
+@keyframes holdPayerPulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.88);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.holdDecisionPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  border-bottom: 1px solid #343434;
+  border-left: 3px solid #a3f53a;
+  padding: 16px 18px;
+  background: linear-gradient(90deg, #171d12 0%, #131513 65%);
+}
+
+.holdDecisionPanel > div:first-child {
+  display: grid;
+  gap: 6px;
+}
+
+.holdDecisionPanel span {
+  color: #8d9389;
+  font: 800 8px/1 var(--font-inter, sans-serif);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.holdDecisionPanel strong {
+  color: #f0f2ef;
+  font: 800 13px/1.2 var(--font-inter, sans-serif);
+}
+
+.holdDecisionPanel p {
+  max-width: 620px;
+  margin: 0;
+  color: #9da29b;
+  font: 500 9px/1.5 var(--font-inter, sans-serif);
+}
+
+.holdDecisionActions {
+  display: flex;
+  gap: 8px;
+}
+
+.holdDecisionActions button {
+  min-width: 112px;
+  min-height: 38px;
+  border-radius: 7px;
+  padding: 0 13px;
+  font: 800 9px/1 var(--font-inter, sans-serif);
+  text-transform: uppercase;
+}
+
+.holdDecisionActions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.holdSettleButton {
+  border: 1px solid #a3f53a;
+  background: #a3f53a;
+  color: #10130e;
+}
+
+.holdCancelButton {
+  border: 1px solid #5b6259;
+  background: transparent;
+  color: #d4d7d2;
+}
+
 .invoiceTransferArrow {
   display: grid;
   place-content: center;
@@ -2258,7 +2504,7 @@
 
   .paymentShell {
     grid-template-columns: 1fr;
-    grid-template-rows: 56px 72dvh 62dvh auto 82px;
+    grid-template-rows: 56px 72dvh 62dvh auto auto;
   }
 
   .paymentShell > .article,
@@ -2308,6 +2554,38 @@
 
   .invoiceTransferArrow b {
     transform: rotate(90deg);
+  }
+
+  .holdDecisionPanel {
+    grid-template-columns: 1fr;
+  }
+
+  .holdInboundRow {
+    grid-template-columns: 1fr;
+  }
+
+  .holdInboundRow button {
+    width: 100%;
+  }
+
+  .holdInboundReady {
+    width: 100%;
+  }
+
+  .holdRouteRow {
+    grid-template-columns: 1fr;
+  }
+
+  .holdRouteBadge {
+    width: 100%;
+  }
+
+  .holdDecisionActions {
+    width: 100%;
+  }
+
+  .holdDecisionActions button {
+    flex: 1;
   }
 }
 
@@ -2441,6 +2719,10 @@
   }
 
   .channelTimeline .pendingChannelState i {
+    animation: none;
+  }
+
+  .holdPayerStatus > i {
     animation: none;
   }
 }

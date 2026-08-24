@@ -86,7 +86,9 @@ export function FiberCloseChannelTutorial() {
   }, [allChannels, reusable]);
   const ready = isChannelReady(selected);
   const state = selected?.state.state_name ?? 'Not opened';
-  const closed = selected ? normalizedChannelState(state) === 'closed' : false;
+  const normalizedState = normalizedChannelState(state);
+  const shuttingDown = normalizedState === 'shuttingdown';
+  const closed = normalizedState === 'closed';
   const connected = runtime.peers.some((key) => samePubkey(key, bottlePeer.pubkey));
   const refreshAll = useCallback(async () => {
     const node = runtime.nodeRef.current; if (!node) return;
@@ -117,6 +119,12 @@ export function FiberCloseChannelTutorial() {
     await runtime.run('close channel', (node) => node.shutdownChannel({ channel_id: selected.channel_id, force: false }));
     await refreshAll();
   }, [addEvent, refreshAll, runtime, selected]);
+  const resumeClose = useCallback(async () => {
+    addEvent('Reconnecting to Bottle to continue cooperative shutdown');
+    const online = await runtime.connect(bottlePeer);
+    addEvent(online ? 'Bottle connected; waiting for shutdown confirmation' : 'Bottle is still offline; retry in a moment');
+    await refreshAll();
+  }, [addEvent, refreshAll, runtime]);
   useEffect(() => {
     if (!closed || before === null) return;
     setAfter(runtime.balance); addEvent(`Channel closed · ${shorten(selected?.shutdown_transaction_hash ?? '')}`);
@@ -133,13 +141,13 @@ export function FiberCloseChannelTutorial() {
   const recovered = before !== null && after !== null ? after - before : null;
   const liveDemo = <><div className={styles.panelHeader}><span><i className={styles.liveDot}/> Cooperative channel shutdown</span><button className={styles.headerAction} disabled={!runtime.nodeInfo} onClick={() => void refreshAll()}>Refresh</button></div><div className={`${styles.previewStage} ${styles.paymentPreviewStage}`}><div className={styles.paymentCard}>
     <div className={styles.routeStatusGrid}><div><span>Node</span><strong>{runtime.nodeState}</strong></div><div><span>Peer</span><strong>{connected ? 'Connected' : 'Offline'}</strong></div><div><span>Channel</span><strong>{state}</strong></div><div><span>Recovery</span><strong>{closed ? 'Closed' : stage === 'closing' ? 'Pending' : 'Not started'}</strong></div></div>
-    <div className={styles.paymentFlow}><div className={styles.paymentFlowNumber}>1</div><div><strong>Restore or prepare a one-way channel</strong><span>{runtime.address ? `${hexToCkb(runtime.balance)} CKB · ${shorten(runtime.address, 14, 10)}` : 'Start the persisted browser identity.'}</span></div><div className={styles.compactActions}><button className={styles.startButton} disabled={Boolean(runtime.nodeInfo) || Boolean(runtime.busy)} onClick={runtime.start}>Start</button><a className={styles.faucetButton} href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Faucet ↗</a><button className={styles.paymentButton} disabled={!runtime.nodeInfo || Boolean(reusable) || Boolean(runtime.busy) || (runtime.balance ?? 0n) < BigInt(ckbToHex('499'))} onClick={() => void open()}>Open if needed</button></div></div>
+    <div className={styles.paymentFlow}><div className={styles.paymentFlowNumber}>1</div><div><strong>Restore or prepare a one-way channel</strong><span>{runtime.address ? `${hexToCkb(runtime.balance)} CKB · ${shorten(runtime.address, 14, 10)}` : 'Start the persisted browser identity.'}</span></div><div className={styles.compactActions}><button className={styles.startButton} disabled={Boolean(runtime.nodeInfo) || Boolean(runtime.busy)} onClick={runtime.start}>Start</button><a className={styles.faucetButton} href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Faucet ↗</a><button className={styles.paymentButton} disabled={!runtime.nodeInfo || Boolean(reusable) || shuttingDown || Boolean(runtime.busy) || (runtime.balance ?? 0n) < BigInt(ckbToHex('499'))} onClick={() => void open()}>{ready ? 'Channel ready' : shuttingDown ? 'Shutdown pending' : 'Prepare channel'}</button></div></div>
     {runtime.address && <div className={styles.rebalanceAddress}><code>{runtime.address}</code><button onClick={() => void navigator.clipboard.writeText(runtime.address)}>Copy</button></div>}
     {!closed && <ChannelProgress label="Channel preparation" stage={stage}/>}
     <div className={styles.oneWayChannelFacts}><div><span>Channel ID</span><strong title={selected?.channel_id}>{shorten(selected?.channel_id ?? '')}</strong></div><div><span>Local balance</span><strong>{hexToCkb(selected?.local_balance)} CKB</strong></div><div><span>Shutdown tx</span><strong title={selected?.shutdown_transaction_hash ?? ''}>{shorten(selected?.shutdown_transaction_hash ?? '')}</strong></div><div><span>State</span><strong>{state}</strong></div></div>
-    <div className={styles.paymentFlow}><div className={styles.paymentFlowNumber}>2</div><div><strong>Close cooperatively</strong><span>Both peers agree on final balances before returning funds on-chain.</span></div><button className={styles.paymentButton} disabled={!ready || Boolean(runtime.busy) || stage === 'closing'} onClick={() => void close()}>{stage === 'closing' ? 'Closing…' : closed ? 'Closed' : 'Close channel'}</button></div>
+    <div className={styles.paymentFlow}><div className={styles.paymentFlowNumber}>2</div><div><strong>Close cooperatively</strong><span>{shuttingDown ? connected ? 'Shutdown was submitted. Waiting for the closing transaction to confirm on-chain.' : 'Shutdown is pending, but Bottle is offline. Reconnect to continue the cooperative close.' : closed ? 'The channel is closed and its final balance is returning on-chain.' : 'Both peers agree on final balances before returning funds on-chain.'}</span></div><button className={styles.paymentButton} disabled={closed || Boolean(runtime.busy) || (!ready && !(shuttingDown && !connected))} onClick={() => void (shuttingDown ? resumeClose() : close())}>{runtime.busy.startsWith('connect:') ? 'Reconnecting…' : runtime.busy === 'close channel' ? 'Submitting…' : closed ? 'Closed ✓' : shuttingDown && !connected ? 'Reconnect & continue' : shuttingDown ? 'Waiting on-chain…' : 'Close channel'}</button></div>
     {before !== null && <div className={styles.balanceComparison}><span>Funding address</span><div><b>Before → after</b><code>{hexToCkb(before)} → {hexToCkb(after)} CKB</code><i>{recovered === null ? 'Waiting for indexer' : `${recovered >= 0n ? '+' : ''}${hexToCkb(recovered)} CKB`}</i></div></div>}
     {runtime.error && <div className={styles.paymentError}>{runtime.error}</div>}
   </div><div className={styles.eventPanel}><div className={styles.eventPanelHeader}><span>Shutdown events and results</span><i className={styles.liveDot}/></div><div className={styles.eventList}><div><time>CH</time><code>state</code><span>{state}</span></div>{events.map((event, index) => <div key={`${event}-${index}`}><time>{String(index + 1).padStart(2, '0')}</time><code>close</code><span>{event}</span></div>)}</div></div></div></>;
-  return <RoutingTutorialFrame article={article} codeFiles={codeFiles} currentTutorialIndex={7} defaultFile="close" demoDescription="Cooperatively close a real Testnet channel and watch its final balance return on-chain." demoTitle="Run the Channel Recovery Demo" downloadHref="/downloads/fiber-close-channel.zip" liveDemo={liveDemo} previousHref="/docs/build/rusd-payment" sectionCode={sectionCode}/>;
+  return <RoutingTutorialFrame article={article} codeFiles={codeFiles} currentTutorialIndex={6} defaultFile="close" demoDescription="Cooperatively close a real Testnet channel and watch its final balance return on-chain." demoTitle="Run the Channel Recovery Demo" downloadHref="/downloads/fiber-close-channel.zip" liveDemo={liveDemo} previousHref="/docs/build/rusd-payment" sectionCode={sectionCode}/>;
 }

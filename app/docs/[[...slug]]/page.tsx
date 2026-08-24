@@ -14,7 +14,6 @@ import { FiberChannelPaymentTutorial } from "@/components/tutorials/fiber-channe
 import { FiberMultiHopInvoiceTutorial } from "@/components/tutorials/fiber-multi-hop-invoice";
 import { FiberUnidirectionalChannelTutorial } from "@/components/tutorials/fiber-unidirectional-channel";
 import { FiberHoldInvoiceTutorial } from "@/components/tutorials/fiber-hold-invoice";
-import { FiberStreamingPaymentsTutorial } from "@/components/tutorials/fiber-streaming-payments";
 import { FiberRusdPaymentTutorial } from "@/components/tutorials/fiber-rusd-payment";
 import { FiberCloseChannelTutorial } from "@/components/tutorials/fiber-close-channel";
 
@@ -99,10 +98,6 @@ export default async function Page(props: {
 
   if (slug === "build/hold-invoice") {
     return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><FiberHoldInvoiceTutorial /></>;
-  }
-
-  if (slug === "build/streaming-payments") {
-    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><FiberStreamingPaymentsTutorial /></>;
   }
 
   if (slug === "build/rusd-payment") {

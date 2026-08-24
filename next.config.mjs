@@ -45,7 +45,6 @@ const config = {
       },
       ...[
         '/docs/build/hold-invoice',
-        '/docs/build/streaming-payments',
         '/docs/build/rusd-payment',
         '/docs/build/close-channel',
       ].map((source) => ({
