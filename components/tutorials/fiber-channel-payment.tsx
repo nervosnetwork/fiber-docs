@@ -42,6 +42,9 @@ const tutorials = [
     shortTitle: 'Open a unidirectional channel',
     href: '/docs/build/unidirectional-channel',
   },
+  { shortTitle: 'Build a Hold Invoice payment', href: '/docs/build/hold-invoice' },
+  { shortTitle: 'Pay with RUSD', href: '/docs/build/rusd-payment' },
+  { shortTitle: 'Close a channel and recover funds', href: '/docs/build/close-channel' },
 ] as const;
 const currentTutorialIndex = 1;
 

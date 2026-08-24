@@ -54,6 +54,33 @@ const tutorials: Tutorial[] = [
     tags: ['One-way', 'Channels', 'Keysend'],
     href: '/docs/build/unidirectional-channel',
   },
+  {
+    level: 'Hard',
+    duration: '~20 min',
+    title: 'Build a Conditional Payment with a Hold Invoice',
+    description:
+      'Pause an Invoice at the receiver, then explicitly settle or cancel the payment.',
+    tags: ['Hold Invoice', 'Settle', 'Cancel'],
+    href: '/docs/build/hold-invoice',
+  },
+  {
+    level: 'Hard',
+    duration: '~25 min',
+    title: 'Pay with RUSD over Fiber',
+    description:
+      'Fund a Testnet RUSD channel, inspect token liquidity, and send a stablecoin payment.',
+    tags: ['RUSD', 'UDT', 'Stablecoin'],
+    href: '/docs/build/rusd-payment',
+  },
+  {
+    level: 'Intermediate',
+    duration: '~20 min',
+    title: 'Close a Fiber Channel and Recover Funds',
+    description:
+      'Cooperatively close a channel and follow its final balance back on-chain.',
+    tags: ['Shutdown', 'Recovery', 'Lifecycle'],
+    href: '/docs/build/close-channel',
+  },
 ];
 
 export function InteractiveTutorials() {

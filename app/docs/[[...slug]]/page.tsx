@@ -13,6 +13,9 @@ import { FiberWasmQuickstart } from "@/components/tutorials/fiber-wasm-quickstar
 import { FiberChannelPaymentTutorial } from "@/components/tutorials/fiber-channel-payment";
 import { FiberMultiHopInvoiceTutorial } from "@/components/tutorials/fiber-multi-hop-invoice";
 import { FiberUnidirectionalChannelTutorial } from "@/components/tutorials/fiber-unidirectional-channel";
+import { FiberHoldInvoiceTutorial } from "@/components/tutorials/fiber-hold-invoice";
+import { FiberRusdPaymentTutorial } from "@/components/tutorials/fiber-rusd-payment";
+import { FiberCloseChannelTutorial } from "@/components/tutorials/fiber-close-channel";
 
 export default async function Page(props: {
   params: Promise<{ slug?: string[] }>;
@@ -91,6 +94,18 @@ export default async function Page(props: {
         <FiberUnidirectionalChannelTutorial />
       </>
     );
+  }
+
+  if (slug === "build/hold-invoice") {
+    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><FiberHoldInvoiceTutorial /></>;
+  }
+
+  if (slug === "build/rusd-payment") {
+    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><FiberRusdPaymentTutorial /></>;
+  }
+
+  if (slug === "build/close-channel") {
+    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><FiberCloseChannelTutorial /></>;
   }
 
   return (
