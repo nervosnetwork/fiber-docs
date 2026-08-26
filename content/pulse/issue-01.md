@@ -7,7 +7,7 @@ date: 2026-03-16
 
 Hey Builders on Fiber,
 
-While development on the protocol level continues to push forward (check the latest [**Devlog**](https://docs.fiber.world/blog/d/1994384f43a636e5) for the technical deep-dive), the ecosystem is rapidly evolving.
+While development on the protocol level continues to push forward (check the latest [**Devlog**](https://github.com/nervosnetwork/fiber/discussions/1170) for the technical deep-dive), the ecosystem is rapidly evolving.
 
 We’re kicking off **Pulse**—a bi-weekly series to highlight what’s happening across the network. It’s been an exciting few weeks as we watch community projects move from initial proposals to successful milestone deliveries.
 

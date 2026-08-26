@@ -79,6 +79,30 @@ const config = {
         destination: '/docs/build/browser-extension',
         permanent: true,
       },
+      {
+        // Preserve links from before the documentation restructure.
+        source: '/docs/tech-explanation/high-level',
+        destination: '/docs/res/high-level',
+        permanent: true,
+      },
+      {
+        // Preserve links from before the documentation restructure.
+        source: '/docs/tech-explanation/invoice-protocol',
+        destination: '/docs/res/invoice-protocol',
+        permanent: true,
+      },
+      {
+        // This archived devlog predates the current rolling API window.
+        source: '/blog/d/3fa6fcf8f94a1aa6',
+        destination: 'https://github.com/nervosnetwork/fiber/discussions/735',
+        permanent: true,
+      },
+      {
+        // Keep the Devlog linked from Pulse 01 reachable from old bookmarks.
+        source: '/blog/d/1994384f43a636e5',
+        destination: 'https://github.com/nervosnetwork/fiber/discussions/1170',
+        permanent: true,
+      },
     ];
   },
 };
