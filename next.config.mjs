@@ -103,6 +103,11 @@ const config = {
         destination: 'https://github.com/nervosnetwork/fiber/discussions/1170',
         permanent: true,
       },
+      {
+        source: '/contact',
+        destination: '/',
+        permanent: true,
+      },
     ];
   },
 };
