@@ -16,6 +16,7 @@ import type {
   FiberBrowserNode,
   NodeInfoResult,
 } from '@fiber-pay/sdk/browser';
+import { ExplainedTerm } from './explained-term';
 import styles from './fiber-wasm-quickstart.module.css';
 
 const routerAddress =
@@ -24,9 +25,7 @@ const routerPubkey =
   '0x02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71';
 const profileKey = 'fiber-docs:wasm-quickstart-profile-v1';
 const isolationReloadKey = 'fiber-docs:wasm-isolation-reload-v1';
-const setupCommands = `npm create next-app@latest fiber-hello
-cd fiber-hello
-npm install @fiber-pay/sdk`;
+const sdkInstallCommand = 'npm install @fiber-pay/sdk';
 
 const tutorials = [
   {
@@ -57,7 +56,11 @@ const tutorials = [
 const currentTutorialIndex = tutorials.findIndex(
   (tutorial) => tutorial.href === '/docs/build/connect-wasm-node',
 );
-const previousTutorial = tutorials[currentTutorialIndex - 1];
+const previousTutorial = tutorials[currentTutorialIndex - 1] ?? {
+  title: 'Interactive Tutorials',
+  shortTitle: 'Interactive tutorials',
+  href: '/docs/build/interactive-tutorials',
+};
 const nextTutorial = tutorials[currentTutorialIndex + 1];
 
 type CodeFile = {
@@ -212,7 +215,7 @@ type CodeFocus = {
 
 const sectionCode: Record<string, CodeFocus> = {
   isolate: { file: 'headers', start: 1, end: 24 },
-  start: { file: 'fiber', start: 13, end: 48 },
+  start: { file: 'fiber', start: 17, end: 49 },
   'connect-helper': { file: 'fiber', start: 51, end: 56 },
   'react-store': { file: 'app', start: 7, end: 11 },
   'react-start': { file: 'app', start: 13, end: 18 },
@@ -382,8 +385,9 @@ export function FiberWasmQuickstart() {
   const demoRef = useRef<HTMLElement | null>(null);
   const articleRef = useRef<HTMLDivElement | null>(null);
   const tutorialMenuRef = useRef<HTMLDivElement | null>(null);
-  const [activeSection, setActiveSection] = useState('intro');
+  const [activeSection, setActiveSection] = useState('architecture');
   const [articleProgress, setArticleProgress] = useState(0);
+  const [articleAtBottom, setArticleAtBottom] = useState(false);
   const [tutorialMenuOpen, setTutorialMenuOpen] = useState(false);
   const [liveDemoActive, setLiveDemoActive] = useState(false);
   const [activeFile, setActiveFile] = useState<CodeFile['id']>('app');
@@ -394,11 +398,21 @@ export function FiberWasmQuickstart() {
   const [busyAction, setBusyAction] = useState<'start' | 'connect' | null>(null);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
-  const [commandsCopied, setCommandsCopied] = useState(false);
+  const [sdkCommandCopied, setSdkCommandCopied] = useState(false);
   const [isolationReady, setIsolationReady] = useState<boolean | null>(null);
 
   const currentFile =
     codeFiles.find((file) => file.id === activeFile) ?? codeFiles[0];
+  const nodeStatusTone = error
+    ? styles.statusError
+    : nodeState === 'running'
+      ? styles.statusSuccess
+      : styles.statusWaiting;
+  const demoStatusTone = error
+    ? styles.statusError
+    : peerCount > 0
+      ? styles.statusSuccess
+      : styles.statusWaiting;
 
   const syncToSection = useCallback((section: string) => {
     setActiveSection(section);
@@ -445,10 +459,17 @@ export function FiberWasmQuickstart() {
         article.querySelectorAll<HTMLElement>('[data-tutorial-section]'),
       );
       const maxScroll = article.scrollHeight - article.clientHeight;
+      const distanceFromBottom = Math.max(
+        0,
+        maxScroll - article.scrollTop,
+      );
       setArticleProgress(
         maxScroll <= 0
           ? 1
           : Math.min(1, Math.max(0, article.scrollTop / maxScroll)),
+      );
+      setArticleAtBottom((wasAtBottom) =>
+        maxScroll <= 1 || distanceFromBottom <= (wasAtBottom ? 72 : 2),
       );
       const articleTop = article.getBoundingClientRect().top;
       let next = sections[0]?.dataset.tutorialSection ?? 'intro';
@@ -632,13 +653,13 @@ export function FiberWasmQuickstart() {
     window.setTimeout(() => setCopied(false), 1_500);
   }, [currentFile]);
 
-  const copySetupCommands = useCallback(async () => {
+  const copySdkInstallCommand = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(setupCommands);
-      setCommandsCopied(true);
-      window.setTimeout(() => setCommandsCopied(false), 1_500);
+      await navigator.clipboard.writeText(sdkInstallCommand);
+      setSdkCommandCopied(true);
+      window.setTimeout(() => setSdkCommandCopied(false), 1_500);
     } catch {
-      setError('Unable to copy the setup commands.');
+      setError('Unable to copy the SDK installation command.');
     }
   }, []);
 
@@ -705,8 +726,8 @@ export function FiberWasmQuickstart() {
             onClick={toggleDemo}
             type="button"
           >
-            {liveDemoActive ? 'Back to tutorial' : 'Run live demo'}{' '}
-            <span aria-hidden="true">{liveDemoActive ? '↑' : '↓'}</span>
+            {liveDemoActive ? 'View code walkthrough' : 'Try live demo'}{' '}
+            <span aria-hidden="true">{liveDemoActive ? '↓' : '↑'}</span>
           </button>
           <div className={styles.toolbarActions}>
             <a download href="/downloads/fiber-connect-wasm-node.zip">
@@ -730,300 +751,35 @@ export function FiberWasmQuickstart() {
           </div>
       </header>
 
-      <section className={styles.instructionWorkspace} ref={topRef}>
-        <div className={styles.instructionGrid}>
-          <div
-            className={styles.article}
-            onClick={(event) => {
-              const section = (event.target as HTMLElement).closest<HTMLElement>(
-                '[data-tutorial-section]',
-              );
-              if (section?.dataset.tutorialSection) {
-                syncToSection(section.dataset.tutorialSection);
-              }
-            }}
-            ref={articleRef}
-          >
-        <header
-          className={styles.hero}
-          data-tutorial-section="intro"
-        >
-          <div className={styles.eyebrow}>
-            <span>Build</span>
-            <span className={styles.eyebrowRule} />
-            <span>10-minute quickstart</span>
-          </div>
-          <h1>Connect to Fiber with a WASM Node</h1>
-          <p className={styles.lead}>
-            Run a Fiber node in a React application, connect it to Fiber Testnet
-            over WSS, and monitor its state without a backend service.
-          </p>
-          <div className={styles.heroMeta}>
-            <span>React</span>
-            <span>Fiber WASM</span>
-            <span>Node connection</span>
-          </div>
-        </header>
-
-        <section
-          className={styles.section}
-          data-tutorial-section="architecture"
-        >
-          <div className={styles.stepLabel}>Architecture</div>
-          <h2>Run the Fiber node in the browser</h2>
-          <p>
-            The Fiber WASM node runs inside the React application rather than on
-            a remote server. Web Workers execute the runtime, IndexedDB stores
-            node data, and WSS connects the browser node to a public Fiber peer.
-          </p>
-          <div className={styles.flow} aria-label="Browser to Fiber network flow">
-            <div>
-              <b>React app</b>
-              <span>Fiber WASM + IndexedDB</span>
-            </div>
-            <span className={styles.flowArrow}>→ WSS →</span>
-            <div>
-              <b>Public Fiber peer</b>
-              <span>Testnet network</span>
-            </div>
-          </div>
-          <div className={styles.note}>
-            <strong>Backend requirements</strong>
-            <p>
-              This quickstart runs the Fiber node entirely in the browser and
-              does not require a backend. Applications that issue invoices,
-              verify merchant payments, or manage server-side content can add a
-              backend service as needed.
-            </p>
-          </div>
-        </section>
-
-        <section className={styles.section} data-tutorial-section="install">
-          <div className={styles.stepLabel}>
-            <span>1</span> Create the React app
-          </div>
-          <h2>Install the browser SDK</h2>
-          <p>
-            Create a Next.js application and install the Fiber browser SDK. The
-            SDK provides the Fiber WASM runtime and node lifecycle APIs required
-            by the React application.
-          </p>
-          <div className={styles.setupCodeBlock}>
-            <div className={styles.setupCodeHeader}>
-              <span>Terminal</span>
-              <button
-                aria-label={
-                  commandsCopied
-                    ? 'Terminal commands copied'
-                    : 'Copy terminal commands'
-                }
-                onClick={copySetupCommands}
-                type="button"
-              >
-                <Image
-                  alt=""
-                  aria-hidden="true"
-                  height={18}
-                  src={
-                    commandsCopied
-                      ? '/icon-checkmark.svg'
-                      : '/icon-copy.svg'
-                  }
-                  width={18}
-                />
-                {commandsCopied ? 'Copied' : 'Copy'}
-              </button>
-            </div>
-            <pre>
-              <code>{setupCommands}</code>
-            </pre>
-          </div>
-        </section>
-
-        <section className={styles.section} data-tutorial-section="isolate">
-          <div className={styles.stepLabel}>
-            <span>2</span> Enable browser isolation
-          </div>
-          <h2>Configure COOP and COEP headers</h2>
-          <p>
-            The Fiber WASM runtime uses <code>SharedArrayBuffer</code> to exchange
-            data between its workers. Browsers expose this API only on
-            cross-origin-isolated pages, so configure COOP and COEP response
-            headers for the <code>/fiber</code> route.
-          </p>
-          <div className={styles.checkList}>
-            <span>Cross-Origin-Opener-Policy: same-origin</span>
-            <span>Cross-Origin-Embedder-Policy: require-corp</span>
-          </div>
-          <small className={styles.fileReference}>next.config.mjs · lines 1–24</small>
-        </section>
-
-        <section className={styles.section} data-tutorial-section="start">
-          <div className={styles.stepLabel}>
-            <span>3</span> Start Fiber
-          </div>
-          <h2>Start the node without connecting</h2>
-          <p>
-            Before creating the node, verify that{' '}
-            <code>crossOriginIsolated</code> is enabled. Then create a credential
-            and initialize a Fiber Testnet node with an empty bootnode list so it
-            starts without connecting to a peer. Register the{' '}
-            <code>stateChange</code> listener before calling{' '}
-            <code>node.start()</code> to receive startup updates.
-          </p>
-          <div className={styles.note}>
-            <strong>Testnet only</strong>
-            <p>
-              The generated credentials are intended for Testnet development
-              only. Production applications must store private keys in encrypted
-              storage and provide backup, account-switching, and recovery
-              mechanisms.
-            </p>
-          </div>
-          <small className={styles.fileReference}>lib/fiber.ts · lines 13–48</small>
-        </section>
-
-        <section
-          className={styles.section}
-          data-tutorial-section="connect-helper"
-        >
-          <div className={styles.stepLabel}>
-            <span>4</span> Connect to Testnet
-          </div>
-          <h2>Connect the node to a public peer</h2>
-          <p>
-            After the node starts locally, call{' '}
-            <code>connectToRouter(node)</code> to connect it to Testnet. Because{' '}
-            <code>connectPeer</code> accepts the transport address and public key
-            as separate fields, the helper removes the{' '}
-            <code>/p2p/&lt;peer-id&gt;</code> suffix and passes the remaining WSS
-            address with <code>routerPubkey</code>.
-          </p>
-          <small className={styles.fileReference}>lib/fiber.ts · lines 51–56</small>
-        </section>
-
-        <section
-          className={styles.section}
-          data-tutorial-section="react-store"
-        >
-          <div className={styles.stepLabel}>
-            <span>5.1</span> Wire it into React
-          </div>
-          <h2>Persist the node across React renders</h2>
-          <p>
-            Store the node instance in a ref so it remains available across
-            renders without triggering rerenders. Store its status, public key,
-            and peer count in React state so changes appear in the interface.
-          </p>
-          <small className={styles.fileReference}>app/fiber/page.tsx · lines 7–11</small>
-        </section>
-
-        <section
-          className={styles.section}
-          data-tutorial-section="react-start"
-        >
-          <div className={styles.stepLabel}>
-            <span>5.2</span> Wire it into React
-          </div>
-          <h2>Start the WASM node</h2>
-          <p>
-            The <code>start</code> handler calls <code>startFiber</code>, stores
-            the returned node, and retrieves its public key with{' '}
-            <code>getNodeInfo</code>. The public key identifies the running
-            browser node. No peer connection is established at this stage.
-          </p>
-          <small className={styles.fileReference}>app/fiber/page.tsx · lines 13–18</small>
-        </section>
-
-        <section
-          className={styles.section}
-          data-tutorial-section="react-connect"
-        >
-          <div className={styles.stepLabel}>
-            <span>5.3</span> Wire it into React
-          </div>
-          <h2>Connect the running node to Testnet</h2>
-          <p>
-            After startup, the <code>connect</code> handler passes the stored node
-            to <code>connectToRouter</code>. It then calls <code>listPeers</code>{' '}
-            and stores the returned peer count so the interface can confirm the
-            connection.
-          </p>
-          <small className={styles.fileReference}>app/fiber/page.tsx · lines 20–25</small>
-        </section>
-
-        <section
-          className={styles.section}
-          data-tutorial-section="react-render"
-        >
-          <div className={styles.stepLabel}>
-            <span>5.4</span> Wire it into React
-          </div>
-          <h2>Display node status and connection results</h2>
-          <p>
-            Bind the start and connect handlers to separate buttons. Display the
-            node status, public key, and peer count so users can verify that the
-            node started and connected successfully.
-          </p>
-          <small className={styles.fileReference}>app/fiber/page.tsx · lines 27–39</small>
-        </section>
-
-          </div>
-
-          <aside className={styles.codePanel} aria-label="Tutorial project files">
-          <div className={styles.fileTabs} role="tablist" aria-label="Code files">
-            {codeFiles.map((file) => (
-              <button
-                aria-selected={file.id === activeFile}
-                className={file.id === activeFile ? styles.activeTab : ''}
-                key={file.id}
-                onClick={() => {
-                  setActiveFile(file.id);
-                  setCodeFocus(null);
-                }}
-                role="tab"
-                type="button"
-              >
-                {file.label}
-              </button>
-            ))}
-          </div>
-          <CodeBlock file={currentFile} focus={codeFocus} />
-          <div className={styles.codeMeta}>
-                <span>
-                  {currentFile.label}{' '}
-                  <i>{currentFile.language}</i>
-                </span>
-            <button
-              aria-label={
-                copied ? `${currentFile.label} copied` : `Copy ${currentFile.label}`
-              }
-              className={styles.copyButton}
-              onClick={copyCode}
-              type="button"
-            >
-              <Image
-                alt=""
-                aria-hidden="true"
-                height={18}
-                src={copied ? '/icon-checkmark.svg' : '/icon-copy.svg'}
-                width={18}
-              />
-              {copied ? 'Copied' : 'Copy file'}
-            </button>
-          </div>
-          </aside>
-        </div>
-      </section>
-
-      <div aria-hidden="true" className={styles.sectionDivider} />
-
       <section className={styles.liveDemo} ref={demoRef}>
         <div className={styles.liveDemoHeading}>
           <div>
-            <span>Fiber Testnet</span>
-            <h2>Run the Live Demo</h2>
-            <p>Start the local WASM node, then connect it to a public peer.</p>
+            <span>Interactive tutorial · About 15 minutes</span>
+            <h1>Run a Fiber WASM Node in Your Browser</h1>
+            <p>
+              Start a real Fiber node in this page, connect it to a public Fiber
+              Testnet peer, and inspect its runtime state. No installation,
+              wallet, Testnet funds, or backend is required.
+            </p>
+          </div>
+        </div>
+
+        <div className={styles.demoSteps}>
+          <div>
+            <span>1</span>
+            <p>
+              <strong>Start your browser node.</strong> Select{' '}
+              <b>Start WASM node</b>, then wait for <b>Node running</b> and a
+              public key. The node starts locally and remains disconnected.
+            </p>
+          </div>
+          <div>
+            <span>2</span>
+            <p>
+              <strong>Connect to Fiber Testnet.</strong> Select{' '}
+              <b>Connect public peer</b>, then wait for the public-peer status to
+              show a successful connection.
+            </p>
           </div>
         </div>
 
@@ -1036,9 +792,7 @@ export function FiberWasmQuickstart() {
                 <strong>{friendlyState(nodeState)}</strong>
               </div>
               <i
-                className={`${styles.statusDot} ${
-                  nodeState === 'running' ? styles.statusRunning : ''
-                }`}
+                className={`${styles.statusDot} ${nodeStatusTone}`}
               />
             </div>
             <div className={styles.nodeIdentity}>
@@ -1092,35 +846,425 @@ export function FiberWasmQuickstart() {
           <div className={styles.eventPanel}>
             <div className={styles.eventPanelHeader}>
               <span>Node events</span>
-              <i className={styles.liveDot} />
+              <i className={`${styles.liveDot} ${demoStatusTone}`} />
             </div>
             <div className={styles.eventList}>
               <div><time>01</time><code>wasm_runtime</code><span>{isolationReady ? 'ready' : 'checking'}</span></div>
               <div><time>02</time><code>node_state</code><span>{friendlyState(nodeState)}</span></div>
               {nodeInfo && <div><time>03</time><code>node_started</code><span>{shorten(nodeInfo.pubkey)}</span></div>}
-              {peerCount > 0 && <div><time>04</time><code>peer_connected</code><span>{peerCount} public peer</span></div>}
+              {peerCount > 0 && (
+                <div className={styles.eventConnected}>
+                  <time>04</time>
+                  <code>peer_connected</code>
+                  <span>{peerCount} public peer</span>
+                </div>
+              )}
               {error && <div className={styles.eventError}><time>!</time><code>error</code><span>{error}</span></div>}
             </div>
           </div>
         </div>
+
       </section>
 
-      <nav className={styles.tutorialFooter} aria-label="Tutorial navigation">
-        <button
-          disabled={!previousTutorial}
-          onClick={() => previousTutorial && router.push(previousTutorial.href)}
-          type="button"
-        >
-          <span aria-hidden="true">←</span> Previous
-        </button>
-        <button
-          disabled={!nextTutorial}
-          onClick={() => nextTutorial && router.push(nextTutorial.href)}
-          type="button"
-        >
-          Next <span aria-hidden="true">→</span>
-        </button>
-      </nav>
+      <div aria-hidden="true" className={styles.sectionDivider} />
+
+      <header className={styles.walkthroughHeader} ref={topRef}>
+        <span>Implementation walkthrough</span>
+        <h2>Behind the scenes</h2>
+        <p>
+          See how the browser runs the node, why it needs browser isolation,
+          and which Fiber SDK APIs power each action in the demo.
+        </p>
+      </header>
+
+      <section className={styles.instructionWorkspace}>
+        <div className={styles.instructionGrid}>
+          <div
+            className={styles.article}
+            onClick={(event) => {
+              const section = (event.target as HTMLElement).closest<HTMLElement>(
+                '[data-tutorial-section]',
+              );
+              if (section?.dataset.tutorialSection) {
+                syncToSection(section.dataset.tutorialSection);
+              }
+            }}
+            ref={articleRef}
+          >
+            <section
+              className={styles.section}
+              data-tutorial-section="architecture"
+            >
+              <div className={styles.stepLabel}>Architecture</div>
+              <h2>How the browser node works</h2>
+              <p>
+                The page starts the WebAssembly version of Fiber in{' '}
+                <ExplainedTerm
+                  explanation="Background browser execution contexts that keep the node runtime from blocking the page interface."
+                  id="worker-definition"
+                >
+                  Web Workers
+                </ExplainedTerm>
+                . The workers exchange data through{' '}
+                <ExplainedTerm
+                  explanation="A block of memory that multiple workers can access to coordinate their work."
+                  id="shared-array-buffer-definition"
+                >
+                  SharedArrayBuffer
+                </ExplainedTerm>
+                , while{' '}
+                <ExplainedTerm
+                  explanation="Browser storage used to keep the node's local data."
+                  id="indexed-db-definition"
+                >
+                  IndexedDB
+                </ExplainedTerm>{' '}
+                stores local node data. The node reaches the public Fiber peer
+                over{' '}
+                <ExplainedTerm
+                  explanation="WebSocket Secure: an encrypted, persistent, two-way connection supported by browsers."
+                  id="wss-definition"
+                >
+                  WSS
+                </ExplainedTerm>
+                .
+              </p>
+              <div className={styles.flow} aria-label="Browser to Fiber network flow">
+                <div>
+                  <b>Browser application</b>
+                  <span>React + Fiber WASM + IndexedDB</span>
+                </div>
+                <span className={styles.flowArrow}>→ WSS →</span>
+                <div>
+                  <b>Public Fiber peer</b>
+                  <span>Testnet network</span>
+                </div>
+              </div>
+              <p className={styles.followupParagraph}>
+                <code>@fiber-pay/sdk</code> provides the browser-facing APIs used
+                here to create the node, manage its identity, observe its state,
+                and connect it to peers. Install it in an existing TypeScript or
+                JavaScript project with:
+              </p>
+              <div className={styles.setupCodeBlock}>
+                <div className={styles.setupCodeHeader}>
+                  <span>Terminal</span>
+                  <button
+                    aria-label={
+                      sdkCommandCopied
+                        ? 'SDK installation command copied'
+                        : 'Copy SDK installation command'
+                    }
+                    onClick={copySdkInstallCommand}
+                    type="button"
+                  >
+                    <Image
+                      alt=""
+                      aria-hidden="true"
+                      height={18}
+                      src={
+                        sdkCommandCopied
+                          ? '/icon-checkmark.svg'
+                          : '/icon-copy.svg'
+                      }
+                      width={18}
+                    />
+                    {sdkCommandCopied ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+                <pre><code>{sdkInstallCommand}</code></pre>
+              </div>
+            </section>
+
+            <section className={styles.section} data-tutorial-section="isolate">
+              <div className={styles.stepLabel}>Browser requirement</div>
+              <h2>Why the page needs COOP and COEP</h2>
+              <p>
+                Browsers restrict shared memory to pages that opt into
+                cross-origin isolation. This example enables it with two response
+                headers:{' '}
+                <ExplainedTerm
+                  explanation="Cross-Origin-Opener-Policy separates this page from windows opened from other origins."
+                  id="coop-definition"
+                >
+                  COOP
+                </ExplainedTerm>{' '}
+                and{' '}
+                <ExplainedTerm
+                  explanation="Cross-Origin-Embedder-Policy permits only cross-origin resources that explicitly allow the page to load them."
+                  id="coep-definition"
+                >
+                  COEP
+                </ExplainedTerm>
+                .
+              </p>
+              <p className={styles.followupParagraph}>
+                Together, these headers make{' '}
+                <code>window.crossOriginIsolated</code> return <code>true</code>,
+                allowing Fiber WASM to use <code>SharedArrayBuffer</code>.
+              </p>
+              <div className={styles.checkList}>
+                <span>Cross-Origin-Opener-Policy: same-origin</span>
+                <span>Cross-Origin-Embedder-Policy: require-corp</span>
+              </div>
+              <div className={`${styles.note} ${styles.noteInfo}`}>
+                <strong>The live demo is already configured</strong>
+                <p>
+                  You only need to add these headers when running the project on
+                  your own server.
+                </p>
+              </div>
+              <small className={styles.fileReference}>next.config.mjs · lines 1–24</small>
+            </section>
+
+            <section className={styles.section} data-tutorial-section="start">
+              <div className={styles.stepLabel}>
+                <span>1</span> Code walkthrough
+              </div>
+              <h2>Start the node without connecting</h2>
+              <p>
+                Before creating the node, verify that{' '}
+                <code>crossOriginIsolated</code> is enabled. Then create a
+                credential and initialize a Fiber Testnet node with an empty{' '}
+                <code>bootnodes</code> list so it starts without connecting to a
+                peer. Register the <code>stateChange</code> listener before calling{' '}
+                <code>node.start()</code> to receive startup updates.
+              </p>
+              <div className={`${styles.note} ${styles.noteWarning}`}>
+                <strong>Testnet only</strong>
+                <p>
+                  The generated credentials are intended for Testnet development
+                  only. Production applications must store private keys in
+                  encrypted storage and provide backup, account-switching, and
+                  recovery mechanisms.
+                </p>
+              </div>
+              <small className={styles.fileReference}>lib/fiber.ts · lines 17–49</small>
+            </section>
+
+            <section
+              className={styles.section}
+              data-tutorial-section="connect-helper"
+            >
+              <div className={styles.stepLabel}>
+                <span>2</span> Code walkthrough
+              </div>
+              <h2>Connect the node to a public peer</h2>
+              <p>
+                The browser node needs both an address and a pubkey to make its
+                first connection. The <code>address</code> tells it how to reach the
+                public Fiber Testnet peer over WSS; the <code>pubkey</code>{' '}
+                identifies the Fiber node it expects to reach.
+              </p>
+              <div className={styles.peerConnectionInputs}>
+                <div className={styles.connectionInput}>
+                  <div className={styles.connectionInputHeader}>
+                    <code>address</code>
+                    <span>Browser route</span>
+                  </div>
+                  <code className={styles.connectionValue}>{routerAddress}</code>
+                  <div
+                    aria-label="Address structure"
+                    className={styles.addressPartsGrid}
+                  >
+                    <div className={styles.addressPart}>
+                      <code>/dns4/bottle.fiber.channel</code>
+                      <span className={styles.codeComment}>// DNS host</span>
+                    </div>
+                    <div className={styles.addressPart}>
+                      <code>/tcp/443</code>
+                      <span className={styles.codeComment}>// TCP port</span>
+                    </div>
+                    <div className={styles.addressPart}>
+                      <code>/wss</code>
+                      <span className={styles.codeComment}>
+                        // encrypted WebSocket
+                      </span>
+                    </div>
+                    <div className={styles.addressPart}>
+                      <code>/p2p/Qm...</code>
+                      <span className={styles.codeComment}>// libp2p peer ID</span>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.connectionInput}>
+                  <div className={styles.connectionInputHeader}>
+                    <code>pubkey</code>
+                    <span>Fiber identity</span>
+                  </div>
+                  <code className={styles.connectionValue}>{routerPubkey}</code>
+                  <span className={styles.codeComment}>
+                    // Hex-encoded secp256k1 Fiber node public key
+                  </span>
+                </div>
+              </div>
+              <p className={styles.followupParagraph}>
+                <code>connectToRouter(node)</code> passes both values to{' '}
+                <code>node.connectPeer({'{ address, pubkey }'})</code>, allowing
+                the first connection to use the explicit WSS route without
+                depending on graph synchronization.
+              </p>
+              <small className={styles.fileReference}>lib/fiber.ts · lines 51–56</small>
+            </section>
+
+            <section
+              className={styles.section}
+              data-tutorial-section="react-store"
+            >
+              <div className={styles.stepLabel}>
+                <span>3.1</span> React integration
+              </div>
+              <h2>Keep the node between renders</h2>
+              <p>
+                <code>useRef()</code> keeps one node instance available across
+                React renders without triggering extra renders. React state stores
+                the status, public key, and peer count displayed by the interface.
+              </p>
+              <small className={styles.fileReference}>app/fiber/page.tsx · lines 7–11</small>
+            </section>
+
+            <section
+              className={styles.section}
+              data-tutorial-section="react-start"
+            >
+              <div className={styles.stepLabel}>
+                <span>3.2</span> React integration
+              </div>
+              <h2>Start the WASM node</h2>
+              <p>
+                <code>start()</code> calls <code>startFiber()</code>, saves the
+                returned node in a React ref, then calls{' '}
+                <code>getNodeInfo()</code> and stores the public key in React
+                state. It does not connect to a peer.
+              </p>
+              <small className={styles.fileReference}>app/fiber/page.tsx · lines 13–18</small>
+            </section>
+
+            <section
+              className={styles.section}
+              data-tutorial-section="react-connect"
+            >
+              <div className={styles.stepLabel}>
+                <span>3.3</span> React integration
+              </div>
+              <h2>Connect the running node to Testnet</h2>
+              <p>
+                <code>connect()</code> calls <code>connectToRouter()</code>, then
+                calls <code>listPeers()</code> and stores the connected-peer count
+                in React state so the interface can confirm the connection.
+              </p>
+              <small className={styles.fileReference}>app/fiber/page.tsx · lines 20–25</small>
+            </section>
+
+            <section
+              className={styles.section}
+              data-tutorial-section="react-render"
+            >
+              <div className={styles.stepLabel}>
+                <span>3.4</span> React integration
+              </div>
+              <h2>Show the result</h2>
+              <p>
+                <code>FiberPage()</code> gives users visible confirmation of each
+                operation. It binds the handlers to separate buttons and displays
+                the node status, public key, and peer count.
+              </p>
+              <small className={styles.fileReference}>app/fiber/page.tsx · lines 27–39</small>
+            </section>
+
+            <section className={styles.section} data-tutorial-section="download">
+              <div className={styles.stepLabel}>Optional local setup</div>
+              <h2>Run the complete project locally</h2>
+              <p>
+                Select <strong>Download project</strong> in the top-right
+                corner, or{' '}
+                <a
+                  className={styles.inlineDownloadLink}
+                  download
+                  href="/downloads/fiber-connect-wasm-node.zip"
+                >
+                  download here
+                </a>
+                . The archive already contains the Next.js application, Fiber
+                integration, browser headers, and interface shown here. After
+                extracting it, open the project directory and run:
+              </p>
+              <div className={styles.setupCodeBlock}>
+                <div className={styles.setupCodeHeader}><span>Terminal</span></div>
+                <pre><code>{`npm install
+npm run dev`}</code></pre>
+              </div>
+              <p className={styles.followupParagraph}>
+                Then open <code>http://localhost:3000/fiber</code> in your
+                browser.
+              </p>
+            </section>
+          </div>
+
+          <aside className={styles.codePanel} aria-label="Tutorial project files">
+            <div className={styles.fileTabs} role="tablist" aria-label="Code files">
+              {codeFiles.map((file) => (
+                <button
+                  aria-selected={file.id === activeFile}
+                  className={file.id === activeFile ? styles.activeTab : ''}
+                  key={file.id}
+                  onClick={() => {
+                    setActiveFile(file.id);
+                    setCodeFocus(null);
+                  }}
+                  role="tab"
+                  type="button"
+                >
+                  {file.label}
+                </button>
+              ))}
+            </div>
+            <CodeBlock file={currentFile} focus={codeFocus} />
+            <div className={styles.codeMeta}>
+              <span>
+                {currentFile.label} <i>{currentFile.language}</i>
+              </span>
+              <button
+                aria-label={
+                  copied ? `${currentFile.label} copied` : `Copy ${currentFile.label}`
+                }
+                className={styles.copyButton}
+                onClick={copyCode}
+                type="button"
+              >
+                <Image
+                  alt=""
+                  aria-hidden="true"
+                  height={18}
+                  src={copied ? '/icon-checkmark.svg' : '/icon-copy.svg'}
+                  width={18}
+                />
+                {copied ? 'Copied' : 'Copy file'}
+              </button>
+            </div>
+          </aside>
+        </div>
+        {articleAtBottom && (
+          <nav
+            aria-label="Tutorial navigation"
+            className={`${styles.tutorialFooter} ${styles.walkthroughFooter}`}
+          >
+            <button
+              onClick={() => router.push(previousTutorial.href)}
+              type="button"
+            >
+              <span aria-hidden="true">←</span> Previous
+            </button>
+            <button
+              disabled={!nextTutorial}
+              onClick={() => nextTutorial && router.push(nextTutorial.href)}
+              type="button"
+            >
+              Next <span aria-hidden="true">→</span>
+            </button>
+          </nav>
+        )}
+      </section>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { FiberBrowserNode } from '@fiber-pay/sdk/browser';
+import type { BrowserNodeState, FiberBrowserNode } from '@fiber-pay/sdk/browser';
 export const routerPubkey = '0x02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71';
 const routerAddress = '/dns4/bottle.fiber.channel/tcp/443/wss/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo';
 const profileKey = 'fiber-tutorial-profile-v1';
@@ -14,10 +14,12 @@ function profile() {
   localStorage.setItem(profileKey, JSON.stringify(value));
   return { fiberKey: fromHex(value.fiberKey), ckbKey: fromHex(value.ckbKey), identifier: value.identifier };
 }
-export async function startFiber() {
+export async function startFiber(onState: (state: BrowserNodeState) => void) {
+  if (!crossOriginIsolated) throw new Error('This page must be cross-origin isolated.');
   const { FiberBrowserNode, RawKeyCredentialProvider } = await import('@fiber-pay/sdk/browser');
   const keys = profile();
   const node = new FiberBrowserNode({ network: 'testnet', credential: new RawKeyCredentialProvider(keys.fiberKey, keys.ckbKey, keys.identifier), nodeConfig: { bootnodes: [], logLevel: 'info' } });
+  node.on('stateChange', onState);
   await node.start(); return node;
 }
 export async function connectToRouter(node: FiberBrowserNode) {

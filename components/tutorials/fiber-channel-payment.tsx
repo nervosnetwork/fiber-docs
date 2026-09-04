@@ -15,6 +15,7 @@ import type {
   FiberBrowserNode,
   NodeInfoResult,
 } from '@fiber-pay/sdk/browser';
+import { ExplainedTerm } from './explained-term';
 import styles from './fiber-wasm-quickstart.module.css';
 
 const routerAddress =
@@ -315,7 +316,7 @@ export default function PayPage() {
   const [paymentStatus, setPaymentStatus] = useState('Not sent');
 
   async function start() {
-    // Reuse startFiber() from the first tutorial.
+    // Start this browser's Fiber node.
     const fiber = await startFiber();
     node.current = fiber;
     const info = await fiber.getNodeInfo();
@@ -369,14 +370,14 @@ type CodeFocus = {
 };
 
 const sectionCode: Record<string, CodeFocus> = {
+  model: { file: 'app', start: 39, end: 48 },
+  identity: { file: 'app', start: 23, end: 31 },
   fund: { file: 'balance', start: 7, end: 45 },
   amounts: { file: 'amounts', start: 1, end: 18 },
   open: { file: 'channel', start: 7, end: 19 },
   ready: { file: 'channel', start: 21, end: 40 },
-  pay: { file: 'payment', start: 4, end: 13 },
-  result: { file: 'payment', start: 15, end: 26 },
-  react: { file: 'app', start: 23, end: 37 },
-  'react-actions': { file: 'app', start: 39, end: 49 },
+  pay: { file: 'payment', start: 4, end: 26 },
+  react: { file: 'app', start: 16, end: 65 },
 };
 
 const syntaxPattern =
@@ -577,6 +578,52 @@ function shorten(value?: string) {
     : value;
 }
 
+function friendlyNodeState(state: BrowserNodeState) {
+  if (state === 'running') return 'Node running';
+  if (state === 'starting') return 'Starting WASM';
+  if (state === 'stopping') return 'Stopping';
+  if (state === 'error') return 'Connection issue';
+  return 'Ready to start';
+}
+
+function ActionHint({
+  children,
+  id,
+  label,
+  reason,
+}: {
+  children: ReactNode;
+  id: string;
+  label: string;
+  reason: string | null;
+}) {
+  if (!reason) return <>{children}</>;
+
+  return (
+    <ExplainedTerm
+      ariaLabel={label}
+      className={styles.disabledActionHint}
+      explanation={reason}
+      id={id}
+    >
+      {children}
+    </ExplainedTerm>
+  );
+}
+
+function RefreshIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className={styles.refreshIcon}
+      fill="none"
+      viewBox="0 0 16 16"
+    >
+      <path d="M13 5V2m0 0h-3m3 0-2.1 2.1A5 5 0 1 0 13 9" />
+    </svg>
+  );
+}
+
 const wait = (milliseconds: number) =>
   new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 
@@ -601,8 +648,7 @@ function nextChannelState(current: string) {
 }
 
 type BusyAction =
-  | 'start'
-  | 'connect'
+  | 'prepare'
   | 'refresh'
   | 'channel'
   | 'payment'
@@ -627,6 +673,7 @@ export function FiberChannelPaymentTutorial() {
   const tutorialMenuRef = useRef<HTMLDivElement | null>(null);
   const [activeSection, setActiveSection] = useState('intro');
   const [articleProgress, setArticleProgress] = useState(0);
+  const [articleAtBottom, setArticleAtBottom] = useState(false);
   const [tutorialMenuOpen, setTutorialMenuOpen] = useState(false);
   const [liveDemoActive, setLiveDemoActive] = useState(false);
   const [activeFile, setActiveFile] = useState<CodeFile['id']>('app');
@@ -643,6 +690,11 @@ export function FiberChannelPaymentTutorial() {
   const [readyChannelCount, setReadyChannelCount] = useState(0);
   const [paymentAmount, setPaymentAmount] = useState('1');
   const [paymentStatus, setPaymentStatus] = useState('Not sent');
+  const [paymentHash, setPaymentHash] = useState('');
+  const [receiptAmount, setReceiptAmount] = useState('');
+  const [activeChannelId, setActiveChannelId] = useState('');
+  const [localBalanceBefore, setLocalBalanceBefore] = useState<bigint | null>(null);
+  const [localBalanceAfter, setLocalBalanceAfter] = useState<bigint | null>(null);
   const [paymentLogs, setPaymentLogs] = useState<PaymentLog[]>([]);
   const [busyAction, setBusyAction] = useState<BusyAction>(null);
   const [error, setError] = useState('');
@@ -655,9 +707,13 @@ export function FiberChannelPaymentTutorial() {
       channel.state.state_name.toLowerCase().includes('ready'),
     );
     const nextState = channels.at(-1)?.state.state_name;
+    const activeChannel = ready.at(-1) ?? channels.at(-1);
 
     setChannelCount(channels.length);
     setReadyChannelCount(ready.length);
+    if (activeChannel) {
+      setActiveChannelId(activeChannel.channel_id);
+    }
     if (!nextState) {
       setChannelState((current) =>
         current.startsWith('Opening') ? current : 'Not opened',
@@ -747,10 +803,14 @@ export function FiberChannelPaymentTutorial() {
         article.querySelectorAll<HTMLElement>('[data-tutorial-section]'),
       );
       const maxScroll = article.scrollHeight - article.clientHeight;
+      const distanceFromBottom = Math.max(0, maxScroll - article.scrollTop);
       setArticleProgress(
         maxScroll <= 0
           ? 1
           : Math.min(1, Math.max(0, article.scrollTop / maxScroll)),
+      );
+      setArticleAtBottom((wasAtBottom) =>
+        maxScroll <= 1 || distanceFromBottom <= (wasAtBottom ? 72 : 2),
       );
       const articleTop = article.getBoundingClientRect().top;
       let next = sections[0]?.dataset.tutorialSection ?? 'intro';
@@ -900,7 +960,7 @@ export function FiberChannelPaymentTutorial() {
 
   const refreshState = useCallback(async () => {
     const node = nodeRef.current;
-    if (!node) return;
+    if (!node) return [] as ChannelList;
 
     const [{ peers }, info, { channels }] = await Promise.all([
       node.listPeers(),
@@ -911,11 +971,12 @@ export function FiberChannelPaymentTutorial() {
     setNodeInfo(info);
     applyChannelSnapshot(channels);
     setCkbBalance(await queryCkbBalance(info.default_funding_lock_script));
+    return channels;
   }, [applyChannelSnapshot]);
 
-  const startNode = useCallback(async () => {
-    if (busyAction || nodeRef.current) return;
-    setBusyAction('start');
+  const prepareBrowserNode = useCallback(async () => {
+    if (busyAction || (nodeRef.current?.isRunning && peerCount > 0)) return;
+    setBusyAction('prepare');
     setError('');
 
     try {
@@ -923,29 +984,34 @@ export function FiberChannelPaymentTutorial() {
         throw new Error('Cross-origin isolation is not enabled for this page.');
       }
 
-      const {
-        FiberBrowserNode,
-        RawKeyCredentialProvider,
-        scriptToAddress,
-      } = await import('@fiber-pay/sdk/browser');
-      const profile = getOrCreateProfile();
-      const credential = new RawKeyCredentialProvider(
-        profile.fiberKey,
-        profile.ckbKey,
-        profile.identifier,
-      );
-      const node = new FiberBrowserNode({
-        network: 'testnet',
-        credential,
-        nodeConfig: { bootnodes: [], logLevel: 'info' },
-      });
+      let node = nodeRef.current;
+      let info = nodeInfo;
+      if (!node?.isRunning) {
+        const {
+          FiberBrowserNode,
+          RawKeyCredentialProvider,
+        } = await import('@fiber-pay/sdk/browser');
+        const profile = getOrCreateProfile();
+        const credential = new RawKeyCredentialProvider(
+          profile.fiberKey,
+          profile.ckbKey,
+          profile.identifier,
+        );
+        node = new FiberBrowserNode({
+          network: 'testnet',
+          credential,
+          nodeConfig: { bootnodes: [], logLevel: 'info' },
+        });
 
-      node.on('stateChange', setNodeState);
-      node.on('error', (nodeError) => setError(nodeError.message));
-      nodeRef.current = node;
+        node.on('stateChange', setNodeState);
+        node.on('error', (nodeError) => setError(nodeError.message));
+        nodeRef.current = node;
+        info = await node.start();
+      }
 
-      const info = await node.start();
+      if (!info) info = await node.nodeInfo();
       setNodeInfo(info);
+      const { scriptToAddress } = await import('@fiber-pay/sdk/browser');
       setCkbAddress(
         scriptToAddress(info.default_funding_lock_script, 'testnet'),
       );
@@ -961,49 +1027,33 @@ export function FiberChannelPaymentTutorial() {
 
       const { channels } = await node.listChannels();
       applyChannelSnapshot(channels);
-    } catch (startError) {
+      if (peerCount === 0) {
+        await node.connectPeer({
+          address: routerAddress,
+          pubkey: routerPubkey,
+        });
+
+        let peers = (await node.listPeers()).peers;
+        for (let attempt = 0; peers.length === 0 && attempt < 10; attempt += 1) {
+          await wait(800);
+          peers = (await node.listPeers()).peers;
+        }
+        if (peers.length === 0) {
+          throw new Error('The public peer handshake timed out.');
+        }
+        setPeerCount(peers.length);
+      }
+    } catch (prepareError) {
       setError(
-        startError instanceof Error
-          ? startError.message
-          : 'Unable to start the Fiber node.',
+        prepareError instanceof Error
+          ? prepareError.message
+          : 'Unable to prepare the browser node.',
       );
       if (!nodeRef.current?.isRunning) nodeRef.current = null;
     } finally {
       setBusyAction(null);
     }
-  }, [applyChannelSnapshot, busyAction]);
-
-  const connectPublicPeer = useCallback(async () => {
-    const node = nodeRef.current;
-    if (busyAction || !node?.isRunning || peerCount > 0) return;
-    setBusyAction('connect');
-    setError('');
-
-    try {
-      await node.connectPeer({
-        address: routerAddress,
-        pubkey: routerPubkey,
-      });
-
-      let peers = (await node.listPeers()).peers;
-      for (let attempt = 0; peers.length === 0 && attempt < 10; attempt += 1) {
-        await wait(800);
-        peers = (await node.listPeers()).peers;
-      }
-      if (peers.length === 0) {
-        throw new Error('The public peer handshake timed out.');
-      }
-      setPeerCount(peers.length);
-    } catch (connectError) {
-      setError(
-        connectError instanceof Error
-          ? connectError.message
-          : 'Unable to connect to the public peer.',
-      );
-    } finally {
-      setBusyAction(null);
-    }
-  }, [busyAction, peerCount]);
+  }, [applyChannelSnapshot, busyAction, nodeInfo, peerCount]);
 
   const handleRefresh = useCallback(async () => {
     if (!nodeRef.current || busyAction) return;
@@ -1053,15 +1103,29 @@ export function FiberChannelPaymentTutorial() {
   const sendPayment = useCallback(async () => {
     const node = nodeRef.current;
     if (!node || readyChannelCount === 0 || peerCount === 0 || busyAction) return;
+    const submittedAmount = paymentAmount;
     setBusyAction('payment');
     setError('');
     setPaymentStatus('Sending');
-    addPaymentLog(`Sending ${paymentAmount} CKB with keysend…`, 'pending');
+    setPaymentHash('');
+    setReceiptAmount(submittedAmount);
+    setLocalBalanceBefore(null);
+    setLocalBalanceAfter(null);
+    addPaymentLog(`Sending ${submittedAmount} CKB with keysend…`, 'pending');
 
     try {
+      const beforeChannels = (await node.listChannels()).channels;
+      const beforeChannel = beforeChannels.find(
+        (channel) => channel.channel_id === activeChannelId,
+      ) ?? beforeChannels.find((channel) =>
+        channel.state.state_name.toLowerCase().includes('ready'),
+      );
+      setLocalBalanceBefore(
+        beforeChannel ? BigInt(beforeChannel.local_balance) : null,
+      );
       const submitted = await node.sendPayment({
         target_pubkey: routerPubkey,
-        amount: ckbToHex(paymentAmount),
+        amount: ckbToHex(submittedAmount),
         keysend: true,
       });
       addPaymentLog(
@@ -1079,11 +1143,18 @@ export function FiberChannelPaymentTutorial() {
             })
           : submitted;
       setPaymentStatus(result.status);
+      setPaymentHash(result.payment_hash);
       addPaymentLog(
-        `${result.status} · ${paymentAmount} CKB · ${shorten(result.payment_hash)}`,
+        `${result.status} · ${submittedAmount} CKB · ${shorten(result.payment_hash)}`,
         result.status === 'Success' ? 'success' : 'error',
       );
-      await refreshState();
+      const refreshedChannels = await refreshState();
+      const refreshedChannel = refreshedChannels.find(
+        (channel) => channel.channel_id === (beforeChannel?.channel_id ?? activeChannelId),
+      );
+      setLocalBalanceAfter(
+        refreshedChannel ? BigInt(refreshedChannel.local_balance) : null,
+      );
     } catch (paymentError) {
       const message =
         paymentError instanceof Error
@@ -1097,6 +1168,7 @@ export function FiberChannelPaymentTutorial() {
     }
   }, [
     addPaymentLog,
+    activeChannelId,
     busyAction,
     paymentAmount,
     peerCount,
@@ -1122,15 +1194,77 @@ export function FiberChannelPaymentTutorial() {
   }, [ckbAddress]);
 
   const toggleDemo = useCallback(() => {
-    if (liveDemoActive) {
-      topRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-    demoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const target = liveDemoActive ? topRef.current : demoRef.current;
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [liveDemoActive]);
 
+  const nodePrepared = nodeState === 'running' && peerCount > 0;
+  const demoStatusTone = error
+    ? styles.statusError
+    : paymentStatus === 'Success'
+      ? styles.statusSuccess
+      : busyAction !== null || channelOpening
+        ? styles.statusWaiting
+        : styles.statusInfo;
+  const channelRequirement = !nodePrepared
+    ? 'Connect the browser node first.'
+    : !ckbAddress
+      ? 'Wait for the funding address.'
+      : !channelFundingReady
+        ? 'Not enough Testnet CKB to open this channel.'
+        : channelOpening
+          ? 'Wait for ChannelReady before paying.'
+          : null;
+  const paymentRequirement = readyChannelCount === 0
+    ? 'Wait for ChannelReady before sending a payment.'
+    : peerCount === 0
+      ? 'Reconnect the public peer first.'
+      : null;
+  const needsFunding =
+    nodePrepared && !channelFundingReady && channelCount === 0;
+  const canOpenChannel =
+    busyAction === null &&
+    peerCount > 0 &&
+    Boolean(ckbAddress) &&
+    channelFundingReady &&
+    channelCount === 0 &&
+    !channelOpening &&
+    readyChannelCount === 0;
+  const canSendPayment =
+    busyAction === null && readyChannelCount > 0 && peerCount > 0;
+  const peerStatus = peerCount > 0
+    ? 'Peer connected'
+    : nodeState === 'running' && busyAction === 'prepare'
+      ? 'Connecting…'
+      : nodeState === 'running'
+        ? 'Not connected'
+        : 'Node required';
+  const peerStatusTone = peerCount > 0
+    ? styles.statusSuccess
+    : nodeState === 'running' && busyAction === 'prepare'
+      ? styles.statusWaiting
+      : styles.statusIdle;
+  const channelStatusTone = readyChannelCount > 0
+    ? styles.statusSuccess
+    : channelState === 'Open failed'
+      ? styles.statusError
+      : channelOpening
+        ? styles.statusWaiting
+        : channelState === 'Not opened'
+          ? styles.statusIdle
+          : styles.statusInfo;
+  const paymentStatusTone = paymentStatus === 'Success'
+    ? styles.statusSuccess
+    : paymentStatus === 'Failed'
+      ? styles.statusError
+      : paymentStatus === 'Sending'
+        ? styles.statusWaiting
+        : paymentStatus === 'Not sent'
+          ? styles.statusIdle
+          : styles.statusInfo;
+
   return (
-    <div className={`${styles.shell} ${styles.paymentShell}`} ref={topRef}>
+    <div className={styles.shell}>
       <header className={styles.tutorialToolbar}>
         <div className={styles.tutorialSelect} ref={tutorialMenuRef}>
           <button
@@ -1187,8 +1321,8 @@ export function FiberChannelPaymentTutorial() {
           onClick={toggleDemo}
           type="button"
         >
-          {liveDemoActive ? 'Back to tutorial' : 'Run live demo'}{' '}
-          <span aria-hidden="true">{liveDemoActive ? '↑' : '↓'}</span>
+          {liveDemoActive ? 'View code walkthrough' : 'Try live demo'}{' '}
+          <span aria-hidden="true">{liveDemoActive ? '↓' : '↑'}</span>
         </button>
         <div className={styles.toolbarActions}>
           <a download href="/downloads/fiber-channel-payment.zip">
@@ -1212,315 +1346,76 @@ export function FiberChannelPaymentTutorial() {
         </div>
       </header>
 
-      <div
-        className={styles.article}
-        onClick={(event) => {
-          const section = (event.target as HTMLElement).closest<HTMLElement>(
-            '[data-tutorial-section]',
-          );
-          if (section?.dataset.tutorialSection) {
-            syncToSection(section.dataset.tutorialSection);
-          }
-        }}
-        ref={articleRef}
-      >
-        <header className={styles.hero} data-tutorial-section="intro">
-          <div className={styles.eyebrow}>
-            <span>Build</span>
-            <span className={styles.eyebrowRule} />
-            <span>15 minute tutorial</span>
-          </div>
-          <h1>Open a Fiber Channel and Send a Payment</h1>
-          <p className={styles.lead}>
-            Fund your browser node, open a real Testnet payment channel, and
-            send CKB over Fiber—all from React and WASM.
-          </p>
-          <div className={styles.heroMeta}>
-            <span>React</span>
-            <span>Fiber WASM</span>
-            <span>Testnet payment</span>
-          </div>
-        </header>
-
-        <section className={styles.section} data-tutorial-section="model">
-          <div className={styles.stepLabel}>Before you pay</div>
-          <h2>A channel turns one on-chain setup into fast payments</h2>
-          <p>
-            Opening a channel commits Testnet CKB on-chain. Once the channel
-            reaches <code>ChannelReady</code>, payments update the channel
-            off-chain instead of creating a new CKB transaction each time.
-          </p>
-          <div className={styles.flow} aria-label="Channel payment flow">
-            <div>
-              <b>Your browser node</b>
-              <span>WASM + local keys</span>
-            </div>
-            <span className={styles.flowArrow}>→ Channel →</span>
-            <div>
-              <b>Public Fiber node</b>
-              <span>Receives keysend</span>
-            </div>
-          </div>
-          <div className={styles.note}>
-            <strong>This page uses real Testnet state</strong>
+      <section className={styles.channelLiveDemo} ref={demoRef}>
+        <div className={styles.liveDemoHeading}>
+          <div>
+            <span>Interactive tutorial · About 15 minutes</span>
+            <h1>Open a Fiber Channel and Send a Payment</h1>
             <p>
-              Starting and connecting do not move funds. Opening the channel
-              and sending the payment happen only after you click their
-              separate buttons.
+              Fund your browser node, open a real Fiber Testnet channel, and
+              send 1 CKB to a public peer. Testnet confirmations may take
+              longer than the active tutorial time.
+            </p>
+            <p className={styles.continuationNote}>
+              Need background on browser nodes? Review{' '}
+              <Link href="/docs/build/connect-wasm-node">
+                Connect to Fiber with a WASM Node
+              </Link>
+              .
             </p>
           </div>
-        </section>
+        </div>
 
-        <section className={styles.section} data-tutorial-section="fund">
-          <div className={styles.stepLabel}>
-            <span>1</span> Fund the browser identity
-          </div>
-          <h2>Send Testnet CKB to the generated address</h2>
-          <p>
-            Start the same browser identity used in the connection tutorial.
-            The SDK derives its CKB funding address from
-            <code> default_funding_lock_script</code>. Use the faucet, then
-            refresh until the on-chain balance appears.
-          </p>
-          <div className={styles.checkList}>
-            <span>Keep the same localStorage identity and IndexedDB data</span>
-            <span>Fund at least 499 CKB plus an on-chain transaction fee</span>
-            <span>Use Testnet funds only</span>
-          </div>
-          <small className={styles.fileReference}>lib/balance.ts · lines 7–45</small>
-        </section>
-
-        <section className={styles.section} data-tutorial-section="amounts">
-          <div className={styles.stepLabel}>
-            <span>2</span> Convert the amount
-          </div>
-          <h2>Express CKB as hexadecimal shannons</h2>
-          <p>
-            Fiber RPC amounts use hexadecimal shannons. Parse the decimal
-            string with <code>BigInt</code> so eight-decimal CKB values stay
-            exact and do not pass through floating-point numbers.
-          </p>
-          <div className={styles.inlineCode}>
-            <code>499 CKB = 49,900,000,000 shannons</code>
-            <span>0xb9e0ab300</span>
-          </div>
-          <small className={styles.fileReference}>lib/amounts.ts · lines 1–18</small>
-        </section>
-
-        <section className={styles.section} data-tutorial-section="open">
-          <div className={styles.stepLabel}>
-            <span>3</span> Open the channel
-          </div>
-          <h2>Commit funding to the public Testnet peer</h2>
-          <p>
-            Call <code>openChannel()</code> only after the browser node is
-            running, the public peer is connected, and the funding address has
-            enough CKB. The example makes the channel public so it can
-            participate in routing.
-          </p>
-          <div className={styles.note}>
-            <strong>Why 499 CKB?</strong>
-            <p>
-              The selected public Testnet node auto-accepts CKB channels at or
-              above 499 CKB. Each side also reserves 99 CKB for channel
-              contracts and shutdown.
-            </p>
-          </div>
-          <small className={styles.fileReference}>lib/channel.ts · lines 7–19</small>
-        </section>
-
-        <section className={styles.section} data-tutorial-section="ready">
-          <div className={styles.stepLabel}>
-            <span>4</span> Wait for ChannelReady
-          </div>
-          <h2>Do not enable payments when negotiation merely starts</h2>
-          <p>
-            <code>openChannel()</code> returns a temporary channel ID before
-            the funding transaction is ready. Poll <code>listChannels()</code>
-            and unlock the payment UI only when a channel state contains
-            <code> ready</code>.
-          </p>
-          <div className={styles.checkList}>
-            <span>NegotiatingFunding: agree on channel parameters</span>
-            <span>CollaboratingFundingTx: build the funding transaction</span>
-            <span>SigningCommitment: exchange commitment signatures</span>
-            <span>AwaitingTxSignatures: finalize funding signatures</span>
-            <span>AwaitingChannelReady: wait for confirmation and both peers</span>
-            <span>ChannelReady: the channel can carry a payment</span>
-          </div>
-          <small className={styles.fileReference}>lib/channel.ts · lines 21–40</small>
-        </section>
-
-        <section className={styles.section} data-tutorial-section="pay">
-          <div className={styles.stepLabel}>
-            <span>5</span> Send a payment
-          </div>
-          <h2>Use keysend for the smallest working example</h2>
-          <p>
-            Pass the recipient pubkey, an amount, and <code>keysend: true</code>
-            to <code>sendPayment()</code>. Keysend avoids invoice generation,
-            which keeps this first payment flow entirely in the browser.
-          </p>
-          <div className={styles.note}>
-            <strong>When do you need a backend?</strong>
-            <p>
-              Not for this direct keysend demo. A merchant app usually adds a
-              backend to create invoices, match payments to orders, and grant
-              access after server-side verification.
-            </p>
-          </div>
-          <small className={styles.fileReference}>lib/payment.ts · lines 4–13</small>
-        </section>
-
-        <section className={styles.section} data-tutorial-section="result">
-          <div className={styles.stepLabel}>
-            <span>6</span> Confirm the result
-          </div>
-          <h2>Wait for a terminal payment status</h2>
-          <p>
-            A submitted payment can still be in flight. If the first response
-            is not <code>Success</code> or <code>Failed</code>, call
-            <code>waitForPayment()</code> and update the React UI with its
-            terminal status.
-          </p>
-          <small className={styles.fileReference}>lib/payment.ts · lines 15–26</small>
-        </section>
-
-        <section className={styles.section} data-tutorial-section="react">
-          <div className={styles.stepLabel}>
-            <span>7.1</span> Wire the controls
-          </div>
-          <h2>Start, then connect</h2>
-          <p>
-            Starting restores local identity and channel data. Connecting is a
-            separate user action, just like the first tutorial. The code panel
-            highlights both handlers as one explicit preparation step.
-          </p>
-          <small className={styles.fileReference}>app/pay/page.tsx · lines 23–37</small>
-        </section>
-
-        <section
-          className={styles.section}
-          data-tutorial-section="react-actions"
-        >
-          <div className={styles.stepLabel}>
-            <span>7.2</span> Wire the controls
-          </div>
-          <h2>Open, then pay</h2>
-          <p>
-            The channel button requires a connected peer. The payment button
-            remains disabled until a stored or new channel is ready, so every
-            state-changing action stays separate and explicit.
-          </p>
-          <small className={styles.fileReference}>app/pay/page.tsx · lines 39–49</small>
-        </section>
-
-        <section className={styles.section} data-tutorial-section="production">
-          <div className={styles.stepLabel}>Production checklist</div>
-          <h2>Keep the browser node; harden everything around it</h2>
-          <p>
-            Before handling real funds, encrypt keys, add backup and recovery,
-            validate channel liquidity, surface fees and timeouts, and decide
-            whether invoices need server-side order verification.
-          </p>
-          <div className={styles.nextLinks}>
-            <a href="/docs/concept/channels">
-              Understand channel lifecycle <span>↗</span>
-            </a>
-            <a href="/docs/concept/payments">
-              Read the payment model <span>↗</span>
-            </a>
-            <a href="/labs/browser-node">
-              Open the full Browser Node Lab <span>↗</span>
-            </a>
-          </div>
-        </section>
-
-      </div>
-
-      <aside
-        className={`${styles.workspace} ${styles.paymentWorkspace}`}
-        aria-label="Live channel preview and code"
-      >
-        <section className={styles.preview} ref={demoRef}>
-          <div className={styles.liveDemoHeading}>
-            <div>
-              <span>Fiber Testnet</span>
-              <h2>Run the Live Demo</h2>
-              <p>Fund the browser identity, observe the channel lifecycle, and send a real Testnet payment.</p>
+        <div className={styles.demoSteps}>
+          {[
+            ['1', 'Prepare node', 'Start and connect.'],
+            ['2', 'Fund address', 'Receive Testnet CKB.'],
+            ['3', 'Open channel', 'Commit the peer minimum on-chain.'],
+            ['4', 'Send payment', 'Send CKB to the peer.'],
+          ].map(([number, title, detail]) => (
+            <div key={number}>
+              <span>{number}</span>
+              <p><strong>{title}.</strong> {detail}</p>
             </div>
-          </div>
-          <div className={styles.panelHeader}>
-            <span>
-              <i className={styles.liveDot} /> Live Testnet flow
-            </span>
-            <button
-              className={styles.headerAction}
-              disabled={!nodeInfo || busyAction !== null}
-              onClick={handleRefresh}
-            >
-              {busyAction === 'refresh' ? 'Refreshing…' : 'Refresh'}
-            </button>
-          </div>
+          ))}
+        </div>
 
-          <div className={`${styles.previewStage} ${styles.paymentPreviewStage}`}>
+        <div className={styles.channelDemoSurface}>
+          <div className={styles.paymentPreviewStage}>
             <div className={styles.paymentCard}>
               <div className={styles.paymentStatusGrid}>
                 <div>
                   <span>Node</span>
-                  <strong>{nodeState === 'running' ? 'Running' : 'Stopped'}</strong>
+                  <strong><i className={`${styles.statusDot} ${nodeState === 'running' ? styles.statusSuccess : styles.statusWaiting}`} />{friendlyNodeState(nodeState)}</strong>
                 </div>
                 <div>
                   <span>Peer</span>
-                  <strong>{peerCount > 0 ? 'Connected' : 'Offline'}</strong>
+                  <strong><i className={`${styles.statusDot} ${peerStatusTone}`} />{peerStatus}</strong>
                 </div>
                 <div>
                   <span>Channel</span>
-                  <strong>{readyChannelCount > 0 ? 'Ready' : channelState}</strong>
+                  <strong><i className={`${styles.statusDot} ${channelStatusTone}`} />{readyChannelCount > 0 ? 'Channel ready' : channelState}</strong>
                 </div>
                 <div>
                   <span>Payment</span>
-                  <strong>{paymentStatus}</strong>
+                  <strong><i className={`${styles.statusDot} ${paymentStatusTone}`} />{paymentStatus === 'Success' ? 'Payment successful' : paymentStatus}</strong>
                 </div>
               </div>
 
               <div className={styles.paymentFlow}>
                 <div className={styles.paymentFlowNumber}>1</div>
-                <div>
-                  <strong>Prepare the browser node</strong>
-                  <span>Start locally, then connect over WSS.</span>
+                <div className={styles.paymentFlowBody}>
+                  <strong>Prepare browser node</strong>
+                  <span>Start locally and connect over WSS. This does not move funds.</span>
                 </div>
-                <div className={styles.compactActions}>
-                  <button
-                    className={styles.startButton}
-                    disabled={
-                      busyAction !== null ||
-                      Boolean(nodeInfo)
-                    }
-                    onClick={
-                      isolationReady === false
-                        ? () => window.location.reload()
-                        : startNode
-                    }
-                  >
-                    {busyAction === 'start'
-                      ? 'Starting…'
-                      : isolationReady === false
-                        ? 'Reload to enable WASM'
-                        : 'Start'}
-                  </button>
-                  <button
-                    className={styles.connectButton}
-                    disabled={
-                      busyAction !== null ||
-                      !nodeInfo ||
-                      peerCount > 0
-                    }
-                    onClick={connectPublicPeer}
-                  >
-                    {busyAction === 'connect' ? 'Connecting…' : 'Connect'}
-                  </button>
-                </div>
+                <button
+                  className={`${styles.startButton} ${styles.demoAction} ${!nodePrepared ? styles.demoPrimaryAction : ''}`}
+                  disabled={busyAction !== null || nodePrepared}
+                  onClick={isolationReady === false ? () => window.location.reload() : prepareBrowserNode}
+                  type="button"
+                >
+                  {busyAction === 'prepare' ? 'Preparing…' : isolationReady === false ? 'Reload to enable WASM' : nodePrepared ? 'Node running' : 'Prepare browser node'}
+                </button>
               </div>
 
               <div className={styles.paymentFlow}>
@@ -1530,31 +1425,61 @@ export function FiberChannelPaymentTutorial() {
                   <div className={styles.addressLine}>
                     <code title={ckbAddress}>{shorten(ckbAddress)}</code>
                     <button
+                      aria-label={addressCopied ? 'Funding address copied' : 'Copy funding address'}
+                      className={`${styles.demoAction} ${styles.addressCopyButton}`}
                       disabled={!ckbAddress}
                       onClick={copyFundingAddress}
+                      title={addressCopied ? 'Copied' : 'Copy funding address'}
                       type="button"
                     >
-                      {addressCopied ? 'Copied' : 'Copy'}
+                      <Image
+                        alt=""
+                        aria-hidden="true"
+                        height={15}
+                        src={addressCopied ? '/icon-checkmark.svg' : '/icon-copy.svg'}
+                        width={15}
+                      />
                     </button>
                   </div>
                   <span>
                     Balance: <b>{formatCkb(ckbBalance)}</b> · auto-checks every 5s
                   </span>
                 </div>
-                <a
-                  className={styles.faucetButton}
-                  href="https://faucet.nervos.org"
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  Faucet ↗
-                </a>
+                <div className={styles.fundingActions}>
+                  <ActionHint
+                    id="funding-action-requirement"
+                    label="Get CKB"
+                    reason={!ckbAddress ? 'Prepare the browser node to reveal its address.' : null}
+                  >
+                    {!ckbAddress ? (
+                      <button
+                        className={`${styles.faucetButton} ${styles.demoAction}`}
+                        disabled
+                        type="button"
+                      >
+                        Get CKB ↗
+                      </button>
+                    ) : (
+                      <a className={`${styles.faucetButton} ${styles.demoAction} ${needsFunding ? styles.demoPrimaryAction : ''}`} href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Get CKB ↗</a>
+                    )}
+                  </ActionHint>
+                  <button className={`${styles.refreshButton} ${styles.demoAction}`} disabled={!nodeInfo || busyAction !== null} onClick={handleRefresh} type="button"><RefreshIcon />{busyAction === 'refresh' ? 'Refreshing…' : 'Refresh'}</button>
+                </div>
               </div>
 
               <div className={styles.paymentFlow}>
                 <div className={styles.paymentFlowNumber}>3</div>
                 <div className={styles.paymentFlowBody}>
-                  <strong>Open a channel</strong>
+                  <strong>
+                    Open a{' '}
+                    <ExplainedTerm
+                      explanation="The selected public peer requires at least 499 CKB to open a channel. Keep extra Testnet CKB available for the transaction fee."
+                      id="channel-minimum-funding"
+                    >
+                      499 CKB
+                    </ExplainedTerm>{' '}
+                    channel
+                  </strong>
                   <label>
                     <input
                       aria-label="Channel funding amount in CKB"
@@ -1566,21 +1491,27 @@ export function FiberChannelPaymentTutorial() {
                     <span>CKB</span>
                   </label>
                 </div>
-                <button
-                  className={styles.channelButton}
-                  disabled={
-                    busyAction !== null ||
-                    peerCount === 0 ||
-                    !ckbAddress ||
-                    !channelFundingReady ||
-                    channelCount > 0 ||
-                    channelOpening ||
-                    readyChannelCount > 0
-                  }
-                  onClick={openChannel}
+                <ActionHint
+                  id="channel-action-requirement"
+                  label="Open channel"
+                  reason={channelRequirement}
                 >
-                  {busyAction === 'channel' ? 'Opening…' : 'Open channel'}
-                </button>
+                  <button
+                    className={`${styles.channelButton} ${styles.demoAction} ${canOpenChannel ? styles.demoPrimaryAction : ''}`}
+                    disabled={
+                      busyAction !== null ||
+                      peerCount === 0 ||
+                      !ckbAddress ||
+                      !channelFundingReady ||
+                      channelCount > 0 ||
+                      channelOpening ||
+                      readyChannelCount > 0
+                    }
+                    onClick={openChannel}
+                  >
+                    {busyAction === 'channel' ? 'Opening…' : readyChannelCount > 0 ? 'Channel ready' : 'Open channel'}
+                  </button>
+                </ActionHint>
               </div>
 
               {channelHistory.length > 0 && (
@@ -1609,7 +1540,7 @@ export function FiberChannelPaymentTutorial() {
               <div className={styles.paymentFlow}>
                 <div className={styles.paymentFlowNumber}>4</div>
                 <div className={styles.paymentFlowBody}>
-                  <strong>Send keysend</strong>
+                  <strong>Send CKB to the peer</strong>
                   <label>
                     <input
                       aria-label="Payment amount in CKB"
@@ -1621,42 +1552,41 @@ export function FiberChannelPaymentTutorial() {
                     <span>CKB</span>
                   </label>
                 </div>
-                <button
-                  className={styles.paymentButton}
-                  disabled={
-                    busyAction !== null ||
-                    readyChannelCount === 0 ||
-                    peerCount === 0
-                  }
-                  onClick={sendPayment}
+                <ActionHint
+                  id="payment-action-requirement"
+                  label="Send payment"
+                  reason={paymentRequirement}
                 >
-                  {busyAction === 'payment' ? 'Sending…' : 'Send payment'}
-                </button>
+                  <button
+                    className={`${styles.paymentButton} ${styles.demoAction} ${canSendPayment ? styles.demoPrimaryAction : ''}`}
+                    disabled={
+                      busyAction !== null ||
+                      readyChannelCount === 0 ||
+                      peerCount === 0
+                    }
+                    onClick={sendPayment}
+                  >
+                    {busyAction === 'payment' ? 'Sending…' : 'Send payment'}
+                  </button>
+                </ActionHint>
               </div>
 
-              {paymentLogs.length > 0 && (
-                <div className={styles.paymentLog}>
-                  <span>Payment log</span>
-                  <div>
-                    {paymentLogs.map((log, index) => (
-                      <div key={`${log.at}-${index}`}>
-                        <time>{log.at}</time>
-                        <i className={styles[`paymentLog_${log.tone}`]} />
-                        <code>{log.message}</code>
-                      </div>
-                    ))}
-                  </div>
+              {paymentHash && (
+                <div className={styles.paymentReceipt}>
+                  <span>Payment receipt</span>
+                  <dl>
+                    <div><dt>Status</dt><dd>{paymentStatus}</dd></div>
+                    <div><dt>Amount</dt><dd>{receiptAmount} CKB</dd></div>
+                    <div><dt>Channel ID</dt><dd title={activeChannelId}>{shorten(activeChannelId)}</dd></div>
+                    <div><dt>Payment hash</dt><dd title={paymentHash}>{shorten(paymentHash)}</dd></div>
+                    <div><dt>Local balance</dt><dd>{formatCkb(localBalanceBefore)} → {formatCkb(localBalanceAfter)}</dd></div>
+                  </dl>
                 </div>
               )}
 
-              {error ? (
+              {error && (
                 <div className={styles.paymentError} role="alert">
                   {error}
-                </div>
-              ) : (
-                <div className={styles.paymentNotice}>
-                  Channel and payment buttons submit real Testnet actions only
-                  when you click them.
                 </div>
               )}
             </div>
@@ -1664,11 +1594,16 @@ export function FiberChannelPaymentTutorial() {
             <div className={styles.eventPanel}>
               <div className={styles.eventPanelHeader}>
                 <span>Runtime events and results</span>
-                <i className={styles.liveDot} />
+                <i className={`${styles.liveDot} ${demoStatusTone}`} />
               </div>
               <div className={styles.eventList}>
-                <div><time>NODE</time><code>state</code><span>{nodeState === 'running' ? 'Running' : 'Stopped'}</span></div>
-                <div><time>PEER</time><code>connection</code><span>{peerCount > 0 ? 'Connected' : 'Offline'}</span></div>
+                <div><time>NODE</time><code>state</code><span>{friendlyNodeState(nodeState)}</span></div>
+                <div className={peerCount > 0 ? styles.eventConnected : undefined}><time>PEER</time><code>connection</code><span>{peerCount > 0 ? 'Connected' : 'Offline'}</span></div>
+                {channelHistory.length === 0 && paymentLogs.length === 0 && !error && (
+                  <div className={styles.eventEmpty}>
+                    <span>Channel and payment events will appear here.</span>
+                  </div>
+                )}
                 {channelHistory.map((state, index) => (
                   <div key={`${state}-event-${index}`}>
                     <time>CH {String(index + 1).padStart(2, '0')}</time>
@@ -1691,9 +1626,115 @@ export function FiberChannelPaymentTutorial() {
               </div>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className={styles.codePanel} aria-label="Tutorial project files">
+      <div aria-hidden="true" className={styles.sectionDivider} />
+
+      <header className={styles.walkthroughHeader} ref={topRef}>
+        <span>Implementation walkthrough</span>
+        <h2>Behind the scenes</h2>
+        <p>Follow the data and SDK calls that prepare the node, fund and open the channel, then confirm the payment.</p>
+      </header>
+
+      <section className={styles.instructionWorkspace}>
+        <div className={styles.instructionGrid}>
+          <div
+            className={styles.article}
+            onClick={(event) => {
+              const section = (event.target as HTMLElement).closest<HTMLElement>('[data-tutorial-section]');
+              if (section?.dataset.tutorialSection) syncToSection(section.dataset.tutorialSection);
+            }}
+            ref={articleRef}
+          >
+            <section className={styles.section} data-tutorial-section="model">
+              <div className={styles.stepLabel}>Architecture</div>
+              <h2>Understand the channel payment flow</h2>
+              <p><code>openChannel()</code> locks a chosen amount of Testnet CKB on-chain. Once the channel is ready, <code>pay()</code> can make multiple off-chain payments without creating a new CKB transaction for every small amount.</p>
+              <div className={styles.flow} aria-label="Channel payment flow">
+                <div><b>Your browser node</b><span>Fiber WASM</span></div>
+                <span className={styles.flowArrow}>→ Fiber channel →</span>
+                <div><b>Public Fiber peer</b><span>Receives payment</span></div>
+              </div>
+              <div className={`${styles.note} ${styles.noteInfo}`}><strong>Testnet state is real</strong><p>Preparing the node starts it locally and connects it to the public peer. Opening the channel and sending payments are separate actions.</p></div>
+              <small className={styles.fileReference}>app/pay/page.tsx · lines 39–48</small>
+            </section>
+
+            <section className={styles.section} data-tutorial-section="identity">
+              <div className={styles.stepLabel}><span>1</span> Prepare the node</div>
+              <h2>Start the node and derive its funding address</h2>
+              <p><code>start()</code> starts the browser node and reveals the Testnet address that must be funded. It calls <code>startFiber()</code>, reads the node information, and uses <code>scriptToAddress()</code> to convert <code>default_funding_lock_script</code> into its Testnet address.</p>
+              <p className={styles.followupParagraph}>The demo combines startup and <code>connectToRouter()</code> into one preparation action. The downloaded source keeps the helpers separate, so an application can expose more control when needed.</p>
+              <small className={styles.fileReference}>app/pay/page.tsx · lines 23–31</small>
+            </section>
+
+            <section className={styles.section} data-tutorial-section="fund">
+              <div className={styles.stepLabel}><span>2</span> Watch funding</div>
+              <h2>Detect sufficient Testnet funding</h2>
+              <p><code>queryCkbBalance()</code> calls CKB RPC <code>get_cells_capacity</code> to measure the address&apos;s available capacity. <code>watchCkbBalance()</code> repeats the check every five seconds while the page is visible, allowing the interface to unlock channel creation once the address can cover the funding amount.</p>
+              <div className={`${styles.note} ${styles.noteWarning}`}><strong>Use Testnet funds only</strong><p>The public peer accepts CKB channels at or above 499 CKB. Keep extra Testnet CKB available for the transaction fee.</p></div>
+              <small className={styles.fileReference}>lib/balance.ts · lines 7–45</small>
+            </section>
+
+            <section className={styles.section} data-tutorial-section="amounts">
+              <div className={styles.stepLabel}><span>3</span> Format the amount</div>
+              <h2>Convert CKB amounts without losing precision</h2>
+              <p><code>ckbToHex()</code> converts the entered CKB amount into the exact hexadecimal shannon value expected by Fiber RPC. It uses <code>BigInt</code> to avoid floating-point rounding across CKB&apos;s eight decimal places.</p>
+              <div className={styles.amountConversion} aria-label="499 CKB represented as shannons and hexadecimal">
+                <div><span>CKB amount</span><code>499 CKB</code></div>
+                <i aria-hidden="true">→</i>
+                <div><span>Smallest unit</span><code>49,900,000,000 shannons</code></div>
+                <i aria-hidden="true">→</i>
+                <div><span>Hexadecimal RPC value</span><code>0xb9e0ab300</code></div>
+              </div>
+              <small className={styles.fileReference}>lib/amounts.ts · lines 1–18</small>
+            </section>
+
+            <section className={styles.section} data-tutorial-section="open">
+              <div className={styles.stepLabel}><span>4</span> Commit funds</div>
+              <h2>Open the channel</h2>
+              <p><code>openCkbChannel()</code> begins channel negotiation with the connected public peer. It calls <code>node.openChannel()</code> with the peer pubkey, the exact funding amount, and <code>public: true</code>.</p>
+              <p className={styles.followupParagraph}>Its temporary channel ID confirms negotiation started; it does not mean the channel can carry a payment yet.</p>
+              <small className={styles.fileReference}>lib/channel.ts · lines 7–19</small>
+            </section>
+
+            <section className={styles.section} data-tutorial-section="ready">
+              <div className={styles.stepLabel}><span>5</span> Observe confirmation</div>
+              <h2>Wait for ChannelReady</h2>
+              <p><code>watchChannelStates()</code> keeps payment controls locked until the funding transaction and peer handshake complete. It polls <code>listChannels()</code> and reports each new <code>state_name</code> as the channel moves through the following states:</p>
+              <div className={styles.checkList}><span>NegotiatingFunding → agree on channel parameters</span><span>CollaboratingFundingTx → build the funding transaction</span><span>AwaitingChannelReady → wait for confirmation and both peers</span><span>ChannelReady → allow payments</span></div>
+              <small className={styles.fileReference}>lib/channel.ts · lines 21–40</small>
+            </section>
+
+            <section className={styles.section} data-tutorial-section="pay">
+              <div className={styles.stepLabel}><span>6</span> Pay and verify</div>
+              <h2>Send and confirm the keysend payment</h2>
+              <p><code>sendKeysend()</code> sends a direct payment without first requesting an invoice. Fiber calls this a keysend payment because it does not require the receiving peer to create an invoice. The function calls <code>sendPayment()</code> with the recipient pubkey, amount, and <code>keysend: true</code>.</p>
+              <p className={styles.followupParagraph}>If the response is still in flight, <code>waitForPayment()</code> waits for <code>Success</code> or <code>Failed</code>. The demo then shows the payment hash and the channel&apos;s local balance before and after.</p>
+              <small className={styles.fileReference}>lib/payment.ts · lines 4–26</small>
+            </section>
+
+            <section className={styles.section} data-tutorial-section="react">
+              <div className={styles.stepLabel}><span>7</span> React integration</div>
+              <h2>Wire the complete flow into React</h2>
+              <p><code>PayPage()</code> turns SDK state into a guided interface. It keeps the node in a ref, renders funding and channel state from React state, and gates each state-changing button on the prerequisite it needs.</p>
+              <div className={`${styles.note} ${styles.noteWarning}`}>
+                <strong>Production requirements</strong>
+                <p>A production product should also encrypt keys, support backup and recovery, surface fees and timeouts, and use server-side verification when payments unlock orders or access.</p>
+              </div>
+              <small className={styles.fileReference}>app/pay/page.tsx · lines 16–65</small>
+            </section>
+
+            <section className={styles.section} data-tutorial-section="download">
+              <div className={styles.stepLabel}>Optional local setup</div>
+              <h2>Run the complete project locally</h2>
+              <p>Select <strong>Download project</strong> in the top-right corner, or <a className={styles.inlineDownloadLink} download href="/downloads/fiber-channel-payment.zip">download here</a>. The archive contains the Next.js application, Fiber integration, required browser headers, and the interface shown here.</p>
+              <div className={styles.setupCodeBlock}><div className={styles.setupCodeHeader}><span>Terminal</span></div><pre><code>{`npm install\nnpm run dev`}</code></pre></div>
+              <p className={styles.followupParagraph}>Then open <code>http://localhost:3000/pay</code> in your browser.</p>
+            </section>
+          </div>
+
+          <aside className={styles.codePanel} aria-label="Tutorial project files">
           <div className={styles.fileTabs} role="tablist" aria-label="Code files">
             {codeFiles.map((file) => (
               <button
@@ -1734,23 +1775,16 @@ export function FiberChannelPaymentTutorial() {
               {copied ? 'Copied' : 'Copy file'}
             </button>
           </div>
-        </section>
-      </aside>
+          </aside>
+        </div>
 
-      <nav className={styles.tutorialFooter} aria-label="Tutorial navigation">
-        <button
-          onClick={() => router.push('/docs/build/connect-wasm-node')}
-          type="button"
-        >
-          <span aria-hidden="true">←</span> Previous
-        </button>
-        <button
-          onClick={() => router.push('/docs/build/multi-hop-invoice')}
-          type="button"
-        >
-          Next <span aria-hidden="true">→</span>
-        </button>
-      </nav>
+        {articleAtBottom && (
+          <nav aria-label="Tutorial navigation" className={`${styles.tutorialFooter} ${styles.walkthroughFooter}`}>
+            <button onClick={() => router.push('/docs/build/connect-wasm-node')} type="button"><span aria-hidden="true">←</span> Previous</button>
+            <button onClick={() => router.push('/docs/build/multi-hop-invoice')} type="button">Next <span aria-hidden="true">→</span></button>
+          </nav>
+        )}
+      </section>
     </div>
   );
 }

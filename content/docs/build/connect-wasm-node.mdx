@@ -1,36 +1,53 @@
 ---
-title: "Tutorial: Connect to Fiber with a WASM Node"
-description: "Start a real Fiber node in React and connect to Testnet without a backend"
-date: 2026-07-27
+title: "Tutorial: Run a Fiber WASM Node in Your Browser"
+description: "Start a real Fiber node in the live demo and connect it to Testnet without local setup"
+date: 2026-09-04
 full: true
 ---
 
-## Overview
+## Try it now
 
-In this quickstart, you will start a real Fiber node inside a React page,
-connect it to Fiber Testnet over WebSocket Secure, and read live node state.
-The application uses Fiber WASM workers and stores its local node state in
-IndexedDB.
+Allow about 15 minutes for the tutorial.
 
-This minimal node connection does not need an application backend. A
-receiving service becomes useful when your product needs to issue invoices,
-verify merchant payments, persist shared business data, or unlock server-side
-content.
+Use the live demo to start a real Fiber node in this page, connect it to a
+public Fiber Testnet peer, and inspect its runtime state. No installation,
+wallet, Testnet funds, or backend is required.
 
-## 1. Create the React app
+1. Select **Start WASM node**. Wait for **Node running** and a node public key.
+   The node is running locally but is not connected to another Fiber node yet.
+2. Select **Connect public peer**. Wait for the public-peer status to show a
+   successful connection.
 
-Create a Next.js application and install the Fiber browser SDK:
+## Behind the scenes
+
+The page started a WebAssembly version of the Fiber node directly inside your
+browser. The interface remained responsive while background workers ran the
+node, and the node used an encrypted WebSocket connection to reach Fiber
+Testnet.
+
+`@fiber-pay/sdk` provides the browser-facing APIs used here to create the node,
+manage its identity, observe its state, and connect it to peers. Install it in
+an existing TypeScript or JavaScript project with:
 
 ```bash
-npm create next-app@latest fiber-hello
-cd fiber-hello
 npm install @fiber-pay/sdk
 ```
 
-## 2. Enable browser isolation
+On the interactive page, hover or focus the dotted-underlined terms—Web Worker,
+SharedArrayBuffer, WSS (WebSocket Secure), and IndexedDB—for a short definition
+without leaving the walkthrough.
 
-Fiber WASM uses workers and `SharedArrayBuffer`. Add COOP and COEP response
-headers to the route that runs the node:
+## Why the page needs COOP and COEP
+
+Browsers restrict shared memory to pages that opt into cross-origin isolation.
+This example enables it with two response headers.
+
+On the interactive page, COOP and COEP use the same dotted-underlined tooltips.
+COOP expands to `Cross-Origin-Opener-Policy`; COEP expands to
+`Cross-Origin-Embedder-Policy`.
+
+Together, these headers make `window.crossOriginIsolated` return `true`,
+allowing Fiber WASM to use `SharedArrayBuffer`:
 
 ```js
 /** @type {import('next').NextConfig} */
@@ -59,22 +76,15 @@ const nextConfig = {
 export default nextConfig;
 ```
 
-Check `crossOriginIsolated` before creating a browser node.
+The live demo is already configured. You only need to add these headers when
+running the project on your own server.
 
-When this route is opened through client-side documentation navigation, the
-new response headers cannot affect the already-loaded document. Detect that
-case and perform one full-page reload so the browser can apply COOP and COEP.
-The interactive preview on this page does this automatically.
+## 1. Start the node without connecting
 
-## 3. Start Fiber WASM
-
-Import `FiberBrowserNode` and `RawKeyCredentialProvider` from
-`@fiber-pay/sdk/browser`. Create a Testnet credential, start the node, and make
-an outbound WSS connection to a browser-reachable public Fiber peer.
-
-Persist the same browser identity between sessions if the node will own
-channels or payment state. Production apps also need encrypted key storage,
-backup, account switching, and recovery.
+Before creating the node, verify that `crossOriginIsolated` is enabled. Then
+create a credential and initialize a Fiber Testnet node with an empty
+`bootnodes` list so it starts without connecting to a peer. Register the
+`stateChange` listener before calling `node.start()` to receive startup updates.
 
 ```ts
 const {
@@ -100,31 +110,61 @@ const node = new FiberBrowserNode({
 await node.start();
 ```
 
-At this point the Fiber WASM node is running locally, but it is not connected
-to the public peer. Connect only after the user explicitly requests it:
+**Testnet only:** The generated credentials are intended for Testnet development
+only. Production applications must store private keys in encrypted storage and
+provide backup, account-switching, and recovery mechanisms.
+
+## 2. Connect the node to a public peer
+
+To make its first connection, the browser node needs both an `address` and a
+`pubkey`. The address tells it how to reach the public Fiber Testnet peer over
+WSS. The pubkey identifies the Fiber node it expects to reach.
+
+```text
+address // Browser route
+/dns4/bottle.fiber.channel/tcp/443/wss/p2p/Qm...
+
+/dns4/bottle.fiber.channel // DNS host
+/tcp/443                   // TCP port
+/wss                       // encrypted WebSocket
+/p2p/Qm...                 // libp2p peer ID
+
+pubkey // Fiber identity
+0x02b6d4e3...d20302be71
+// Hex-encoded secp256k1 Fiber node public key
+```
+
+`connectToRouter(node)` passes both values to `connectPeer()`:
 
 ```ts
 await node.connectPeer({
-  address: routerWssMultiaddr.replace(/\/p2p\/[^/]+$/, ''),
+  address: routerAddress,
   pubkey: routerPubkey,
 });
 ```
 
-## 4. Wire it into React
+Passing both allows the first connection to use the explicit WSS route without
+depending on graph synchronization.
 
-### 4.1 Keep the node between renders
+## 3. Wire it into React
 
-Store the node in a ref and keep status, pubkey, and peer count in React state.
+### 3.1 Keep the node between renders
 
-### 4.2 Start the WASM node
+`useRef()` keeps one node instance available across React renders without
+triggering extra renders. React state stores the status, public key, and peer
+count displayed by the interface.
 
-The first button starts Fiber and calls `getNodeInfo()`. It does not make a
-network connection.
+### 3.2 Start the WASM node
 
-### 4.3 Connect only when requested
+`start()` calls `startFiber()`, saves the returned node in a React ref, then
+calls `getNodeInfo()` and stores the public key in React state. It does not
+connect to a peer.
 
-Enable a second button after the node starts. Connect to the public peer from
-that handler, then query the peer list:
+### 3.3 Connect the running node to Testnet
+
+`connect()` calls `connectToRouter()`, then calls `listPeers()` and stores the
+connected-peer count in React state so the interface can confirm the
+connection:
 
 ```ts
 await node.connectPeer({ address: routerAddress, pubkey: routerPubkey });
@@ -132,12 +172,27 @@ const peerList = await node.listPeers();
 setPeers(peerList.peers.length);
 ```
 
-The interactive preview on this page runs this flow with a browser-local
-Testnet identity and a public Testnet peer.
+### 3.4 Show the result
+
+`FiberPage()` gives users visible confirmation of each operation. It binds the
+handlers to separate buttons and displays the node status, public key, and peer
+count.
+
+## Optional: Run the complete project locally
+
+Select **Download project** in the top-right corner, or
+[**download here**](/downloads/fiber-connect-wasm-node.zip). The archive already
+contains the Next.js application, Fiber integration, browser headers, and
+interface shown here. After extracting it, open the project directory and run:
+
+```bash
+npm install
+npm run dev
+```
+
+Then open `http://localhost:3000/fiber` in your browser.
 
 ## Next steps
 
-This tutorial ends after a real peer connection. Channel funding, invoices,
-and sending a payment will live in a separate follow-up tutorial. Continue
-with the [WASM Node integration guide](/docs/build/sdk/wasm-node) or use the
-[full Browser Node Lab](/labs/browser-node) for the complete browser flow.
+This tutorial ends after a real peer connection. Continue to the next
+interactive tutorial to open a channel and send a Testnet payment.
