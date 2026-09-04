@@ -691,6 +691,7 @@ export function FiberChannelPaymentTutorial() {
   const [paymentAmount, setPaymentAmount] = useState('1');
   const [paymentStatus, setPaymentStatus] = useState('Not sent');
   const [paymentHash, setPaymentHash] = useState('');
+  const [receiptAmount, setReceiptAmount] = useState('');
   const [activeChannelId, setActiveChannelId] = useState('');
   const [localBalanceBefore, setLocalBalanceBefore] = useState<bigint | null>(null);
   const [localBalanceAfter, setLocalBalanceAfter] = useState<bigint | null>(null);
@@ -1102,10 +1103,15 @@ export function FiberChannelPaymentTutorial() {
   const sendPayment = useCallback(async () => {
     const node = nodeRef.current;
     if (!node || readyChannelCount === 0 || peerCount === 0 || busyAction) return;
+    const submittedAmount = paymentAmount;
     setBusyAction('payment');
     setError('');
     setPaymentStatus('Sending');
-    addPaymentLog(`Sending ${paymentAmount} CKB with keysend…`, 'pending');
+    setPaymentHash('');
+    setReceiptAmount(submittedAmount);
+    setLocalBalanceBefore(null);
+    setLocalBalanceAfter(null);
+    addPaymentLog(`Sending ${submittedAmount} CKB with keysend…`, 'pending');
 
     try {
       const beforeChannels = (await node.listChannels()).channels;
@@ -1119,7 +1125,7 @@ export function FiberChannelPaymentTutorial() {
       );
       const submitted = await node.sendPayment({
         target_pubkey: routerPubkey,
-        amount: ckbToHex(paymentAmount),
+        amount: ckbToHex(submittedAmount),
         keysend: true,
       });
       addPaymentLog(
@@ -1139,7 +1145,7 @@ export function FiberChannelPaymentTutorial() {
       setPaymentStatus(result.status);
       setPaymentHash(result.payment_hash);
       addPaymentLog(
-        `${result.status} · ${paymentAmount} CKB · ${shorten(result.payment_hash)}`,
+        `${result.status} · ${submittedAmount} CKB · ${shorten(result.payment_hash)}`,
         result.status === 'Success' ? 'success' : 'error',
       );
       const refreshedChannels = await refreshState();
@@ -1365,7 +1371,7 @@ export function FiberChannelPaymentTutorial() {
             ['1', 'Prepare node', 'Start and connect.'],
             ['2', 'Fund address', 'Receive Testnet CKB.'],
             ['3', 'Open channel', 'Commit the peer minimum on-chain.'],
-            ['4', 'Send payment', 'Send 1 CKB to the peer.'],
+            ['4', 'Send payment', 'Send CKB to the peer.'],
           ].map(([number, title, detail]) => (
             <div key={number}>
               <span>{number}</span>
@@ -1534,7 +1540,7 @@ export function FiberChannelPaymentTutorial() {
               <div className={styles.paymentFlow}>
                 <div className={styles.paymentFlowNumber}>4</div>
                 <div className={styles.paymentFlowBody}>
-                  <strong>Send 1 CKB to the peer</strong>
+                  <strong>Send CKB to the peer</strong>
                   <label>
                     <input
                       aria-label="Payment amount in CKB"
@@ -1570,7 +1576,7 @@ export function FiberChannelPaymentTutorial() {
                   <span>Payment receipt</span>
                   <dl>
                     <div><dt>Status</dt><dd>{paymentStatus}</dd></div>
-                    <div><dt>Amount</dt><dd>{paymentAmount} CKB</dd></div>
+                    <div><dt>Amount</dt><dd>{receiptAmount} CKB</dd></div>
                     <div><dt>Channel ID</dt><dd title={activeChannelId}>{shorten(activeChannelId)}</dd></div>
                     <div><dt>Payment hash</dt><dd title={paymentHash}>{shorten(paymentHash)}</dd></div>
                     <div><dt>Local balance</dt><dd>{formatCkb(localBalanceBefore)} → {formatCkb(localBalanceAfter)}</dd></div>
