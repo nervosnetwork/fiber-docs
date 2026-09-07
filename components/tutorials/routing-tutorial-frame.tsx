@@ -11,6 +11,7 @@ import {
   useState,
 } from 'react';
 import styles from './fiber-wasm-quickstart.module.css';
+import { liveTutorials } from './tutorial-registry';
 
 export type RoutingCodeFile = {
   id: string;
@@ -25,33 +26,7 @@ export type RoutingCodeFocus = {
   end: number;
 };
 
-const tutorials = [
-  { shortTitle: 'Connect a WASM node', href: '/docs/build/connect-wasm-node' },
-  {
-    shortTitle: 'Open a channel and send a payment',
-    href: '/docs/build/open-channel-payment',
-  },
-  {
-    shortTitle: 'Send a multi-hop invoice payment',
-    href: '/docs/build/multi-hop-invoice',
-  },
-  {
-    shortTitle: 'Open a unidirectional channel',
-    href: '/docs/build/unidirectional-channel',
-  },
-  {
-    shortTitle: 'Build a Hold Invoice payment',
-    href: '/docs/build/hold-invoice',
-  },
-  {
-    shortTitle: 'Pay with RUSD',
-    href: '/docs/build/rusd-payment',
-  },
-  {
-    shortTitle: 'Close a channel and recover funds',
-    href: '/docs/build/close-channel',
-  },
-] as const;
+const tutorials = liveTutorials;
 
 const syntaxPattern =
   /(\/\/.*$|\/\*.*?\*\/|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`|<\/?[A-Za-z][\w.]*|\b(?:import|from|export|default|const|let|var|function|async|await|return|if|else|throw|new|typeof|instanceof|true|false|null|undefined|type|interface|extends|implements|as|in|of)\b|\b(?:[A-Z][A-Za-z0-9_]*|[a-zA-Z_$][\w$]*(?=\())\b|\b\d[\d_]*(?:\.\d+)?n?\b)/g;

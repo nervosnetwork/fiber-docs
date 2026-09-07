@@ -1,0 +1,902 @@
+.labShell {
+  --lab-border: color-mix(in srgb, currentColor 16%, transparent);
+  --lab-muted: color-mix(in srgb, currentColor 58%, transparent);
+  --lab-soft: color-mix(in srgb, currentColor 5%, transparent);
+  --lab-green: #79d99a;
+  --lab-blue: #7eb6ff;
+  --lab-amber: #e7b467;
+  --lab-red: #ee8585;
+  display: grid;
+  gap: 28px;
+  margin: 42px 0 72px;
+}
+
+.labNavigation {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--lab-border);
+  border-radius: 14px;
+}
+
+.labNavigation a {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  color: var(--lab-muted);
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.labNavigation a + a {
+  border-left: 1px solid var(--lab-border);
+}
+
+.labNavigation a:hover,
+.labNavigation .currentLab {
+  background: var(--lab-soft);
+  color: currentColor;
+}
+
+.labNavigation a span {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--lab-border);
+  border-radius: 50%;
+  font-size: 11px;
+}
+
+.currentLab span {
+  border-color: color-mix(in srgb, var(--lab-green) 60%, transparent) !important;
+  background: color-mix(in srgb, var(--lab-green) 14%, transparent);
+  color: color-mix(in srgb, currentColor 25%, var(--lab-green));
+}
+
+.labLead {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.34fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  border-top: 1px solid var(--lab-border);
+  padding-top: 22px;
+}
+
+.labLead span,
+.stageHeader span,
+.panelHeading span,
+.projectionPanel > span,
+.presetRow > span {
+  color: var(--lab-muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.labLead p {
+  max-width: 800px;
+  margin: 0;
+  color: var(--lab-muted);
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.labGrid,
+.routeGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.8fr);
+  border: 1px solid var(--lab-border);
+  border-radius: 18px;
+  background: color-mix(in srgb, currentColor 2.5%, transparent);
+  box-shadow: 0 30px 70px color-mix(in srgb, #000 12%, transparent);
+}
+
+.routeGrid {
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.85fr);
+}
+
+.stage,
+.actionPanel {
+  min-width: 0;
+  padding: 30px;
+}
+
+.actionPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  border-left: 1px solid var(--lab-border);
+  background: color-mix(in srgb, currentColor 2%, transparent);
+}
+
+.stageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.stageHeader h2,
+.panelHeading h2 {
+  margin: 7px 0 0;
+  font-size: clamp(21px, 2vw, 29px);
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+
+.subtleButton,
+.presetRow button,
+.segmented button,
+.directionButtons button,
+.predictionFieldset button,
+.disclosureButton,
+.secondaryButton {
+  border: 1px solid var(--lab-border);
+  border-radius: 9px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.subtleButton {
+  padding: 8px 11px;
+  color: var(--lab-muted);
+  font-size: 12px;
+}
+
+.subtleButton:hover,
+.presetRow button:hover,
+.secondaryButton:hover:not(:disabled) {
+  border-color: color-mix(in srgb, currentColor 34%, transparent);
+  background: var(--lab-soft);
+  color: currentColor;
+}
+
+.channelVisual {
+  margin-top: 42px;
+}
+
+.channelLabels {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.channelLabels > span {
+  color: var(--lab-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.channelLabels div {
+  display: grid;
+  gap: 3px;
+}
+
+.channelLabels div:last-child {
+  text-align: right;
+}
+
+.channelLabels div span {
+  color: var(--lab-muted);
+  font-size: 12px;
+}
+
+.channelLabels strong {
+  font-size: 18px;
+}
+
+.channelBar {
+  position: relative;
+  display: flex;
+  height: 54px;
+  overflow: hidden;
+  border: 1px solid var(--lab-border);
+  border-radius: 13px;
+  background: var(--lab-soft);
+}
+
+.channelLeft,
+.channelRight {
+  transition: width 220ms ease;
+}
+
+.channelLeft {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--lab-green) 50%, transparent), color-mix(in srgb, var(--lab-green) 18%, transparent));
+}
+
+.channelRight {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--lab-blue) 16%, transparent), color-mix(in srgb, var(--lab-blue) 46%, transparent));
+}
+
+.channelDivider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-1px);
+  background: color-mix(in srgb, currentColor 72%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, currentColor 34%, transparent);
+  transition: left 220ms ease;
+}
+
+.rangeControl {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.rangeControl > span {
+  display: flex;
+  justify-content: space-between;
+  color: var(--lab-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.rangeControl input {
+  width: 100%;
+  accent-color: var(--lab-green);
+}
+
+.segmented,
+.directionButtons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.segmented {
+  margin-top: 28px;
+}
+
+.segmented > span {
+  margin-right: 6px;
+  color: var(--lab-muted);
+  font-size: 12px;
+}
+
+.segmented button,
+.directionButtons button,
+.predictionFieldset button {
+  padding: 9px 12px;
+  color: var(--lab-muted);
+  font-size: 12px;
+}
+
+.segmented button[aria-pressed='true'],
+.directionButtons button[aria-pressed='true'],
+.predictionFieldset button[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--lab-green) 50%, transparent);
+  background: color-mix(in srgb, var(--lab-green) 12%, transparent);
+  color: currentColor;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.metric {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid var(--lab-border);
+  border-radius: 11px;
+  padding: 14px;
+  background: color-mix(in srgb, currentColor 2%, transparent);
+}
+
+.metric span,
+.metric small {
+  color: var(--lab-muted);
+  font-size: 11px;
+}
+
+.metric strong {
+  overflow: hidden;
+  font-size: 16px;
+  text-overflow: ellipsis;
+}
+
+.disclosureButton {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  margin-top: 22px;
+  padding: 13px 14px;
+  color: var(--lab-muted);
+  font-size: 12px;
+}
+
+.disclosureButton strong {
+  color: currentColor;
+}
+
+.deductionPanel,
+.projectionPanel {
+  display: grid;
+  gap: 9px;
+  margin-top: 10px;
+  border: 1px solid var(--lab-border);
+  border-radius: 11px;
+  padding: 15px;
+  background: color-mix(in srgb, var(--lab-amber) 7%, transparent);
+}
+
+.deductionPanel div,
+.projectionPanel div {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  color: var(--lab-muted);
+  font-size: 12px;
+}
+
+.deductionPanel div:last-of-type {
+  border-top: 1px solid var(--lab-border);
+  padding-top: 9px;
+  color: currentColor;
+}
+
+.deductionPanel small,
+.projectionPanel small {
+  margin-top: 4px;
+  color: var(--lab-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.panelHeading {
+  margin-bottom: 2px;
+}
+
+.directionButtons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.directionButtons button {
+  min-height: 42px;
+}
+
+.numberControl {
+  display: grid;
+  gap: 8px;
+}
+
+.numberControl > span,
+.predictionFieldset legend {
+  color: var(--lab-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.numberControl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid var(--lab-border);
+  border-radius: 10px;
+}
+
+.numberControl input {
+  width: 100%;
+  border: 0;
+  padding: 12px;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+}
+
+.numberControl small {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-left: 1px solid var(--lab-border);
+  color: var(--lab-muted);
+  font-size: 11px;
+}
+
+.predictionFieldset {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.predictionFieldset legend {
+  grid-column: 1 / -1;
+  margin-bottom: 8px;
+}
+
+.primaryButton,
+.secondaryButton {
+  min-height: 46px;
+  padding: 11px 16px;
+  font-weight: 750;
+}
+
+.primaryButton {
+  border: 1px solid color-mix(in srgb, var(--lab-green) 60%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--lab-green) 82%, #111);
+  color: #0a1a0f;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
+.primaryButton:hover {
+  filter: brightness(1.05);
+}
+
+.secondaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.resultPanel {
+  min-height: 126px;
+  border: 1px dashed var(--lab-border);
+  border-radius: 11px;
+  padding: 15px;
+  background: color-mix(in srgb, currentColor 1.5%, transparent);
+}
+
+.resultPanel > span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--lab-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.resultPanel strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.resultPanel p {
+  margin: 7px 0 0;
+  color: var(--lab-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.resultSuccess {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--lab-green) 44%, transparent);
+  background: color-mix(in srgb, var(--lab-green) 7%, transparent);
+}
+
+.resultFailure {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--lab-red) 44%, transparent);
+  background: color-mix(in srgb, var(--lab-red) 6%, transparent);
+}
+
+.presetRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.presetRow > span {
+  margin-right: 6px;
+}
+
+.presetRow button {
+  padding: 8px 11px;
+  color: var(--lab-muted);
+  font-size: 11px;
+}
+
+.presetRow button[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--lab-green) 52%, transparent);
+  background: color-mix(in srgb, var(--lab-green) 11%, transparent);
+  color: currentColor;
+}
+
+.presetRow .resetPreset {
+  margin-left: auto;
+}
+
+.missionBanner {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.28fr) minmax(0, 1fr) auto;
+  gap: 22px;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--lab-green) 38%, transparent);
+  border-radius: 14px;
+  padding: 18px 20px;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--lab-green) 10%, transparent), color-mix(in srgb, var(--lab-blue) 5%, transparent));
+}
+
+.missionBanner > span {
+  color: color-mix(in srgb, currentColor 28%, var(--lab-green));
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.missionBanner h2 {
+  margin: 0;
+  font-size: clamp(17px, 1.7vw, 22px);
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.missionBanner p {
+  margin: 5px 0 0;
+  color: var(--lab-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.missionBanner > strong {
+  border: 1px solid var(--lab-border);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: var(--lab-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.routeEndpoints {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px;
+  align-items: center;
+  margin: 34px 0 16px;
+}
+
+.routeEndpoints span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--lab-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.routeEndpoints span::before,
+.routeEndpoints span::after {
+  height: 1px;
+  flex: 1;
+  background: var(--lab-border);
+  content: '';
+}
+
+.routeList {
+  display: grid;
+  gap: 9px;
+}
+
+.routeEquation {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.routeEquation .metric {
+  padding: 11px;
+}
+
+.routeEquation .metric strong {
+  font-size: 14px;
+}
+
+.routeCard {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--lab-border);
+  border-radius: 11px;
+  padding: 14px;
+  background: color-mix(in srgb, currentColor 2%, transparent);
+}
+
+.routeCard > div:first-child,
+.routeValues {
+  display: grid;
+  gap: 3px;
+}
+
+.routeCard span,
+.routeCard small {
+  color: var(--lab-muted);
+  font-size: 10px;
+}
+
+.routeCard strong {
+  font-size: 12px;
+}
+
+.routeValues {
+  text-align: right;
+}
+
+.routeCard > b {
+  position: absolute;
+  top: 0;
+  right: 0;
+  border-radius: 0 10px 0 8px;
+  padding: 4px 7px;
+  background: color-mix(in srgb, var(--lab-green) 18%, transparent);
+  color: color-mix(in srgb, currentColor 22%, var(--lab-green));
+  font-size: 9px;
+}
+
+.routeAllocated {
+  border-color: color-mix(in srgb, var(--lab-green) 48%, transparent);
+  background: color-mix(in srgb, var(--lab-green) 6%, transparent);
+}
+
+.receiverMeter {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.receiverMeter > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  font-size: 12px;
+}
+
+.receiverMeter > div:first-child span,
+.receiverMeter small {
+  color: var(--lab-muted);
+}
+
+.receiverMeter > div:nth-child(2) {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.receiverMeter > div:nth-child(2) span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--lab-blue), var(--lab-green));
+  transition: width 220ms ease;
+}
+
+.receiverMeter small,
+.executionNote {
+  margin: 0;
+  color: var(--lab-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.controlPair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.circularRoute {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  align-items: center;
+  justify-content: center;
+  margin: 34px 0;
+  border: 1px solid var(--lab-border);
+  border-radius: 999px;
+  padding: 13px 18px;
+  background: var(--lab-soft);
+  font-size: 12px;
+}
+
+.circularRoute span {
+  color: var(--lab-muted);
+}
+
+.circularRouteActive {
+  border-color: color-mix(in srgb, var(--lab-green) 48%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--lab-green) 8%, transparent), color-mix(in srgb, var(--lab-blue) 8%, transparent));
+}
+
+.circularRouteActive span {
+  color: var(--lab-green);
+  animation: routePulse 900ms ease-in-out infinite alternate;
+}
+
+@keyframes routePulse {
+  to { opacity: 0.36; }
+}
+
+.channelStack {
+  display: grid;
+  gap: 32px;
+}
+
+.channelStack .channelVisual {
+  margin-top: 0;
+}
+
+.projectionPanel {
+  margin-top: 18px;
+  background: color-mix(in srgb, var(--lab-green) 6%, transparent);
+}
+
+.projectionPanel > span {
+  margin-bottom: 3px;
+}
+
+.quoteFacts {
+  display: grid;
+  gap: 9px;
+  border: 1px solid var(--lab-border);
+  border-radius: 11px;
+  padding: 14px;
+  background: var(--lab-soft);
+}
+
+.quoteFacts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--lab-muted);
+  font-size: 11px;
+}
+
+.quoteFacts strong {
+  color: currentColor;
+}
+
+.codeDisclosure {
+  border-top: 1px solid var(--lab-border);
+  padding-top: 14px;
+}
+
+.codeDisclosure summary {
+  color: var(--lab-muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.codeDisclosure pre {
+  overflow-x: auto;
+  margin: 12px 0 0;
+  border-radius: 9px;
+  padding: 13px;
+  background: color-mix(in srgb, #000 30%, transparent);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.codeDisclosure p {
+  margin: 10px 0 0;
+  color: var(--lab-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .channelLeft,
+  .channelRight,
+  .channelDivider,
+  .receiverMeter > div:nth-child(2) span {
+    transition: none;
+  }
+
+  .circularRouteActive span {
+    animation: none;
+  }
+}
+
+@media (max-width: 960px) {
+  .labGrid,
+  .routeGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .actionPanel {
+    border-top: 1px solid var(--lab-border);
+    border-left: 0;
+  }
+
+  .missionBanner {
+    grid-template-columns: 120px minmax(0, 1fr);
+  }
+
+  .missionBanner > strong {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .labShell {
+    margin-top: 30px;
+  }
+
+  .labNavigation {
+    grid-template-columns: 1fr;
+  }
+
+  .labNavigation a + a {
+    border-top: 1px solid var(--lab-border);
+    border-left: 0;
+  }
+
+  .labLead {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .missionBanner {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .stage,
+  .actionPanel {
+    padding: 22px;
+  }
+
+  .stageHeader {
+    align-items: center;
+  }
+
+  .stageHeader .subtleButton {
+    max-width: 145px;
+  }
+
+  .channelLabels {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .channelLabels > span {
+    display: none;
+  }
+
+  .metrics,
+  .controlPair,
+  .routeEquation {
+    grid-template-columns: 1fr;
+  }
+
+  .routeCard {
+    grid-template-columns: 1fr;
+  }
+
+  .routeValues {
+    text-align: left;
+  }
+
+  .presetRow .resetPreset {
+    margin-left: 0;
+  }
+}

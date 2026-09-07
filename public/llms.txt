@@ -34,7 +34,7 @@ Fiber Network Node (FNN) is the reference Rust implementation. fiber-js provides
 - [Using fiber-js in a Browser Extension](https://www.fiber.world/docs/build/browser-extension): Guide for running @nervosnetwork/fiber-js inside a Chrome browser extension using Offscreen Documents
 - [Tutorial: Build a Game](https://www.fiber.world/docs/build/gaming/simple-game): A simple JavaScript game example with Fiber micro-payments
 - [Game Payment Patterns](https://www.fiber.world/docs/build/gaming/payment-patterns): Three ways to attach payments to a game with Fiber — pay-as-you-play, hold-invoice stakes with a trusted oracle, and adaptor-signature oracles — and how to choose between them
-- [Interactive tutorials](https://www.fiber.world/docs/build/interactive-tutorials): Build and test Fiber dApps step by step in a live browser playground
+- [Interactive tutorials](https://www.fiber.world/docs/build/interactive-tutorials): Learn Fiber through deterministic concept labs and live Testnet projects
 
 ## Node Operations
 
