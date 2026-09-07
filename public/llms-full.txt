@@ -8667,6 +8667,220 @@ Yunwen Liu is a cryptographer at Cryptape. She completed her Ph.D at COSIC, KU L
 
 ---
 
+## Understanding Fiber Liquidity
+
+Source: https://www.fiber.world/docs/res/liquidity
+
+Fiber uses payment channels to move value off-chain frequently and at low cost. Once a channel is opened, assets are locked in the channel. Later payments update the channel state off-chain instead of submitting every payment to CKB Layer 1.
+
+This creates the central constraint of payment channels: whether a payment can be completed depends not only on how many assets were locked when the channel was opened, but also on how those assets are currently distributed between the two sides and whether every hop along the payment path has enough usable liquidity.
+
+Understanding liquidity is therefore essential when building Fiber wallets, payment-acceptance applications, routing nodes, and payment services.
+
+## Core Concepts
+
+Suppose Alice and Bob open a bidirectional channel with a total capacity of 1,000 CKB. Its current balances are:
+
+- Alice's side: 800 CKB
+- Bob's side: 200 CKB
+
+From Alice's perspective:
+
+- Outbound liquidity is approximately 800 CKB. It represents how much Alice can send toward Bob through this channel.
+- Inbound liquidity is approximately 200 CKB. It represents how much Alice can receive from Bob through this channel.
+
+From Bob's perspective, the directions are reversed: Bob has approximately 200 CKB of outbound liquidity and 800 CKB of inbound liquidity.
+
+After Alice pays Bob 100 CKB, the balances become 700 CKB for Alice and 300 CKB for Bob. The payment does not change the channel's total capacity, but it does change how much liquidity remains available in each direction.
+
+For clarity, this example omits channel reserves, fees, in-flight TLCs, and other policy limits. The amount that can actually be paid may be lower than the local balance shown in an interface.
+
+## Why Having Funds Does Not Guarantee That You Can Pay or Receive
+
+On-chain balance, total channel capacity, and usable liquidity are three different concepts.
+
+For example, a merchant may hold enough assets at a CKB address and already run a Fiber node. But if no other node has placed funds on the side of a channel that can flow toward the merchant, the merchant still lacks inbound liquidity and cannot receive a large payment through that path.
+
+Similarly, a user may be connected to several nodes, but a payment can still fail when funds are concentrated on the wrong side of those channels for the intended direction. Common causes include:
+
+- The first hop does not have enough outbound liquidity.
+- The recipient's last hop does not provide enough inbound liquidity.
+- No single path has enough capacity.
+- Fees on viable paths exceed the sender's configured limit.
+- Too much channel liquidity is temporarily committed to in-flight TLCs.
+- Capacity in the network graph describes only a channel's total capacity, while real-time usable liquidity in each direction may be unavailable or stale.
+- A peer is offline, has disabled one direction, or has not yet brought the channel into a usable state.
+
+Applications should therefore never treat “sufficient balance” as a guarantee that a payment will succeed.
+
+## How Multi-Hop Payments Use Liquidity
+
+Fiber does not require the sender and recipient to share a direct channel. A payment can pass through one or more intermediate nodes as long as the network contains a path with the correct direction and enough capacity.
+
+Suppose the path is:
+
+[text code block]
+
+Every hop along the path must have enough outbound liquidity in the payment direction. If any hop falls short, the entire path cannot carry the payment.
+
+Multi-hop routing makes existing liquidity more reachable, but it does not create new liquidity.
+
+## What Multi-Path Payments Can Solve
+
+When no single path can carry the full amount, Fiber can use a multi-path payment (MPP) to split one payment across several paths. For example, a 300 CKB payment could be completed by three paths that can carry 120, 100, and 80 CKB respectively.
+
+Multi-path payments can:
+
+- Aggregate usable capacity distributed across several channels.
+- Increase the chance of finding viable routes for a large payment.
+- Reduce an application's dependence on one high-capacity channel.
+
+However, MPP still uses only existing liquidity. If there is not enough inbound liquidity near the recipient, splitting the payment into more parts cannot solve the problem. MPP may also use more paths or longer paths, with a routing fee charged along each one. Its total fee can therefore be higher than that of a single-path payment. The actual cost depends on each path's hop count, fee rates, and the way the payment is split.
+
+## Common Ways to Manage Liquidity
+
+Different approaches solve problems at different levels. Developers should first determine whether they need to use existing liquidity, move existing liquidity, or introduce new liquidity.
+
+### 1. Open a Direct Channel
+
+The most direct approach is for a payer, partner, or liquidity node to open a channel with the recipient and place funds on the side from which they can flow toward that recipient.
+
+This approach works well for:
+
+- Parties with a stable transaction relationship.
+- Merchants and frequent customers.
+- Businesses that can estimate payment direction and amount in advance.
+- Testnet demonstrations and early product validation.
+
+Its main costs are the on-chain transactions needed to open and close the channel and the capital tied up during the channel's lifetime.
+
+For a point-to-point use case that only needs customers to pay a merchant, the customer can fund and open a Fiber one-way channel to the merchant. A one-way channel is funded by the initiator, and funds can flow only from the initiator to the acceptor. It is always private, cannot route payments for third parties, and is unsuitable when bidirectional payments or channel rebalancing are required.
+
+### 2. Use Network Liquidity Through Multi-Hop and MPP
+
+If both sender and recipient are already connected to liquid public nodes, an application can use multi-hop routing and MPP instead of opening a direct channel for every pair of users.
+
+This reduces the number of channels, but payment success still depends on network topology, directional liquidity at every hop, fee policies, and node availability.
+
+### 3. Rebalance Channels
+
+After routing one-way traffic for an extended period, a routing node can gradually exhaust the local balance of some channels. Rebalancing uses a circular payment path: funds leave through one of the node's channels and return through another, changing the distribution of balances across the node's channels.
+
+For example, Alice operates a routing node and maintains two bidirectional channels, each with a total capacity of 1,000 CKB:
+
+[text code block]
+
+Alice has plenty of funds to send toward Bob but can barely continue forwarding payments toward Carol. If a viable path exists between Bob and Carol, Alice can construct a circular route from her existing channels and make a payment to herself:
+
+[text code block]
+
+Suppose the circular payment is 300 CKB. After it succeeds, the balances would be approximately:
+
+[text code block]
+
+Alice's total funds have not increased. She has moved approximately 300 CKB of local balance from the Bob channel to the Carol channel and paid routing fees along the way. She can now forward payments more evenly in both directions.
+
+Rebalancing works well for:
+
+- Routing nodes that maintain several bidirectional channels.
+- Nodes with enough total funds but with those funds distributed across the wrong channels.
+- Operators who want to avoid immediately closing and reopening channels.
+
+Rebalancing does not increase a node's total funds, does not guarantee that an affordable circular route exists, and incurs routing fees. One-way channels do not participate in this kind of rebalancing.
+
+### 4. Just-in-Time Channels or Liquidity Service Providers
+
+A common service model is for a liquidity service provider (LSP) to open or supply a channel on demand when a user is about to receive a payment but lacks inbound liquidity. This is often called a just-in-time (JIT) channel or LSP service.
+
+For example, Alice has just registered as a merchant. Bob wants to pay her 500 CKB, but Alice has no inbound liquidity that can carry the payment. Alice's wallet forwards the payment request to Carol, a liquidity service provider:
+
+1. Carol checks the incoming-payment request and the state of Alice's node.
+2. Carol uses her own funds to open a channel with Alice and places at least 500 CKB of usable balance on the side from which it can flow toward Alice.
+3. Once the channel is usable, Bob's payment reaches Carol either through a direct Bob-Carol channel or a multi-hop path, then completes its final hop through Carol's new channel with Alice.
+4. Alice pays Carol an agreed channel-opening fee or service fee, or the fee is deducted from the payment she receives.
+
+Alice can obtain inbound liquidity when she needs to receive a payment, without finding a channel counterparty in advance or paying long-term service fees before demand exists. Carol, in turn, provides a service that requires her to lock capital, keep a node online, and bear the risk that channel opening fails.
+
+This can lower the barrier to a new user's first incoming payment, but the service design must make several points explicit:
+
+- Who supplies the channel funds.
+- How service fees are calculated.
+- How long the channel must remain open.
+- How the provider validates the incoming-payment demand.
+- What happens if opening fails or the channel closes early.
+- How much the user must trust the provider.
+
+### 5. Liquidity Markets
+
+A liquidity market treats inbound liquidity as a time-limited service. A party that needs receiving capacity publishes its desired capacity, duration, and price. A liquidity provider opens or maintains a channel for that party in return for a fee.
+
+For example, Alice runs a store and expects to need an additional 1,000 CKB of inbound liquidity for the next 30 days. She does not need one particular payment to arrive immediately; she wants reliable receiving capacity throughout that period. She publishes the following order in the market:
+
+[text code block]
+
+After Bob accepts the order, he uses his own funds to open or maintain a channel that provides Alice with approximately 1,000 CKB of inbound liquidity. Alice is paying for the right to use that liquidity for 30 days, not buying the 1,000 CKB that Bob locked in the channel. When the period ends, Bob can close the channel and recover any funds that have not moved to Alice.
+
+This arrangement still needs enforcement rules. If Bob maintains the channel for only 10 days before closing it, the system must decide how to refund the unused rent. If Alice has paid but Bob never provides the agreed capacity, the system also needs cancellation, refund, challenge, or penalty mechanisms. What a matching platform, an on-chain contract, and the participants can each verify determines the market's trust model.
+
+Compared with ordinary channel management, a liquidity market must also address:
+
+- How buyers and sellers discover and match with each other.
+- How rent payment is coordinated with channel creation.
+- How to prove that the provider supplied the agreed channel.
+- How to settle the unfulfilled portion if the channel closes early.
+- How to limit misconduct by buyers, sellers, or the matching platform.
+- Which states an on-chain contract can verify and which must be confirmed by participants, services, or other mechanisms.
+
+CKB's programmable Cell model provides design space for orders, escrow, time-based release, and challenge mechanisms. An on-chain contract, however, does not automatically know every off-chain Fiber state. Designers must still define the trust boundary between on-chain and off-chain systems.
+
+## Choosing an Approach
+
+| Need | Consider first | Main limitation |
+|---|---|---|
+| Frequent one-way payments between two fixed participants | One-way channel | Cannot pay in reverse or route for third parties |
+| General users paying through the public network | Multi-hop routing and MPP | Depends on usable liquidity along the entire path |
+| A routing node has enough total funds but imbalanced channels | Channel rebalancing | Requires a circular route and incurs routing fees |
+| A new user's first incoming payment | JIT/LSP service | Depends on provider availability, pricing, and trust model |
+| A merchant needs stable receiving capacity for a period | Pre-opened channels or rented inbound liquidity | Capital lockup plus enforcement and settlement design |
+| A participant wants to supply network liquidity for revenue | Public bidirectional channels or a liquidity market | Requires continuous monitoring, capital management, and risk control |
+
+These approaches are not mutually exclusive. A wallet can use MPP to improve everyday payment success and request a channel from an LSP when inbound liquidity is insufficient. A routing node can rebalance periodically and add new funds when needed.
+
+## Common Misconceptions
+
+### “Channel capacity is the amount I can send”
+
+No. Total capacity is distributed between the two sides of a channel. Sending capacity depends on the usable balance in the sending direction and is further limited by reserves, fees, and TLC state.
+
+### “MPP can solve every liquidity shortage”
+
+MPP can only combine liquidity that already exists across multiple paths. It cannot create inbound liquidity that does not exist near the recipient.
+
+### “Rebalancing increases a node's funds”
+
+It does not. Rebalancing only changes where a node's funds are located across its channels, and it normally incurs routing fees.
+
+### “One large channel is enough”
+
+A large channel can increase capacity in one direction, but it can also create a single point of dependency. Connection quality, peer uptime, fee policy, and alternative paths also affect payment success.
+
+### “An on-chain contract can directly verify every off-chain service”
+
+It cannot. A contract can verify only facts explicitly supplied by a transaction and provable under on-chain rules. When combining Fiber channels with on-chain orders, designers should specify the source of every state and the associated trust assumptions.
+
+## Further Reading
+
+- Fiber: Unidirectional Channel
+- Fiber: Channel Lifecycle
+- Fiber: Channel Rebalancing
+- Fiber: Payment Lifecycle and Multi-Path Payments
+- Fiber: Multi-Hop Payments
+- Fiber Liquidity Solutions Research
+- Community discussion: Can CKB Give Fiber a Better Amboss?
+- Community project log: Building Opticrum on Fiber
+
+---
+
 ## Fiber P2P Message Protocol
 
 Source: https://www.fiber.world/docs/res/p2p-message

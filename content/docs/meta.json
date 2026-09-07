@@ -37,6 +37,7 @@
     "res/light-paper",
     "res/high-level",
     "res/payment-channel",
+    "res/liquidity",
     "res/p2p-message",
     "res/gossip-protocol",
     "res/cross-chain-htlc"

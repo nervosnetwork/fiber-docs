@@ -83,6 +83,7 @@ Fiber Network Node (FNN) is the reference Rust implementation. fiber-js provides
 - [Fiber Network Light Paper](https://www.fiber.world/docs/res/light-paper): Fiber Network: A Lightning Network Based on CKB
 - [Fiber Architecture & Module](https://www.fiber.world/docs/res/high-level): A source code-level exploration of Fiber's architecture and key modules.
 - [What is Payment Channel Network](https://www.fiber.world/docs/res/payment-channel): Understanding Payment Channel Network - A Quick Walkthrough Guide
+- [Understanding Fiber Liquidity](https://www.fiber.world/docs/res/liquidity): Learn how directional balances, routing, MPP, rebalancing, and liquidity services affect Fiber payments
 - [Fiber P2P Message Protocol](https://www.fiber.world/docs/res/p2p-message): Fiber Network P2P Message Protocol
 - [Gossip Protocol](https://www.fiber.world/docs/res/gossip-protocol): Architecture, data flow, and operational notes of the Fiber gossip subsystem
 - [Cross-Chain HTLC](https://www.fiber.world/docs/res/cross-chain-htlc): Atomic cross-chain payments between CKB (Fiber) and Bitcoin (Lightning) networks — architecture, mechanics, and developer guide
