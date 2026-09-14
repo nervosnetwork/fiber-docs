@@ -114,6 +114,18 @@ export const liveTutorials: Tutorial[] = [
     href: '/docs/build/hold-invoice',
   },
   {
+    id: 'encrypted-data-payment',
+    level: 'Hard',
+    mode: 'Testnet',
+    duration: '~25 min',
+    title: 'Unlock Encrypted Data with a Fiber Payment',
+    shortTitle: 'Unlock encrypted data with a payment',
+    description:
+      'Encrypt a result in one browser node, pay its Invoice from another, and decrypt with the revealed preimage.',
+    tags: ['Encryption', 'Invoice', 'Preimage'],
+    href: '/docs/build/encrypted-data-payment',
+  },
+  {
     id: 'rusd-payment',
     level: 'Hard',
     mode: 'Testnet',

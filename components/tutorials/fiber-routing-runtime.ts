@@ -217,12 +217,27 @@ export function useFiberRoutingNode(profileKey: string) {
       const info = await node.start();
       setNodeInfo(info);
       setAddress(scriptToAddress(info.default_funding_lock_script, 'testnet'));
-      const [{ peers: currentPeers }, { channels: currentChannels }, currentBalance] =
+      const [{ peers: initialPeers }, { channels: currentChannels }, currentBalance] =
         await Promise.all([
           node.listPeers(),
           node.listChannels(),
           queryCkbBalance(info.default_funding_lock_script),
         ]);
+
+      // Channel state survives a reload, but WebSocket peer connections do not.
+      // Reconnect known public peers so a persisted CHANNEL_READY channel is
+      // immediately usable for invoices and trampoline payments.
+      const knownPeers = [bottlePeer, bracerPeer].filter((peer) =>
+        currentChannels.some((channel) => samePubkey(channel.pubkey, peer.pubkey)),
+      );
+      await Promise.allSettled(
+        knownPeers
+          .filter((peer) =>
+            !initialPeers.some((connected) => samePubkey(connected.pubkey, peer.pubkey)),
+          )
+          .map((peer) => node.connectPeer({ address: peer.address, pubkey: peer.pubkey })),
+      );
+      const currentPeers = (await node.listPeers()).peers;
       setPeers(currentPeers.map((peer) => peer.pubkey));
       setChannels(currentChannels);
       setBalance(currentBalance);
