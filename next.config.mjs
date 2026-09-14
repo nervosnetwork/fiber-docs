@@ -81,6 +81,26 @@ const config = {
         permanent: true,
       },
       {
+        source: '/docs/res/liquidity',
+        destination: '/docs/concept/liquidity/overview',
+        permanent: true,
+      },
+      {
+        source: '/docs/build/directional-liquidity',
+        destination: '/docs/concept/liquidity/directional-liquidity',
+        permanent: true,
+      },
+      {
+        source: '/docs/build/route-liquidity',
+        destination: '/docs/concept/liquidity/route-liquidity',
+        permanent: true,
+      },
+      {
+        source: '/docs/build/rebalance-liquidity',
+        destination: '/docs/concept/liquidity/rebalance-liquidity',
+        permanent: true,
+      },
+      {
         // Preserve links from before the documentation restructure.
         source: '/docs/tech-explanation/high-level',
         destination: '/docs/res/high-level',

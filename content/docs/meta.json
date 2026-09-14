@@ -26,6 +26,7 @@
     "concept/channels",
     "concept/payments",
     "concept/routing",
+    "concept/liquidity",
     "concept/security",
     "---RPC API Reference---",
     "...api-reference",
@@ -37,7 +38,6 @@
     "res/light-paper",
     "res/high-level",
     "res/payment-channel",
-    "res/liquidity",
     "res/p2p-message",
     "res/gossip-protocol",
     "res/cross-chain-htlc"
