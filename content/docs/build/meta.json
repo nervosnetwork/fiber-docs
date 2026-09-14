@@ -4,7 +4,10 @@
     "toolchain",
     "api-reference",
     "sdk",
+    "community-sdk",
     "ffi",
-    "simple-game"
+    "browser-extension",
+    "gaming",
+    "interactive-tutorials"
   ]
 }

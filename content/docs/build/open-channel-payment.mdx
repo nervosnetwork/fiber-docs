@@ -1,0 +1,172 @@
+---
+title: "Tutorial: Open a Fiber Channel and Send a Payment"
+description: "Fund a Fiber WASM browser node, open a real Testnet channel, and send 1 CKB to a public peer from React"
+date: 2026-09-04
+full: true
+---
+
+## Try it now
+
+Fund your browser node, open a real Fiber Testnet channel, and send a 1 CKB
+payment to a public peer. The active steps take about 15 minutes; Testnet
+confirmations may take longer.
+
+Need background on browser nodes? Review
+[Connect to Fiber with a WASM Node](/docs/build/connect-wasm-node). You can also
+begin here directly: **Prepare browser node** starts the WASM node and connects
+it to the public peer without moving funds.
+
+Complete the four stages in order:
+
+1. **Prepare browser node.** Start and connect the node.
+2. **Fund the address.** Copy the generated Testnet address, request CKB from
+   the faucet, and wait for the balance to update.
+3. **Open a 499 CKB channel.** This submits a real CKB Testnet funding
+   transaction. Keep additional Testnet CKB available for its fee.
+4. **Send 1 CKB to the peer.** Wait for `ChannelReady`, then send the payment and
+   inspect its receipt.
+
+The interface explains why an action is unavailable and changes its status
+from waiting to success or error as the flow progresses. Use Testnet funds
+only.
+
+## Behind the scenes
+
+The code workspace follows the same sequence as the live demo. Each section
+starts with the function doing the work, then identifies the Fiber SDK or CKB
+RPC call underneath it.
+
+### Understand the channel payment flow
+
+`openChannel()` locks a chosen amount of Testnet CKB on-chain. Once the channel
+is ready, `pay()` can make multiple off-chain payments without creating a new
+CKB transaction for every small amount.
+
+Preparing the browser node starts it locally and connects it to the public peer.
+Opening the channel and sending payments are separate actions.
+
+### Start the node and derive its funding address
+
+`start()` starts the browser node and reveals the Testnet address that must be
+funded. It calls `startFiber()`, reads the node information, and uses the SDK's
+`scriptToAddress()` helper to convert
+`default_funding_lock_script` into a CKB Testnet address. The demo then calls
+`connectToRouter()` as part of the same **Prepare browser node** action to keep
+the recovery path short.
+
+The demo combines startup and `connectToRouter()` into one preparation action.
+The downloaded source keeps these helpers separate so applications can expose
+more control when they need it.
+
+### Detect sufficient Testnet funding
+
+`queryCkbBalance()` calls CKB RPC `get_cells_capacity` with the node's default
+funding lock script to measure its available capacity. `watchCkbBalance()`
+repeats the check every five seconds while the page is visible, allowing the
+interface to unlock channel creation once the address can cover the requested
+funding amount. The demo also provides a manual refresh action.
+
+The selected public peer accepts CKB channels funded with at least 499 CKB.
+Keep extra Testnet CKB available for the on-chain transaction fee.
+
+### Convert CKB amounts without losing precision
+
+`ckbToHex()` converts the entered CKB amount into the exact hexadecimal shannon
+value expected by Fiber RPC. It parses the decimal string with `BigInt`,
+preserves all eight decimal places, and converts the result to hex. One CKB is
+100,000,000 shannons:
+
+```ts
+const SHANNONS_PER_CKB = 100_000_000n;
+
+const shannons =
+  BigInt(whole) * SHANNONS_PER_CKB +
+  BigInt(fraction.padEnd(8, '0'));
+
+return `0x${shannons.toString(16)}`;
+```
+
+The same amount appears in three forms:
+
+- `499 CKB` — the human-readable amount.
+- `49,900,000,000 shannons` — the amount in CKB's smallest unit.
+- `0xb9e0ab300` — the same shannon amount written in hexadecimal for Fiber RPC.
+
+### Open the channel
+
+`openCkbChannel()` begins channel negotiation with the connected public peer.
+It calls `node.openChannel()` with the peer pubkey, exact funding amount, and
+`public: true`:
+
+```ts
+const result = await node.openChannel({
+  pubkey: routerPubkey,
+  funding_amount: ckbToHex('499'),
+  public: true,
+});
+```
+
+The returned temporary channel ID confirms that negotiation started. It does
+not mean the channel can carry a payment yet.
+
+### Wait for ChannelReady
+
+`watchChannelStates()` keeps payment controls locked until the funding
+transaction and peer handshake complete. It polls `listChannels()` and reports
+each new `state_name` as the channel moves through the following states:
+
+- `NegotiatingFunding` — agree on channel parameters.
+- `CollaboratingFundingTx` — build the funding transaction.
+- `AwaitingChannelReady` — wait for confirmation and both peers.
+- `ChannelReady` — allow payments.
+
+Some transitions may happen between polls, so the interface shows every
+distinct state it observes rather than promising that every intermediate state
+will appear.
+
+### Send and confirm the keysend payment
+
+`sendKeysend()` sends a direct payment without first requesting an invoice.
+Fiber calls this a keysend payment because it does not require the receiving
+peer to create an invoice. The function calls `sendPayment()` with the recipient
+pubkey, hexadecimal amount, and `keysend: true`:
+
+```ts
+const submitted = await node.sendPayment({
+  target_pubkey: routerPubkey,
+  amount: ckbToHex('1'),
+  keysend: true,
+});
+```
+
+If the first response is not terminal, `waitForPayment()` waits for `Success`
+or `Failed`. The demo then shows the channel ID, payment hash, amount, status,
+and the local channel balance before and after the payment.
+
+### Wire the complete flow into React
+
+`PayPage()` turns SDK state into a guided interface that prevents actions from
+running before their prerequisites are ready. It keeps the Fiber node in a
+React ref, renders funding and channel data from state, and gates channel
+creation on peer connection and sufficient funding. It gates payment on
+`ChannelReady`.
+
+> **Production requirements:** A production product should encrypt keys,
+> support backup and recovery, surface fees and timeouts, and use server-side
+> verification when payments unlock orders or access.
+
+### Run the complete project locally
+
+Select **Download project** in the top-right corner, or
+[download here](/downloads/fiber-channel-payment.zip). The archive contains the
+Next.js application, Fiber integration, required browser headers, and the
+interface shown in this tutorial.
+
+After extracting it, run:
+
+```bash
+npm install
+npm run dev
+```
+
+Then open `http://localhost:3000/pay` in your browser.

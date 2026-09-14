@@ -1,0 +1,198 @@
+---
+title: "Tutorial: Run a Fiber WASM Node in Your Browser"
+description: "Start a real Fiber node in the live demo and connect it to Testnet without local setup"
+date: 2026-09-04
+full: true
+---
+
+## Try it now
+
+Allow about 15 minutes for the tutorial.
+
+Use the live demo to start a real Fiber node in this page, connect it to a
+public Fiber Testnet peer, and inspect its runtime state. No installation,
+wallet, Testnet funds, or backend is required.
+
+1. Select **Start WASM node**. Wait for **Node running** and a node public key.
+   The node is running locally but is not connected to another Fiber node yet.
+2. Select **Connect public peer**. Wait for the public-peer status to show a
+   successful connection.
+
+## Behind the scenes
+
+The page started a WebAssembly version of the Fiber node directly inside your
+browser. The interface remained responsive while background workers ran the
+node, and the node used an encrypted WebSocket connection to reach Fiber
+Testnet.
+
+`@fiber-pay/sdk` provides the browser-facing APIs used here to create the node,
+manage its identity, observe its state, and connect it to peers. Install it in
+an existing TypeScript or JavaScript project with:
+
+```bash
+npm install @fiber-pay/sdk
+```
+
+On the interactive page, hover or focus the dotted-underlined terms—Web Worker,
+SharedArrayBuffer, WSS (WebSocket Secure), and IndexedDB—for a short definition
+without leaving the walkthrough.
+
+## Why the page needs COOP and COEP
+
+Browsers restrict shared memory to pages that opt into cross-origin isolation.
+This example enables it with two response headers.
+
+On the interactive page, COOP and COEP use the same dotted-underlined tooltips.
+COOP expands to `Cross-Origin-Opener-Policy`; COEP expands to
+`Cross-Origin-Embedder-Policy`.
+
+Together, these headers make `window.crossOriginIsolated` return `true`,
+allowing Fiber WASM to use `SharedArrayBuffer`:
+
+```js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  transpilePackages: [
+    '@fiber-pay/sdk',
+    '@nervosnetwork/fiber-js',
+  ],
+  async headers() {
+    return [{
+      source: '/fiber',
+      headers: [
+        {
+          key: 'Cross-Origin-Opener-Policy',
+          value: 'same-origin',
+        },
+        {
+          key: 'Cross-Origin-Embedder-Policy',
+          value: 'require-corp',
+        },
+      ],
+    }];
+  },
+};
+
+export default nextConfig;
+```
+
+The live demo is already configured. You only need to add these headers when
+running the project on your own server.
+
+## 1. Start the node without connecting
+
+Before creating the node, verify that `crossOriginIsolated` is enabled. Then
+create a credential and initialize a Fiber Testnet node with an empty
+`bootnodes` list so it starts without connecting to a peer. Register the
+`stateChange` listener before calling `node.start()` to receive startup updates.
+
+```ts
+const {
+  FiberBrowserNode,
+  RawKeyCredentialProvider,
+} = await import('@fiber-pay/sdk/browser');
+
+const credential = new RawKeyCredentialProvider(
+  crypto.getRandomValues(new Uint8Array(32)),
+  crypto.getRandomValues(new Uint8Array(32)),
+  crypto.randomUUID(),
+);
+
+const node = new FiberBrowserNode({
+  network: 'testnet',
+  credential,
+  nodeConfig: {
+    bootnodes: [],
+    logLevel: 'info',
+  },
+});
+
+await node.start();
+```
+
+**Testnet only:** The generated credentials are intended for Testnet development
+only. Production applications must store private keys in encrypted storage and
+provide backup, account-switching, and recovery mechanisms.
+
+## 2. Connect the node to a public peer
+
+To make its first connection, the browser node needs both an `address` and a
+`pubkey`. The address tells it how to reach the public Fiber Testnet peer over
+WSS. The pubkey identifies the Fiber node it expects to reach.
+
+```text
+address // Browser route
+/dns4/bottle.fiber.channel/tcp/443/wss/p2p/Qm...
+
+/dns4/bottle.fiber.channel // DNS host
+/tcp/443                   // TCP port
+/wss                       // encrypted WebSocket
+/p2p/Qm...                 // libp2p peer ID
+
+pubkey // Fiber identity
+0x02b6d4e3...d20302be71
+// Hex-encoded secp256k1 Fiber node public key
+```
+
+`connectToRouter(node)` passes both values to `connectPeer()`:
+
+```ts
+await node.connectPeer({
+  address: routerAddress,
+  pubkey: routerPubkey,
+});
+```
+
+Passing both allows the first connection to use the explicit WSS route without
+depending on graph synchronization.
+
+## 3. Wire it into React
+
+### 3.1 Keep the node between renders
+
+`useRef()` keeps one node instance available across React renders without
+triggering extra renders. React state stores the status, public key, and peer
+count displayed by the interface.
+
+### 3.2 Start the WASM node
+
+`start()` calls `startFiber()`, saves the returned node in a React ref, then
+calls `getNodeInfo()` and stores the public key in React state. It does not
+connect to a peer.
+
+### 3.3 Connect the running node to Testnet
+
+`connect()` calls `connectToRouter()`, then calls `listPeers()` and stores the
+connected-peer count in React state so the interface can confirm the
+connection:
+
+```ts
+await node.connectPeer({ address: routerAddress, pubkey: routerPubkey });
+const peerList = await node.listPeers();
+setPeers(peerList.peers.length);
+```
+
+### 3.4 Show the result
+
+`FiberPage()` gives users visible confirmation of each operation. It binds the
+handlers to separate buttons and displays the node status, public key, and peer
+count.
+
+## Optional: Run the complete project locally
+
+Select **Download project** in the top-right corner, or
+[**download here**](/downloads/fiber-connect-wasm-node.zip). The archive already
+contains the Next.js application, Fiber integration, browser headers, and
+interface shown here. After extracting it, open the project directory and run:
+
+```bash
+npm install
+npm run dev
+```
+
+Then open `http://localhost:3000/fiber` in your browser.
+
+## Next steps
+
+This tutorial ends after a real peer connection. Continue to the next
+interactive tutorial to open a channel and send a Testnet payment.

@@ -9,6 +9,14 @@ import { notFound } from "next/navigation";
 import { createRelativeLink } from "fumadocs-ui/mdx";
 import { getMDXComponents } from "@/mdx-components";
 import { VersionBadge } from "@/components/VersionBadge";
+import { FiberWasmQuickstart } from "@/components/tutorials/fiber-wasm-quickstart";
+import { FiberChannelPaymentTutorial } from "@/components/tutorials/fiber-channel-payment";
+import { FiberMultiHopInvoiceTutorial } from "@/components/tutorials/fiber-multi-hop-invoice";
+import { FiberUnidirectionalChannelTutorial } from "@/components/tutorials/fiber-unidirectional-channel";
+import { FiberHoldInvoiceTutorial } from "@/components/tutorials/fiber-hold-invoice";
+import { FiberEncryptedDataPaymentTutorial } from "@/components/tutorials/fiber-encrypted-data-payment";
+import { FiberRusdPaymentTutorial } from "@/components/tutorials/fiber-rusd-payment";
+import { FiberCloseChannelTutorial } from "@/components/tutorials/fiber-close-channel";
 
 export default async function Page(props: {
   params: Promise<{ slug?: string[] }>;
@@ -41,8 +49,80 @@ export default async function Page(props: {
     },
   };
 
+  if (slug === "build/connect-wasm-node") {
+    return (
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <FiberWasmQuickstart />
+      </>
+    );
+  }
+
+  if (slug === "build/open-channel-payment") {
+    return (
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <FiberChannelPaymentTutorial />
+      </>
+    );
+  }
+
+  if (slug === "build/multi-hop-invoice") {
+    return (
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <FiberMultiHopInvoiceTutorial />
+      </>
+    );
+  }
+
+  if (slug === "build/unidirectional-channel") {
+    return (
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <FiberUnidirectionalChannelTutorial />
+      </>
+    );
+  }
+
+  if (slug === "build/hold-invoice") {
+    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><FiberHoldInvoiceTutorial /></>;
+  }
+
+  if (slug === "build/encrypted-data-payment") {
+    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><FiberEncryptedDataPaymentTutorial /></>;
+  }
+
+  if (slug === "build/rusd-payment") {
+    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><FiberRusdPaymentTutorial /></>;
+  }
+
+  if (slug === "build/close-channel") {
+    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><FiberCloseChannelTutorial /></>;
+  }
+
   return (
-    <DocsPage toc={page.data.toc} full={page.data.full}>
+    <DocsPage
+      toc={page.data.toc}
+      full={page.data.full}
+      footer={
+        slug === "build/interactive-tutorials"
+          ? { enabled: false }
+          : undefined
+      }
+    >
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

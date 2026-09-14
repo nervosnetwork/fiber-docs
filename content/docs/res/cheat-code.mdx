@@ -1,7 +1,7 @@
 ---
 title: "Fiber Cheat Code"
 description: "Quick reference for common Fiber CLI commands, RPC calls, channel operations, and configuration"
-date: 2026-06-18
+date: 2026-08-17
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -35,6 +35,7 @@ Use [Run a Fiber Node](/docs/quick-start/run-a-node) for installation and startu
 |----------|-----------|--------|---------|
 | Node | List available commands | Any shell | `fnn-cli --help` |
 | Node | View node info | Node being inspected | `fnn-cli info` |
+| Node | Trigger an online backup (`admin` module required) | Node being backed up | `fnn-cli admin backup` |
 | Peer | Connect to a peer (by pubkey) | Node initiating the connection | `fnn-cli peer connect_peer --pubkey <pubkey>` |
 | Peer | Connect to a WSS peer (by pubkey) | Browser/WASM-facing or WSS-capable node | `fnn-cli peer connect_peer --pubkey <pubkey> --addr-type wss` |
 | Peer | Connect to a peer (by address) | Node initiating the connection | `fnn-cli peer connect_peer --address "/ip4/<ip>/tcp/<port>"` |
@@ -119,6 +120,7 @@ curl -s -X POST -H "Content-Type: application/json" \
 NegotiatingFunding -> CollaboratingFundingTx -> SigningCommitment
 SigningCommitment -> AwaitingTxSignatures -> AwaitingChannelReady
 AwaitingChannelReady -> ChannelReady -> ShuttingDown -> Closed
+Restored risk state -> Stale -> Passive peer audit
 ```
 
 | State | Description |
@@ -131,6 +133,7 @@ AwaitingChannelReady -> ChannelReady -> ShuttingDown -> Closed
 | **ChannelReady** | Channel is open and operational; off-chain payments are possible |
 | **ShuttingDown** | A cooperative shutdown has started |
 | **Closed** | Channel is fully settled on-chain |
+| **Stale** | Restored channel state may be outdated and must be passively audited with its peer before normal operation resumes |
 
 <Callout type="info">
   Use `fnn-cli channel list_channels` to check the state of your channels. JSON-RPC returns states as `{"state_name":"ChannelReady"}` and similar PascalCase names. Each side must reserve **99 CKB** (98 for commitment lock + 1 for shutdown fee).

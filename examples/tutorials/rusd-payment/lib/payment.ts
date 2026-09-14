@@ -1,0 +1,3 @@
+import type { FiberBrowserNode } from '@fiber-pay/sdk/browser';import { bottle,findRusd,rusd,rusdToHex } from './fiber';
+export async function ensureRusdChannel(node:FiberBrowserNode){await node.connectPeer(bottle);const existing=findRusd((await node.listChannels()).channels);if(existing)return existing;await node.openChannel({pubkey:bottle.pubkey,funding_amount:rusdToHex('20'),funding_udt_type_script:rusd,public:true})}
+export async function sendRusd(node:FiberBrowserNode,amount:string){const sent=await node.sendPayment({target_pubkey:bottle.pubkey,amount:rusdToHex(amount),udt_type_script:rusd,keysend:true});return sent.status==='Success'||sent.status==='Failed'?sent:node.waitForPayment(sent.payment_hash,{timeout:60_000,interval:1_000})}

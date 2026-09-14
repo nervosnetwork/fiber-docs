@@ -1,9 +1,12 @@
 import './global.css';
 import { RootProvider } from 'fumadocs-ui/provider';
+import { GoogleAnalytics } from '@next/third-parties/google';
 import { Inter, Atkinson_Hyperlegible } from 'next/font/google';
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
 import SearchDialogWrapper from '@/components/search-dialog-wrapper';
+
+const googleAnalyticsId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 const inter = Inter({
   variable: '--font-inter',
@@ -56,6 +59,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           {children}
         </RootProvider>
       </body>
+      {googleAnalyticsId ? <GoogleAnalytics gaId={googleAnalyticsId} /> : null}
     </html>
   );
 }

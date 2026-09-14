@@ -5,6 +5,7 @@ import { calculateReadingTime } from "./util";
 const DEV_LOG_CATEGORY_ID = "DIC_kwDOLfBvi84CntYR";
 const DEV_LOG_REPO_OWNER = "nervosnetwork";
 const DEV_LOG_REPO_NAME = "fiber";
+const DEV_LOG_LIST_LIMIT = 20;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 export interface DevLogsCache {
@@ -140,7 +141,10 @@ export const getFiberDevLogLists = async (limit: number = 10): Promise<BlogPost[
 
 export const getFiberDevLogById = async (id: string): Promise<BlogPost | undefined> => {
   try {
-    const devLogs = await getFiberDevLogLists();
+    // Keep detail lookups aligned with the 20 posts exposed by /api/devlogs.
+    // Previously the listing returned 20 items while detail pages searched 10,
+    // so links for items 11-20 immediately resolved to a 404.
+    const devLogs = await getFiberDevLogLists(DEV_LOG_LIST_LIMIT);
     return devLogs.find((devLog) => devLog.id === id);
   } catch (error) {
     console.error("Error fetching devlog by ID:", error);

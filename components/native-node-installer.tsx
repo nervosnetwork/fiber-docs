@@ -5,14 +5,14 @@ import Link from 'next/link';
 import { useState } from 'react';
 import Section from './section';
 
-const UNIX_COMMAND = `curl -sSfL https://raw.githubusercontent.com/nervosnetwork/fiber/develop/tools/install/install.sh \\
-  | INSTALL_REF=develop FNN_VERSION=0.9.0-rc7 bash`;
+const UNIX_COMMAND = `curl -sSfL https://raw.githubusercontent.com/nervosnetwork/fiber/v0.9.1/tools/install/install.sh \\
+  | INSTALL_REF=v0.9.1 FNN_VERSION=0.9.1 bash`;
 
-const WINDOWS_COMMAND = `$env:INSTALL_REF="develop"
-$env:FNN_VERSION="0.9.0-rc7"
+const WINDOWS_COMMAND = `$env:INSTALL_REF="v0.9.1"
+$env:FNN_VERSION="0.9.1"
 $env:NETWORK="testnet"
 $env:INSTALL_DIR="$HOME\\.fiber"
-irm https://raw.githubusercontent.com/nervosnetwork/fiber/develop/tools/install/install.ps1 | iex`;
+irm https://raw.githubusercontent.com/nervosnetwork/fiber/v0.9.1/tools/install/install.ps1 | iex`;
 
 type OperatingSystem = 'unix' | 'windows';
 type CopyStatus = 'idle' | 'copied' | 'failed';
@@ -70,7 +70,7 @@ export default function NativeNodeInstaller() {
       description={
         <Link
           className="w-full md:w-60 h-[60px] p-2 border border-white flex shrink-0 justify-center items-center gap-sm cursor-pointer hover-invert"
-          href="/docs/quick-start/run-a-node/rust#automated-installer-preview"
+          href="/docs/quick-start/run-a-node/rust#automated-installer"
         >
           <span className="w-6 h-6 relative flex items-center justify-center">
             <Image src="/external.svg" alt="" width={20} height={20} />
@@ -129,7 +129,7 @@ export default function NativeNodeInstaller() {
               </span>
               <span className="hidden md:inline">
                 Target Version:{' '}
-                <span className="text-primary">0.9.0-rc7</span>
+                <span className="text-primary">0.9.1</span>
               </span>
             </div>
           </div>

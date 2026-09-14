@@ -1,7 +1,7 @@
 ---
 title: Module `Payment`
 description: Payment management RPC methods
-date: 2026-05-25
+date: 2026-08-17
 ---
 
 ## Module `Payment`
@@ -73,6 +73,7 @@ Sends a payment to a peer.
 #### Returns
 
 * `payment_hash` - [Hash256](#type-hash256), The payment hash of the payment
+* `payment_preimage` - `Option<[Hash256](#type-hash256)>`, The preimage learned from a successful payment attempt.
 * `status` - [PaymentStatus](#type-paymentstatus), The status of the payment
 * `created_at` - `u64`, The time the payment was created at, in milliseconds from UNIX epoch
 * `last_updated_at` - `u64`, The time the payment was last updated at, in milliseconds from UNIX epoch
@@ -101,6 +102,7 @@ Retrieves a payment.
 #### Returns
 
 * `payment_hash` - [Hash256](#type-hash256), The payment hash of the payment
+* `payment_preimage` - `Option<[Hash256](#type-hash256)>`, The preimage learned from a successful payment attempt.
 * `status` - [PaymentStatus](#type-paymentstatus), The status of the payment
 * `created_at` - `u64`, The time the payment was created at, in milliseconds from UNIX epoch
 * `last_updated_at` - `u64`, The time the payment was last updated at, in milliseconds from UNIX epoch
@@ -190,6 +192,7 @@ Sends a payment to a peer with specified router.
 #### Returns
 
 * `payment_hash` - [Hash256](#type-hash256), The payment hash of the payment
+* `payment_preimage` - `Option<[Hash256](#type-hash256)>`, The preimage learned from a successful payment attempt.
 * `status` - [PaymentStatus](#type-paymentstatus), The status of the payment
 * `created_at` - `u64`, The time the payment was created at, in milliseconds from UNIX epoch
 * `last_updated_at` - `u64`, The time the payment was last updated at, in milliseconds from UNIX epoch

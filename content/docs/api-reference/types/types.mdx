@@ -1,7 +1,7 @@
 ---
 title: Types Reference
 description: Common data types used in the JSON-RPC API
-date: 2026-05-25
+date: 2026-08-17
 ---
 
 ## Types Reference
@@ -139,6 +139,7 @@ The state of a channel.
  now operational.
 * `ShuttingDown` - `ShuttingDownFlags`, We've successfully negotiated a `closing_signed` dance. At this point, the `ChannelManager`
 * `Closed` - `CloseFlags`, This channel is closed.
+* `Stale` - The channel state may be outdated after a database restore. The node must passively audit the channel with its peer before resuming normal operation.
 ***
 
 ### Type `ChannelUpdateInfo`
@@ -208,6 +209,7 @@ The result of a get_payment command, which includes the payment hash, status, ti
 #### Fields
 
 * `payment_hash` - [Hash256](#type-hash256), The payment hash of the payment
+* `payment_preimage` - `Option<[Hash256](#type-hash256)>`, The preimage learned from a successful payment attempt.
 * `status` - [PaymentStatus](#type-paymentstatus), The status of the payment
 * `created_at` - `u64`, The time the payment was created at, in milliseconds from UNIX epoch
 * `last_updated_at` - `u64`, The time the payment was last updated at, in milliseconds from UNIX epoch

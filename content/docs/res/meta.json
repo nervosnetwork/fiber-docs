@@ -8,7 +8,6 @@
     "payment-channel",
     "p2p-message",
     "gossip-protocol",
-    "cross-chain-htlc",
-    "fiber-js-browser-extension"
+    "cross-chain-htlc"
   ]
 }

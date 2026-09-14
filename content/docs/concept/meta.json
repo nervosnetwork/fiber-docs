@@ -13,6 +13,9 @@
     "---Routing---",
     "routing/multi-hop",
     "routing/trampoline-routing",
+    "---Liquidity---",
+    "liquidity/overview",
+    "liquidity/concept-labs",
     "---Security & Auth---",
     "biscuit-auth",
     "watchtower"

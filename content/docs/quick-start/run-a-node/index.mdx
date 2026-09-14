@@ -1,7 +1,7 @@
 ---
 title: "Overview"
 description: "What it means to run a Fiber node, the available node forms, and how to pick the right deployment for your use case"
-date: 2026-08-02
+date: 2026-09-14
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -11,7 +11,7 @@ A **Fiber node** is a running instance of the [Fiber Network Node (FNN)](https:/
 If you want to **send or receive** payments over Fiber, build a wallet that speaks the protocol, or **earn routing fees** by forwarding payments for others, you need a node.
 
 <Callout type="info">
-FNN is still under active development. Before upgrading between versions, close your channels or migrate storage carefully — protocol and storage formats can change between releases.
+FNN is still under active development. Before upgrading, stop the node and back up its complete data directory. v0.9.1 includes built-in migrations, backup, and restore support, but protocol and storage formats can still change between releases.
 </Callout>
 
 ## What a Fiber Node Does
@@ -42,7 +42,7 @@ The native Rust binary is the full production node. It runs as a standalone proc
 | **Network exposure** | Public IP recommended for routing; private nodes can connect through public relay nodes |
 | **Interaction** | `fnn-cli` or raw JSON-RPC |
 
-Use the native node when you need full control, persistent storage, and the ability to accept inbound channel requests from the public internet. A guided installer is being prepared to download the release bundle, configure the selected network, set up keys, and generate a reusable startup script.
+Use the native node when you need full control, persistent storage, and the ability to accept inbound channel requests from the public internet. Fiber v0.9.1 includes a guided installer that downloads the release bundle, configures the selected network, sets up keys, and generates a reusable startup script.
 
 → [Run a Native Node](/docs/quick-start/run-a-node/rust)
 
@@ -64,11 +64,11 @@ Use Docker when you want a fast, reproducible native node deployment without ins
 
 ### WASM Node (`fiber-js`)
 
-`fiber-js` compiles the same node logic to WebAssembly so it can run inside a browser or a `Node.js` process. It stores data in IndexedDB (via a WASM worker) and is designed for client-side applications that do not want to operate a backend server.
+`fiber-js` compiles the same node logic to WebAssembly so it can run inside a browser. It stores data in IndexedDB (via a WASM worker) and is designed for client-side applications that do not want to operate a backend server.
 
 | Aspect | Details |
 |--------|---------|
-| **Runtime** | Browser or `Node.js` |
+| **Runtime** | Browser |
 | **Best for** | Browser wallets, web games, client-side dApps |
 | **Storage** | IndexedDB |
 | **Network exposure** | No public IP required; can connect through relay nodes |
@@ -84,15 +84,13 @@ Use the WASM node when you want users to bring their own node inside a web app, 
 
 The fastest way to experiment. You run `fnn` locally against Fiber Testnet, fund the address from a testnet faucet, and open channels with the public Testnet relay nodes. No public IP is required because you initiate outbound connections to the public nodes.
 
-Typical flow with the upcoming installer:
+Typical flow with the v0.9.1 installer:
 
 1. Bootstrap the FNN bundle, `ckb-cli`, and Testnet configuration.
 2. Run the guided setup to create or import a CKB account.
 3. Save `FIBER_SECRET_KEY_PASSWORD` and back up the install directory.
 4. Start the node with the generated `start-node` script.
 5. Open a channel and try [Basic Transfer](/docs/quick-start/basic-transfer).
-
-Until a Fiber release includes the installer, follow the release-only manual path in [Run a Native Node](/docs/quick-start/run-a-node/rust#manual-installation).
 
 ### Production Public Node
 
@@ -109,13 +107,13 @@ You will need:
 - Sufficient CKB/UDT liquidity to fund and maintain channels.
 - (Optional) A TLS proxy if you also want browser/WASM clients to reach you over WSS.
 
-→ See [WSS Configuration](https://github.com/nervosnetwork/fiber/blob/v0.9.0-rc5/docs/fiber-node-wss.md) for browser-facing deployments.
+→ See [WSS Configuration](https://github.com/nervosnetwork/fiber/blob/v0.9.1/docs/fiber-node-wss.md) for browser-facing deployments.
 
 ### Private Node Behind Relay
 
 Not every node has to be public. A private node can open outbound channels to public relay nodes and then send or receive payments through those relays. This is the easiest way to participate without exposing a public IP or running server infrastructure.
 
-This pattern is covered in the [Public Nodes User Manual](https://github.com/nervosnetwork/fiber/blob/v0.9.0-rc5/docs/public-nodes.md) and is the default mental model for the WASM node.
+This pattern is covered in the [Public Nodes User Manual](https://github.com/nervosnetwork/fiber/blob/v0.9.1/docs/public-nodes.md) and is the default mental model for the WASM node.
 
 ### Browser-Embedded Node
 
