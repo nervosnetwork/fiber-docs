@@ -80,7 +80,7 @@ The following sections show the complete Fiber channel lifecycle in its actual s
 ## Stale
 
 `Stale` means the restored channel data may be older than the peer's latest
-state. Fiber v0.9.0 marks channels that could carry penalty risk as `Stale`
+state. Fiber v0.9.1 marks channels that could carry penalty risk as `Stale`
 after a database restore and waits for a passive audit with the peer before
 resuming normal channel operations. This state has no `state_flags`.
 

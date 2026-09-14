@@ -4,8 +4,8 @@ description: Learn how to transfer stablecoins between nodes
 date: 2026-08-17
 dependencies:
   - name: Fiber Node
-    minVersion: "0.9.0"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0"
+    minVersion: "0.9.1"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.1"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -29,15 +29,15 @@ This guide demonstrates a direct [UDT](https://docs.nervos.org/docs/tech-explana
 
 ### 1. Prepare Fiber Binary
 
-Download the v0.9.0 package for your platform from [GitHub Releases](https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0). For example, on an Apple Silicon Mac:
+Download the v0.9.1 package for your platform from [GitHub Releases](https://github.com/nervosnetwork/fiber/releases/tag/v0.9.1). For example, on an Apple Silicon Mac:
 
 ```sh
-curl -LO https://github.com/nervosnetwork/fiber/releases/download/v0.9.0/fnn_v0.9.0-aarch64-darwin-portable.tar.gz
-tar -xzf fnn_v0.9.0-aarch64-darwin-portable.tar.gz
+curl -LO https://github.com/nervosnetwork/fiber/releases/download/v0.9.1/fnn_v0.9.1-aarch64-darwin-portable.tar.gz
+tar -xzf fnn_v0.9.1-aarch64-darwin-portable.tar.gz
 ./fnn --version
 ```
 
-The final command should report `Fiber v0.9.0`. To build instead, check out the matching tag with `git clone --branch v0.9.0 --depth 1 https://github.com/nervosnetwork/fiber.git` before running `cargo build --release`.
+The final command should report `Fiber v0.9.1`. To build instead, check out the matching tag with `git clone --branch v0.9.1 --depth 1 https://github.com/nervosnetwork/fiber.git` before running `cargo build --release`.
 
 <Callout type="info" title="macOS Security">
 ```sh
@@ -90,7 +90,7 @@ sed -i.bak 's|/ip4/0.0.0.0/tcp/8228|/ip4/127.0.0.1/tcp/8238|' node2/config.yml
 sed -i.bak 's|127.0.0.1:8227|127.0.0.1:8237|' node2/config.yml
 ```
 
-The v0.9.0 Testnet config already contains the current RUSD type script and cell dependency. Its local `auto_accept_amount` is 10 RUSD; this guide funds 20 RUSD to match the minimum accepted by the official Testnet public nodes.
+The v0.9.1 Testnet config already contains the current RUSD type script and cell dependency. Its local `auto_accept_amount` is 10 RUSD; this guide funds 20 RUSD to match the minimum accepted by the official Testnet public nodes.
 
 ### 4. Start Both Nodes
 

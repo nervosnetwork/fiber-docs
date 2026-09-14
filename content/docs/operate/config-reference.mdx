@@ -32,7 +32,7 @@ These options affect native `fnn` startup. They are not `config.yml` fields.
 | `-d, --dir <BASE_DIR>` | Set `BASE_DIR`; also changes the implicit config path to `$BASE_DIR/config.yml` when `--config` is not provided. |
 | `-s, --services <services>` | Services to start. When present, this replaces the `services` list from `config.yml`. Values are comma-separated or space-separated. |
 | `--check-validate` | Validate the Fiber store database and exit without starting services. |
-| `--restore <BACKUP_PATH>` | Restore the Fiber database and node keys from a v0.9.0 timestamped backup directory, then exit. See the [native v0.9.0 restore requirements](/docs/operate/backup#restore-a-v090-online-backup). |
+| `--restore <BACKUP_PATH>` | Restore the Fiber database and node keys from a v0.9.1 timestamped backup directory, then exit. See the [native v0.9.1 restore requirements](/docs/operate/backup#restore-a-v090-online-backup). |
 
 ## Top-Level Fields
 
@@ -400,4 +400,4 @@ services:
   - ckb
 ```
 
-> **Tip**: Use the config files from the [Fiber v0.9.0 release](https://github.com/nervosnetwork/fiber/tree/v0.9.0/config) as starting points. They include the matching script hashes, cell deps, UDT whitelist entries, and bootnode addresses for each network.
+> **Tip**: Use the config files from the [Fiber v0.9.1 release](https://github.com/nervosnetwork/fiber/tree/v0.9.1/config) as starting points. They include the matching script hashes, cell deps, UDT whitelist entries, and bootnode addresses for each network.

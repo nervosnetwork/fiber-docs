@@ -265,7 +265,7 @@ for (const [section, sectionPages] of Object.entries(sections)) {
 // Optional section for supplementary resources
 llmsTxt += `## Optional\n\n`;
 llmsTxt += `- [Fiber GitHub Repository](https://github.com/nervosnetwork/fiber): The main FNN source code\n`;
-llmsTxt += `- [Fiber RPC API Reference](https://github.com/nervosnetwork/fiber/blob/main/crates/fiber-lib/src/rpc/README.md): Complete auto-generated RPC documentation\n`;
+llmsTxt += `- [Fiber RPC API Reference](https://github.com/nervosnetwork/fiber/blob/v0.9.1/crates/fiber-lib/src/rpc/README.md): Complete auto-generated RPC documentation\n`;
 llmsTxt += `- [fiber-scripts](https://github.com/nervosnetwork/fiber-scripts): On-chain CKB scripts for payment channels\n`;
 llmsTxt += `- [fiber-sphinx](https://github.com/nervosnetwork/fiber-sphinx): Onion routing cryptography library\n`;
 llmsTxt += `- [Fiber Network Dashboard](https://dashboard.fiber.channel/nodes): Live network status\n`;
@@ -286,7 +286,7 @@ for (const page of pages) {
 
 // Append optional resources
 llmsFull += `## Fiber RPC API Reference\n\n`;
-llmsFull += `Source: https://github.com/nervosnetwork/fiber/blob/main/crates/fiber-lib/src/rpc/README.md\n\n`;
+llmsFull += `Source: https://github.com/nervosnetwork/fiber/blob/v0.9.1/crates/fiber-lib/src/rpc/README.md\n\n`;
 llmsFull += `The complete RPC API is maintained in the Fiber GitHub repository. See the link above for the latest version.\n\n`;
 
 fs.writeFileSync(path.join(PUBLIC_DIR, "llms-full.txt"), llmsFull);
