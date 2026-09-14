@@ -34,7 +34,7 @@ Fiber Network Node (FNN) is the reference Rust implementation. fiber-js provides
 - [Using fiber-js in a Browser Extension](https://www.fiber.world/docs/build/browser-extension): Guide for running @nervosnetwork/fiber-js inside a Chrome browser extension using Offscreen Documents
 - [Tutorial: Build a Game](https://www.fiber.world/docs/build/gaming/simple-game): A simple JavaScript game example with Fiber micro-payments
 - [Game Payment Patterns](https://www.fiber.world/docs/build/gaming/payment-patterns): Three ways to attach payments to a game with Fiber — pay-as-you-play, hold-invoice stakes with a trusted oracle, and adaptor-signature oracles — and how to choose between them
-- [Interactive tutorials](https://www.fiber.world/docs/build/interactive-tutorials): Learn Fiber through deterministic concept labs and live Testnet projects
+- [Interactive tutorials](https://www.fiber.world/docs/build/interactive-tutorials): Build with live Fiber Testnet projects running real browser nodes
 
 ## Node Operations
 
@@ -53,6 +53,8 @@ Fiber Network Node (FNN) is the reference Rust implementation. fiber-js provides
 - [Hold Invoice](https://www.fiber.world/docs/concept/payments/hold-invoice): Deferred settlement invoices for conditional payments in the Fiber network
 - [Multi-Hop Payments](https://www.fiber.world/docs/concept/routing/multi-hop): How Fiber routes payments through intermediate nodes using time-locked contracts and onion encryption
 - [Trampoline Routing](https://www.fiber.world/docs/concept/routing/trampoline-routing): How Fiber delegates pathfinding to trampoline nodes so lightweight clients can route payments without a full network graph
+- [Understanding Fiber Liquidity](https://www.fiber.world/docs/concept/liquidity/overview): Learn how directional balances, routing, MPP, rebalancing, and liquidity services affect Fiber payments
+- [Liquidity Concept Labs](https://www.fiber.world/docs/concept/liquidity/concept-labs): Explore directional balances, route bottlenecks, multi-path payments, fees, and channel rebalancing through deterministic simulations.
 - [Biscuit Authentication in Fiber](https://www.fiber.world/docs/concept/security/biscuit-auth): Overview of Biscuit authentication and how it's integrated into Fiber's RPC system
 - [Watchtower](https://www.fiber.world/docs/concept/security/watchtower): How Fiber watchtower monitors channels and protects your funds from fraud
 
@@ -83,7 +85,6 @@ Fiber Network Node (FNN) is the reference Rust implementation. fiber-js provides
 - [Fiber Network Light Paper](https://www.fiber.world/docs/res/light-paper): Fiber Network: A Lightning Network Based on CKB
 - [Fiber Architecture & Module](https://www.fiber.world/docs/res/high-level): A source code-level exploration of Fiber's architecture and key modules.
 - [What is Payment Channel Network](https://www.fiber.world/docs/res/payment-channel): Understanding Payment Channel Network - A Quick Walkthrough Guide
-- [Understanding Fiber Liquidity](https://www.fiber.world/docs/res/liquidity): Learn how directional balances, routing, MPP, rebalancing, and liquidity services affect Fiber payments
 - [Fiber P2P Message Protocol](https://www.fiber.world/docs/res/p2p-message): Fiber Network P2P Message Protocol
 - [Gossip Protocol](https://www.fiber.world/docs/res/gossip-protocol): Architecture, data flow, and operational notes of the Fiber gossip subsystem
 - [Cross-Chain HTLC](https://www.fiber.world/docs/res/cross-chain-htlc): Atomic cross-chain payments between CKB (Fiber) and Bitcoin (Lightning) networks — architecture, mechanics, and developer guide

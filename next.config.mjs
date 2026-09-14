@@ -45,6 +45,7 @@ const config = {
       },
       ...[
         '/docs/build/hold-invoice',
+        '/docs/build/encrypted-data-payment',
         '/docs/build/rusd-payment',
         '/docs/build/close-channel',
       ].map((source) => ({
@@ -77,6 +78,26 @@ const config = {
       {
         source: '/docs/res/fiber-js-browser-extension',
         destination: '/docs/build/browser-extension',
+        permanent: true,
+      },
+      {
+        source: '/docs/res/liquidity',
+        destination: '/docs/concept/liquidity/overview',
+        permanent: true,
+      },
+      {
+        source: '/docs/build/directional-liquidity',
+        destination: '/docs/concept/liquidity/directional-liquidity',
+        permanent: true,
+      },
+      {
+        source: '/docs/build/route-liquidity',
+        destination: '/docs/concept/liquidity/route-liquidity',
+        permanent: true,
+      },
+      {
+        source: '/docs/build/rebalance-liquidity',
+        destination: '/docs/concept/liquidity/rebalance-liquidity',
         permanent: true,
       },
       {

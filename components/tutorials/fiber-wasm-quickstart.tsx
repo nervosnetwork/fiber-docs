@@ -49,6 +49,7 @@ const tutorials = [
     href: '/docs/build/unidirectional-channel',
   },
   { title: 'Build a Conditional Payment with a Hold Invoice', shortTitle: 'Build a Hold Invoice payment', href: '/docs/build/hold-invoice' },
+  { title: 'Unlock Encrypted Data with a Fiber Payment', shortTitle: 'Unlock encrypted data with a payment', href: '/docs/build/encrypted-data-payment' },
   { title: 'Pay with RUSD over Fiber', shortTitle: 'Pay with RUSD', href: '/docs/build/rusd-payment' },
   { title: 'Close a Fiber Channel and Recover Funds', shortTitle: 'Close a channel and recover funds', href: '/docs/build/close-channel' },
 ] as const;

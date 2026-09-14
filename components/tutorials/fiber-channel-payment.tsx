@@ -44,6 +44,7 @@ const tutorials = [
     href: '/docs/build/unidirectional-channel',
   },
   { shortTitle: 'Build a Hold Invoice payment', href: '/docs/build/hold-invoice' },
+  { shortTitle: 'Unlock encrypted data with a payment', href: '/docs/build/encrypted-data-payment' },
   { shortTitle: 'Pay with RUSD', href: '/docs/build/rusd-payment' },
   { shortTitle: 'Close a channel and recover funds', href: '/docs/build/close-channel' },
 ] as const;

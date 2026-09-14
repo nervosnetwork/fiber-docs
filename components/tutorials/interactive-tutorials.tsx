@@ -69,20 +69,33 @@ export function InteractiveTutorials() {
         </div>
       </section>
 
-      <section className={styles.group}>
-        <div className={styles.groupHeading}>
-          <span>Concept labs</span>
-          <div>
-            <h2>See liquidity move before writing code</h2>
-            <p>Short, deterministic simulations for the mental models behind reliable Fiber payments.</p>
-          </div>
+    </div>
+  );
+}
+
+function ConceptLabsGroup() {
+  return (
+    <section className={styles.group}>
+      <div className={styles.groupHeading}>
+        <span>Concept labs</span>
+        <div>
+          <h2>See liquidity move before writing code</h2>
+          <p>Short, deterministic simulations for the mental models behind reliable Fiber payments.</p>
         </div>
-        <div className={styles.grid}>
-          {conceptTutorials.map((tutorial) => (
-            <TutorialCard concept key={tutorial.href} tutorial={tutorial} />
-          ))}
-        </div>
-      </section>
+      </div>
+      <div className={styles.grid}>
+        {conceptTutorials.map((tutorial) => (
+          <TutorialCard concept key={tutorial.href} tutorial={tutorial} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export function LiquidityConceptLabs() {
+  return (
+    <div className={styles.catalog}>
+      <ConceptLabsGroup />
     </div>
   );
 }

@@ -24,7 +24,7 @@ export const conceptTutorials: Tutorial[] = [
     description:
       'Move balance across a channel, switch perspectives, and predict whether a payment can flow.',
     tags: ['Liquidity', 'Channels', 'Simulation'],
-    href: '/docs/build/directional-liquidity',
+    href: '/docs/concept/liquidity/directional-liquidity',
   },
   {
     id: 'route-liquidity',
@@ -36,7 +36,7 @@ export const conceptTutorials: Tutorial[] = [
     description:
       'Compare single-path and multi-path payments, inspect fees, and diagnose the limiting hop.',
     tags: ['Routing', 'MPP', 'Fees'],
-    href: '/docs/build/route-liquidity',
+    href: '/docs/concept/liquidity/route-liquidity',
   },
   {
     id: 'rebalance-liquidity',
@@ -48,7 +48,7 @@ export const conceptTutorials: Tutorial[] = [
     description:
       'Preview a circular payment, move local balance between channels, and account for routing fees.',
     tags: ['Rebalancing', 'Operators', 'Dry run'],
-    href: '/docs/build/rebalance-liquidity',
+    href: '/docs/concept/liquidity/rebalance-liquidity',
   },
 ];
 
@@ -112,6 +112,18 @@ export const liveTutorials: Tutorial[] = [
       'Pause an Invoice at the receiver, then explicitly settle or cancel the payment.',
     tags: ['Hold Invoice', 'Settle', 'Cancel'],
     href: '/docs/build/hold-invoice',
+  },
+  {
+    id: 'encrypted-data-payment',
+    level: 'Hard',
+    mode: 'Testnet',
+    duration: '~25 min',
+    title: 'Unlock Encrypted Data with a Fiber Payment',
+    shortTitle: 'Unlock encrypted data with a payment',
+    description:
+      'Encrypt a result in one browser node, pay its Invoice from another, and decrypt with the revealed preimage.',
+    tags: ['Encryption', 'Invoice', 'Preimage'],
+    href: '/docs/build/encrypted-data-payment',
   },
   {
     id: 'rusd-payment',
