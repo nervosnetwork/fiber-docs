@@ -6,6 +6,7 @@
     "light-paper",
     "high-level",
     "payment-channel",
+    "liquidity",
     "p2p-message",
     "gossip-protocol",
     "cross-chain-htlc"
