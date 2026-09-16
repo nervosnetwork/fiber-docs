@@ -1,0 +1,47 @@
+* { box-sizing: border-box; }
+
+body { margin: 0; background: #090b09; color: #f4f4f4; font: 16px system-ui, sans-serif; }
+main { max-width: 1080px; margin: auto; padding: 48px 24px 80px; }
+header { max-width: 760px; margin-bottom: 28px; }
+h1 { margin: 10px 0; font-size: clamp(42px, 7vw, 76px); line-height: .95; }
+h2 { margin: 8px 0 16px; }
+p { color: #aab2aa; line-height: 1.6; }
+button, textarea { border: 1px solid #485048; border-radius: 6px; background: #151915; color: inherit; padding: 12px; }
+button { cursor: pointer; font-weight: 750; }
+button:hover:not(:disabled) { border-color: #a3f53a; }
+button:disabled { cursor: not-allowed; opacity: .38; }
+textarea { width: 100%; min-height: 116px; margin: 14px 0; resize: vertical; }
+.eyebrow { color: #94a08f; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.status { min-height: 28px; color: #b7fa66; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
+.card, .contract, .decision, aside { border: 1px solid #394139; padding: 20px; background: #101310; }
+.card > button { width: 100%; }
+.row { display: flex; gap: 10px; }
+.row button { flex: 1; }
+.contract { display: flex; align-items: center; justify-content: space-between; gap: 24px; border-left: 3px solid #a3f53a; }
+.limits { display: grid; grid-template-columns: repeat(4, auto); gap: 8px; }
+.limits span, .key, .mini-status { border: 1px solid #3d4737; border-radius: 999px; padding: 8px 11px; color: #c8dbc0; font: 700 12px ui-monospace, monospace; }
+.liquidity { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #303730; color: #b7c0b4; }
+.toggle { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 10px; }
+.toggle button { border-radius: 0; }
+.toggle button[aria-pressed='true'] { background: #eaeaea; color: #111; }
+pre { min-height: 140px; overflow: auto; border: 1px solid #303730; border-radius: 6px; padding: 14px; background: #090b09; color: #cfe0c8; line-height: 1.6; }
+.checks { display: grid; gap: 7px; min-height: 140px; margin-top: 14px; }
+.checks > div { display: grid; grid-template-columns: 22px 1fr; align-items: center; gap: 8px; border: 1px solid #3a4436; border-radius: 6px; padding: 8px 10px; color: #c6cec2; font-size: 13px; }
+.checks .pass { border-color: #58743f; background: rgba(163, 245, 58, .05); }
+.checks .pass b { color: #b7fa66; }
+.checks .fail { border-color: #794843; background: rgba(214, 99, 91, .06); }
+.checks .fail b { color: #f1a19a; }
+.decision { display: flex; align-items: center; justify-content: space-between; gap: 28px; margin-top: 18px; border-left: 3px solid #a3f53a; background: linear-gradient(110deg, rgba(163, 245, 58, .08), #111411 55%); }
+.decision p { max-width: 650px; margin: 0; }
+.decision-actions { display: grid; grid-template-columns: repeat(2, minmax(145px, 1fr)); gap: 9px; min-width: 330px; }
+.decision-actions .settle:not(:disabled) { border-color: #a3f53a; background: #a3f53a; color: #091007; }
+aside { margin-top: 18px; border-color: #514c35; background: #18160e; color: #c9c3a7; line-height: 1.6; }
+aside strong { color: #f0e6b6; }
+
+@media (max-width: 760px) {
+  .grid, .contract, .decision { display: grid; grid-template-columns: 1fr; }
+  .limits { grid-template-columns: repeat(2, 1fr); }
+  .decision-actions { min-width: 0; }
+  .row { display: grid; }
+}

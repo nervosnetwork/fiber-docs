@@ -13,7 +13,7 @@ import { FiberWasmQuickstart } from "@/components/tutorials/fiber-wasm-quickstar
 import { FiberChannelPaymentTutorial } from "@/components/tutorials/fiber-channel-payment";
 import { FiberMultiHopInvoiceTutorial } from "@/components/tutorials/fiber-multi-hop-invoice";
 import { FiberUnidirectionalChannelTutorial } from "@/components/tutorials/fiber-unidirectional-channel";
-import { FiberHoldInvoiceTutorial } from "@/components/tutorials/fiber-hold-invoice";
+import { FiberHoldInvoiceTutorial, FiberVerifiedAgentJobTutorial } from "@/components/tutorials/fiber-hold-invoice";
 import { FiberEncryptedDataPaymentTutorial } from "@/components/tutorials/fiber-encrypted-data-payment";
 import { FiberRusdPaymentTutorial } from "@/components/tutorials/fiber-rusd-payment";
 import { FiberCloseChannelTutorial } from "@/components/tutorials/fiber-close-channel";
@@ -103,6 +103,10 @@ export default async function Page(props: {
 
   if (slug === "build/encrypted-data-payment") {
     return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><FiberEncryptedDataPaymentTutorial /></>;
+  }
+
+  if (slug === "build/verified-agent-job") {
+    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><FiberVerifiedAgentJobTutorial /></>;
   }
 
   if (slug === "build/rusd-payment") {
