@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   scriptToAddress,
   type Channel,
@@ -33,7 +34,11 @@ import {
   selectReviewStep,
   selectVerificationSample,
   setupActionLabels,
+  setupChannelActionRequirement,
   setupDisclosureRole,
+  setupInboundActionRequirement,
+  setupParticipantLocks,
+  setupParticipantState,
   setupParticipantSummary,
   shouldPollPaymentSession,
   type ResultStatus,
@@ -43,6 +48,7 @@ import {
   verificationSimulationNotice,
   verificationSamples,
   verifiedResultStep,
+  updateOpeningRoles,
 } from '../lib/job';
 import { formatCkb, queryCkbBalance } from '../lib/funding';
 import { createVerifierLock, releasePayment } from '../lib/verifier';
@@ -54,6 +60,47 @@ const progressSteps = ['Set up', 'Hold payment', 'Verify result', 'Outcome'];
 const ready = (channel: Channel | null) =>
   channel?.state.state_name.replace(/[^a-z0-9]/gi, '').toLowerCase() ===
   'channelready';
+
+function ActionHint({ children, id, label, reason }: { children: ReactNode; id: string; label: string; reason: string | null }) {
+  const triggerRef = useRef<HTMLSpanElement | null>(null);
+  const tooltipRef = useRef<HTMLSpanElement | null>(null);
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    const tooltip = tooltipRef.current;
+    if (!trigger || !tooltip) return;
+    const margin = 12;
+    const gap = 10;
+    const triggerBox = trigger.getBoundingClientRect();
+    const tooltipBox = tooltip.getBoundingClientRect();
+    const centeredLeft = triggerBox.left + triggerBox.width / 2 - tooltipBox.width / 2;
+    const left = Math.min(Math.max(centeredLeft, margin), window.innerWidth - tooltipBox.width - margin);
+    const roomAbove = triggerBox.top - gap - tooltipBox.height;
+    const preferredTop = roomAbove >= margin ? roomAbove : triggerBox.bottom + gap;
+    const top = Math.min(Math.max(preferredTop, margin), window.innerHeight - tooltipBox.height - margin);
+    setPosition({ left, top });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [open, updatePosition]);
+
+  if (!reason) return <>{children}</>;
+  const show = () => {
+    if (!open) setPosition(null);
+    setOpen(true);
+  };
+  return <><span aria-describedby={open ? id : undefined} aria-label={label} className="action-hint" onBlur={() => setOpen(false)} onFocus={show} onKeyDown={(event) => { if (event.key === 'Escape') setOpen(false); }} onMouseEnter={show} onMouseLeave={() => { if (document.activeElement !== triggerRef.current) setOpen(false); }} ref={triggerRef} tabIndex={0}>{children}</span>{open && createPortal(<span className="action-tooltip" data-positioned={Boolean(position)} id={id} ref={tooltipRef} role="tooltip" style={{ left: position?.left ?? 0, top: position?.top ?? 0 }}>{reason}</span>, document.body)}</>;
+}
 
 export default function Page() {
   const customer = useRef<FiberBrowserNode | null>(null);
@@ -67,8 +114,12 @@ export default function Page() {
     solver: { address: '', balance: null },
   });
   const [preparingNodes, setPreparingNodes] = useState(false);
-  const [openingRole, setOpeningRole] = useState<Role | null>(null);
-  const [expandedSetupRole, setExpandedSetupRole] = useState<Role | null>('customer');
+  const [preparingSetupRole, setPreparingSetupRole] = useState<Role | null>(null);
+  const [openingRoles, setOpeningRoles] = useState<Record<Role, boolean>>({
+    customer: false,
+    solver: false,
+  });
+  const [expandedSetupRole, setExpandedSetupRole] = useState<Role | null>(null);
   const [paymentAttempting, setPaymentAttempting] = useState(false);
   const [paymentAttemptError, setPaymentAttemptError] = useState('');
   const [status, setStatus] = useState('Prepare Customer A and Solver C');
@@ -112,6 +163,7 @@ export default function Page() {
     setStatus('Preparing Customer A and Solver C…');
     try {
       await prepareSetupRolesInOrder(['customer', 'solver'], async (role) => {
+        setPreparingSetupRole(role);
         const existing = role === 'customer' ? customer.current : solver.current;
         const node = existing ?? await startRole(role);
         if (role === 'customer') customer.current = node;
@@ -128,6 +180,7 @@ export default function Page() {
     } catch (error) {
       setStatus(error instanceof Error ? error.message : `Could not prepare ${roles[0] === 'solver' ? 'Solver C' : 'Customer A'}`);
     } finally {
+      setPreparingSetupRole(null);
       setPreparingNodes(false);
     }
   }
@@ -135,7 +188,7 @@ export default function Page() {
   async function prepare(role: Role) {
     const node = role === 'customer' ? customer.current : solver.current;
     if (!node || !channelFundingReady(funding[role].balance)) return;
-    setOpeningRole(role);
+    setOpeningRoles((current) => updateOpeningRoles(current, role, true));
     try {
       setStatus('Opening a 499 CKB Testnet channel. Confirmation can take a few minutes…');
       const channel = await connectAndOpenChannel(node);
@@ -145,7 +198,7 @@ export default function Page() {
     } catch (error) {
       setStatus(error instanceof Error ? error.message : String(error));
     } finally {
-      setOpeningRole(null);
+      setOpeningRoles((current) => updateOpeningRoles(current, role, false));
     }
   }
 
@@ -368,11 +421,13 @@ export default function Page() {
   const solverInbound = BigInt(solverChannel?.remote_balance ?? '0x0');
   const canReceive = solverReady && solverInbound >= 100_000_000n;
   const nodesPrepared = started.customer && started.solver;
+  const participantLocks = setupParticipantLocks(nodesPrepared);
   const setupRole = nextSetupRole({
     customerReady,
     solverReady: canReceive,
   });
   const activeSetupDisclosure = setupDisclosureRole({
+    nodesPrepared,
     customerReady,
     solverReady,
   });
@@ -387,6 +442,11 @@ export default function Page() {
   const selectedGroupedChecks = groupVerificationChecks(selectedChecks);
   const selectedDecision = paymentDecision({ ...selectedSample.result });
   const paymentRecovery = paymentRecoveryState(invoiceStatus, paymentAttemptError);
+  const inboundRequirement = setupInboundActionRequirement({
+    channelReady: solverReady,
+    inboundReady: canReceive,
+    busy: openingRoles.customer || openingRoles.solver,
+  });
   const setupReviewParticipants = [
     setupParticipantSummary({
       role: 'customer',
@@ -437,13 +497,13 @@ export default function Page() {
           <button className={!nodesPrepared ? 'primary' : ''} disabled={preparingNodes || nodesPrepared} onClick={() => void prepareNodes()} type="button">{preparingNodes ? 'Preparing…' : nodesPrepared ? 'Nodes running' : 'Prepare nodes'}</button>
         </div>
         <div className="setup-disclosures">
-          <SetupParticipant channel={customerChannel} expanded={expandedSetupRole === 'customer'} funding={funding.customer} label="Customer A" locked={false} onOpen={() => void prepare('customer')} onRefresh={() => customer.current && void refreshFunding('customer', customer.current)} onToggle={() => setExpandedSetupRole((current) => current === 'customer' ? null : 'customer')} opening={openingRole === 'customer'} ready={customerReady} role="customer"/>
-          <SetupParticipant channel={solverChannel} expanded={expandedSetupRole === 'solver'} funding={funding.solver} label="Solver C" locked={!customerReady} onOpen={() => void prepare('solver')} onRefresh={() => solver.current && void refreshFunding('solver', solver.current)} onToggle={() => setExpandedSetupRole((current) => current === 'solver' ? null : 'solver')} opening={openingRole === 'solver'} ready={solverReady} role="solver"/>
+          <SetupParticipant channel={customerChannel} expanded={expandedSetupRole === 'customer'} funding={funding.customer} label="Customer A" locked={participantLocks.customer} nodeRunning={started.customer} nodeStarting={preparingNodes && preparingSetupRole === 'customer'} onOpen={() => void prepare('customer')} onRefresh={() => customer.current && void refreshFunding('customer', customer.current)} onToggle={() => setExpandedSetupRole((current) => current === 'customer' ? null : 'customer')} opening={openingRoles.customer} ready={customerReady} role="customer"/>
+          <SetupParticipant channel={solverChannel} expanded={expandedSetupRole === 'solver'} funding={funding.solver} label="Solver C" locked={participantLocks.solver} nodeRunning={started.solver} nodeStarting={preparingNodes && preparingSetupRole === 'solver'} onOpen={() => void prepare('solver')} onRefresh={() => solver.current && void refreshFunding('solver', solver.current)} onToggle={() => setExpandedSetupRole((current) => current === 'solver' ? null : 'solver')} opening={openingRoles.solver} ready={solverReady} role="solver"/>
         </div>
         <div className="setup-row">
           <i>4</i>
           <div><strong>Prepare Solver C to receive</strong><span>{canReceive ? `${formatCkb(solverInbound)} is available on Bottle's side.` : 'Move 5 CKB to Bottle’s side so Solver C has inbound liquidity.'}</span></div>
-          <button className={solverReady && !canReceive ? 'primary' : ''} disabled={!solverReady || canReceive || openingRole !== null} onClick={() => void prepareInbound()} type="button">{canReceive ? 'Ready to receive' : 'Move funds'}</button>
+          <ActionHint id="verified-inbound-requirement" label="Move funds requirements" reason={inboundRequirement}><button className={solverReady && !canReceive ? 'primary' : ''} disabled={!solverReady || canReceive || openingRoles.customer || openingRoles.solver} onClick={() => void prepareInbound()} type="button">{canReceive ? 'Ready to receive' : 'Move funds'}</button></ActionHint>
         </div>
       </div>}
 
@@ -471,7 +531,7 @@ function ReviewSummary({ checks, invoiceStatus, participants, result, step }: { 
   return <div className="review-summary"><span className="eyebrow">Customer A · Verification</span><h2>Verified route allocation</h2><p>Customer A evaluated this result against every acceptance rule.</p>{result && <div className="submitted">{Object.entries(result).map(([route, value]) => <div key={route}><span>{route.replace('route', 'Route ')}</span><strong>{value} CKB</strong></div>)}</div>}<VerificationCriteria checks={checks}/></div>;
 }
 
-function SetupParticipant({ channel, expanded, funding, label, locked, onOpen, onRefresh, onToggle, opening, ready: channelReady, role }: { channel: Channel | null; expanded: boolean; funding: RoleFunding; label: string; locked: boolean; onOpen: () => void; onRefresh: () => void; onToggle: () => void; opening: boolean; ready: boolean; role: Role }) {
+function SetupParticipant({ channel, expanded, funding, label, locked, nodeRunning, nodeStarting, onOpen, onRefresh, onToggle, opening, ready: channelReady, role }: { channel: Channel | null; expanded: boolean; funding: RoleFunding; label: string; locked: boolean; nodeRunning: boolean; nodeStarting: boolean; onOpen: () => void; onRefresh: () => void; onToggle: () => void; opening: boolean; ready: boolean; role: Role }) {
   const [channelHistory, setChannelHistory] = useState<string[]>([]);
   const canOpen = channelFundingReady(funding.balance);
   const actionLabels = setupActionLabels(role);
@@ -479,15 +539,17 @@ function SetupParticipant({ channel, expanded, funding, label, locked, onOpen, o
     stage: channelReady ? 'ready' : opening ? 'confirming' : 'idle',
     busy: opening,
   });
-  const status = locked
-    ? 'Waiting for Customer A'
-    : channelReady
-      ? 'Ready'
-      : opening
-        ? 'Waiting for CHANNEL_READY'
-        : !canOpen
-          ? 'Needs funding'
-          : 'Ready to open';
+  const participantState = setupParticipantState({
+    nodeRunning,
+    nodeStarting,
+  });
+  const channelRequirement = setupChannelActionRequirement({
+    role,
+    nodePrepared: nodeRunning,
+    fundingReady: canOpen,
+    actionPending: opening,
+    channelReady,
+  });
   const currentChannelState = channel?.state.state_name;
   const expectedChannelState = currentChannelState
     ? nextObservedChannelState(currentChannelState)
@@ -504,12 +566,12 @@ function SetupParticipant({ channel, expanded, funding, label, locked, onOpen, o
     <button aria-expanded={expanded} className="setup-disclosure-header" disabled={locked} onClick={onToggle} type="button">
       <i>{role === 'customer' ? '2' : '3'}</i>
       <span><strong>{label}</strong><small>{role === 'customer' ? 'Fund the payer and open its outbound channel.' : 'Fund the recipient and open its channel.'}</small></span>
-      <b className="setup-disclosure-status"><i/>{status}</b>
+      <b className="setup-disclosure-status" data-tone={participantState.tone}><i/>{participantState.label}</b>
       <em aria-hidden="true"/>
     </button>
     {expanded && <div className="setup-disclosure-body">
       <div className="setup-task"><div className="funding"><span>{actionLabels.fund}</span><div><code title={funding.address}>{funding.address || 'Preparing address…'}</code><button disabled={!funding.address} onClick={() => funding.address && void navigator.clipboard.writeText(funding.address)} type="button">Copy</button></div><small>Balance: {formatCkb(funding.balance)} · auto-checks every 5s</small></div><div className="setup-actions"><a className={!canOpen ? 'primary' : ''} href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Get CKB ↗</a><button onClick={onRefresh} type="button">Refresh</button></div></div>
-      <div className="setup-task"><div><strong>{actionLabels.open}</strong><small>499 CKB</small></div><button className={canOpen && !actionState.disabled ? 'primary' : ''} disabled={locked || !canOpen || actionState.disabled} onClick={onOpen} type="button">{actionState.label}</button></div>
+      <div className="setup-task"><div><strong>{actionLabels.open}</strong><small>499 CKB</small></div><ActionHint id={`verified-${role}-channel-requirement`} label={`Open ${label} channel requirements`} reason={channelRequirement}><button className={canOpen && !actionState.disabled ? 'primary' : ''} disabled={locked || !canOpen || actionState.disabled} onClick={onOpen} type="button">{actionState.label}</button></ActionHint></div>
       {channelHistory.length > 0 && <div className="channel-timeline"><span>Observed channel lifecycle</span><div>{channelHistory.map((state, index) => <span key={`${state}-${index}`}>{index > 0 && <i aria-hidden="true">→</i>}<b>{state}</b></span>)}{expectedChannelState && <span aria-label={`Waiting for ${expectedChannelState}`} className="pending"><i aria-hidden="true">→</i><b>{expectedChannelState}</b></span>}</div></div>}
     </div>}
   </section>;

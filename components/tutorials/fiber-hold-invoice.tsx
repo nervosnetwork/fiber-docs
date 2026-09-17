@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import type {
   Channel,
   CkbInvoiceStatus,
@@ -28,6 +28,7 @@ import {
   progressFromChannelState,
 } from './fiber-tutorial-utils';
 import styles from './fiber-wasm-quickstart.module.css';
+import { ExplainedTerm } from './explained-term';
 import {
   appendObservedChannelState,
   channelActionState,
@@ -44,7 +45,11 @@ import {
   selectReviewStep,
   selectVerificationSample,
   setupActionLabels,
+  setupChannelActionRequirement,
   setupDisclosureRole,
+  setupInboundActionRequirement,
+  setupParticipantLocks,
+  setupParticipantState,
   setupParticipantSummary,
   shouldPollPaymentSession,
   type ResultStatus as JobStatus,
@@ -64,6 +69,21 @@ type AllocationResult = { routeA: number; routeB: number; routeC: number };
 type VerificationCheck = { label: string; passed: boolean };
 
 const verifiedResultSteps = ['Set up', 'Hold payment', 'Verify result', 'Outcome'];
+
+function SetupActionHint({
+  children,
+  id,
+  label,
+  reason,
+}: {
+  children: ReactNode;
+  id: string;
+  label: string;
+  reason: string | null;
+}) {
+  if (!reason) return <>{children}</>;
+  return <ExplainedTerm ariaLabel={label} className={styles.disabledActionHint} explanation={reason} id={id}>{children}</ExplainedTerm>;
+}
 
 function verifyAllocationResult(result: AllocationResult): VerificationCheck[] {
   return [
@@ -426,6 +446,7 @@ function VerifiedSetupParticipant({
   expanded,
   label,
   locked,
+  nodeStarting,
   onToggle,
   runtime,
   setStage,
@@ -435,6 +456,7 @@ function VerifiedSetupParticipant({
   expanded: boolean;
   label: 'Customer A' | 'Solver C';
   locked?: boolean;
+  nodeStarting: boolean;
   onToggle: () => void;
   runtime: ReturnType<typeof useFiberRoutingNode>;
   setStage: (stage: ChannelProgressStage) => void;
@@ -452,17 +474,17 @@ function VerifiedSetupParticipant({
     stage,
     busy: runtime.busy === 'open channel',
   });
-  const status = locked
-    ? 'Waiting for Customer A'
-    : channelReady
-      ? 'Ready'
-      : actionState.pending
-        ? actionState.label.replace('…', '')
-        : !nodePrepared
-          ? 'Waiting for nodes'
-          : !fundingReady
-            ? 'Needs funding'
-            : 'Ready to open';
+  const participantState = setupParticipantState({
+    nodeRunning: nodePrepared,
+    nodeStarting,
+  });
+  const channelRequirement = setupChannelActionRequirement({
+    role,
+    nodePrepared,
+    fundingReady,
+    actionPending: actionState.pending,
+    channelReady,
+  });
   const currentChannelState = channel?.state.state_name;
   const expectedChannelState = currentChannelState
     ? nextObservedChannelState(currentChannelState)
@@ -514,7 +536,7 @@ function VerifiedSetupParticipant({
     <button aria-expanded={expanded} className={styles.verifiedSetupDisclosureHeader} disabled={locked} onClick={onToggle} type="button">
       <span className={styles.verifiedSetupDisclosureNumber}>{role === 'customer' ? '2' : '3'}</span>
       <span className={styles.verifiedSetupDisclosureTitle}><strong>{label}</strong><small>{role === 'customer' ? 'Fund the payer and open its outbound channel.' : 'Fund the recipient and open its channel.'}</small></span>
-      <span className={styles.verifiedSetupDisclosureStatus}><i className={`${styles.statusDot} ${channelReady ? styles.statusSuccess : actionState.pending ? styles.statusWaiting : styles.statusIdle}`}/><b>{status}</b></span>
+      <span className={styles.verifiedSetupDisclosureStatus} data-tone={participantState.tone}><i className={`${styles.statusDot} ${participantState.tone === 'success' ? styles.statusSuccess : participantState.tone === 'waiting' ? styles.statusWaiting : styles.statusIdle}`}/><b>{participantState.label}</b></span>
       <i aria-hidden="true" className={styles.verifiedSetupChevron}/>
     </button>
     {expanded && <div className={styles.verifiedSetupDisclosureBody}>
@@ -524,7 +546,7 @@ function VerifiedSetupParticipant({
       </div>
       <div className={styles.verifiedSetupTask}>
         <div className={styles.paymentFlowBody}><strong>{actionLabels.open}</strong><label><input aria-label={`${label} channel funding amount in CKB`} disabled readOnly value={channelAmount}/><span>CKB</span></label></div>
-        <button className={`${styles.channelButton} ${styles.demoAction} ${nodePrepared && fundingReady && !actionState.disabled ? styles.demoPrimaryAction : ''}`} disabled={locked || !nodePrepared || !fundingReady || actionState.disabled} onClick={() => void open()} type="button">{actionState.label}</button>
+        <SetupActionHint id={`verified-${role}-channel-requirement`} label={`Open ${label} channel requirements`} reason={channelRequirement}><button className={`${styles.channelButton} ${styles.demoAction} ${nodePrepared && fundingReady && !actionState.disabled ? styles.demoPrimaryAction : ''}`} disabled={locked || !nodePrepared || !fundingReady || actionState.disabled} onClick={() => void open()} type="button">{actionState.label}</button></SetupActionHint>
       </div>
       {channelHistory.length > 0 && <div className={styles.channelTimeline}><span>Observed channel lifecycle</span><div>{channelHistory.map((state, index) => <span key={`${state}-${index}`}>{index > 0 && <i aria-hidden="true">→</i>}<b>{state}</b></span>)}{expectedChannelState && <span aria-label={`Waiting for ${expectedChannelState}`} className={styles.pendingChannelState}><i aria-hidden="true">→</i><b>{expectedChannelState}</b></span>}</div></div>}
     </div>}
@@ -543,6 +565,11 @@ function VerifiedInboundSetup({
   const channel = findReusableChannel(runtime.channels, bottlePeer.pubkey);
   const inboundLiquidity = channel ? BigInt(channel.remote_balance) : 0n;
   const inboundReady = inboundLiquidity >= BigInt(ckbToHex(inboundSeedAmount));
+  const inboundRequirement = setupInboundActionRequirement({
+    channelReady,
+    inboundReady,
+    busy: Boolean(runtime.busy),
+  });
   const prepareInbound = async () => {
     const result = await runtime.run('prepare inbound liquidity', async (node) => {
       const submitted = await node.sendPayment({
@@ -560,7 +587,7 @@ function VerifiedInboundSetup({
   return <div className={styles.paymentFlow}>
     <div className={styles.paymentFlowNumber}>4</div>
     <div className={styles.paymentFlowBody}><strong>Prepare Solver C to receive</strong><span>{inboundReady ? `${hexToCkb(inboundLiquidity)} CKB is available on Bottle's side.` : `Move ${inboundSeedAmount} CKB to Bottle's side so Solver C has inbound liquidity.`}</span></div>
-    <button className={`${styles.paymentButton} ${styles.demoAction} ${channelReady && !inboundReady ? styles.demoPrimaryAction : ''}`} disabled={!channelReady || inboundReady || Boolean(runtime.busy)} onClick={() => void prepareInbound()} type="button">{runtime.busy === 'prepare inbound liquidity' ? 'Moving funds…' : inboundReady ? 'Ready to receive' : 'Move funds'}</button>
+    <SetupActionHint id="verified-inbound-requirement" label="Move funds requirements" reason={inboundRequirement}><button className={`${styles.paymentButton} ${styles.demoAction} ${channelReady && !inboundReady ? styles.demoPrimaryAction : ''}`} disabled={!channelReady || inboundReady || Boolean(runtime.busy)} onClick={() => void prepareInbound()} type="button">{runtime.busy === 'prepare inbound liquidity' ? 'Moving funds…' : inboundReady ? 'Ready to receive' : 'Move funds'}</button></SetupActionHint>
   </div>;
 }
 
@@ -611,8 +638,9 @@ function FiberHoldInvoiceExperience({ variant }: { variant: TutorialVariant }) {
   const [jobStatus, setJobStatus] = useState<JobStatus>('Draft');
   const [selectedSampleId, setSelectedSampleId] = useState<VerificationSampleId>('within-limits');
   const [reviewStep, setReviewStep] = useState<number | null>(null);
-  const [expandedSetupRole, setExpandedSetupRole] = useState<SetupRole | null>('customer');
+  const [expandedSetupRole, setExpandedSetupRole] = useState<SetupRole | null>(null);
   const [preparingNodes, setPreparingNodes] = useState(false);
+  const [preparingSetupRole, setPreparingSetupRole] = useState<SetupRole | null>(null);
   const [paymentAttempting, setPaymentAttempting] = useState(false);
   const [paymentAttemptError, setPaymentAttemptError] = useState('');
   const [allocationResult, setAllocationResult] = useState<AllocationResult | null>(null);
@@ -641,6 +669,7 @@ function FiberHoldInvoiceExperience({ variant }: { variant: TutorialVariant }) {
   const nodesPrepared = Boolean(
     sender.nodeInfo && receiver.nodeInfo && senderConnected && receiverConnected,
   );
+  const participantLocks = setupParticipantLocks(nodesPrepared);
 
   const prepareVerifiedNodes = useCallback(async () => {
     if (sender.isolationReady === false || receiver.isolationReady === false) {
@@ -653,12 +682,14 @@ function FiberHoldInvoiceExperience({ variant }: { variant: TutorialVariant }) {
         customerRunning: Boolean(sender.nodeRef.current),
         solverRunning: Boolean(receiver.nodeRef.current),
       });
+      setPreparingSetupRole(roles[0] ?? null);
       await Promise.all(roles.map((role) => role === 'customer' ? sender.start() : receiver.start()));
       const participants = [
         { label: 'Customer A', runtime: sender, setStage: setSenderStage },
         { label: 'Solver C', runtime: receiver, setStage: setReceiverStage },
       ] as const;
       const connections = await prepareSetupRolesInOrder(['customer', 'solver'], async (role) => {
+        setPreparingSetupRole(role);
         const { label, runtime, setStage } = role === 'customer' ? participants[0] : participants[1];
         if (!runtime.nodeRef.current) return false;
         const currentPeers = (await runtime.nodeRef.current.listPeers()).peers;
@@ -682,6 +713,7 @@ function FiberHoldInvoiceExperience({ variant }: { variant: TutorialVariant }) {
         addEvent('Customer A and Solver C are running and connected');
       }
     } finally {
+      setPreparingSetupRole(null);
       setPreparingNodes(false);
     }
   }, [addEvent, receiver, sender]);
@@ -999,6 +1031,7 @@ npm run dev`}</code></pre>
     setReviewStep((current) => current !== null && current >= resultStep ? null : current);
   }, [resultStep]);
   const activeSetupDisclosure = setupDisclosureRole({
+    nodesPrepared,
     customerReady: senderReady,
     solverReady: isChannelReady(receiverChannel),
   });
@@ -1071,8 +1104,8 @@ npm run dev`}</code></pre>
                   <button className={`${styles.startButton} ${styles.demoAction} ${!nodesPrepared ? styles.demoPrimaryAction : ''}`} disabled={preparingNodes || nodesPrepared} onClick={sender.isolationReady === false || receiver.isolationReady === false ? () => window.location.reload() : () => void prepareVerifiedNodes()} type="button">{preparingNodes ? 'Preparing…' : sender.isolationReady === false || receiver.isolationReady === false ? 'Reload to enable WASM' : nodesPrepared ? 'Nodes running' : 'Prepare nodes'}</button>
                 </div>
                 <div className={styles.verifiedSetupDisclosures}>
-                  <VerifiedSetupParticipant addEvent={addEvent} expanded={expandedSetupRole === 'customer'} label="Customer A" onToggle={() => setExpandedSetupRole((current) => current === 'customer' ? null : 'customer')} runtime={sender} setStage={setSenderStage} stage={senderStage}/>
-                  <VerifiedSetupParticipant addEvent={addEvent} expanded={expandedSetupRole === 'solver'} label="Solver C" locked={!senderReady} onToggle={() => setExpandedSetupRole((current) => current === 'solver' ? null : 'solver')} runtime={receiver} setStage={setReceiverStage} stage={receiverStage}/>
+                  <VerifiedSetupParticipant addEvent={addEvent} expanded={expandedSetupRole === 'customer'} label="Customer A" locked={participantLocks.customer} nodeStarting={preparingNodes && preparingSetupRole === 'customer'} onToggle={() => setExpandedSetupRole((current) => current === 'customer' ? null : 'customer')} runtime={sender} setStage={setSenderStage} stage={senderStage}/>
+                  <VerifiedSetupParticipant addEvent={addEvent} expanded={expandedSetupRole === 'solver'} label="Solver C" locked={participantLocks.solver} nodeStarting={preparingNodes && preparingSetupRole === 'solver'} onToggle={() => setExpandedSetupRole((current) => current === 'solver' ? null : 'solver')} runtime={receiver} setStage={setReceiverStage} stage={receiverStage}/>
                 </div>
                 <VerifiedInboundSetup addEvent={addEvent} channelReady={isChannelReady(receiverChannel)} runtime={receiver}/>
               </div>

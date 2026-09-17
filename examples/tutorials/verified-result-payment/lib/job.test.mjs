@@ -105,16 +105,137 @@ test('allows a channel retry only before submission or after a terminal failure'
 
 test('advances the default setup disclosure without removing either participant', () => {
   assert.equal(
-    job.setupDisclosureRole?.({ customerReady: false, solverReady: false }),
+    job.setupDisclosureRole?.({
+      nodesPrepared: false,
+      customerReady: false,
+      solverReady: false,
+    }),
+    null,
+  );
+  assert.equal(
+    job.setupDisclosureRole?.({
+      nodesPrepared: true,
+      customerReady: false,
+      solverReady: false,
+    }),
     'customer',
   );
   assert.equal(
-    job.setupDisclosureRole?.({ customerReady: true, solverReady: false }),
+    job.setupDisclosureRole?.({
+      nodesPrepared: true,
+      customerReady: true,
+      solverReady: false,
+    }),
     'solver',
   );
   assert.equal(
-    job.setupDisclosureRole?.({ customerReady: true, solverReady: true }),
+    job.setupDisclosureRole?.({
+      nodesPrepared: true,
+      customerReady: true,
+      solverReady: true,
+    }),
     null,
+  );
+});
+
+test('keeps participant headers scoped to the browser node lifecycle', () => {
+  const cases = [
+    {
+      input: { nodeRunning: false, nodeStarting: false, channelReady: false, pendingLabel: null },
+      expected: { label: 'Waiting for nodes', tone: 'idle' },
+    },
+    {
+      input: { nodeRunning: false, nodeStarting: true, channelReady: false, pendingLabel: null },
+      expected: { label: 'Starting node…', tone: 'waiting' },
+    },
+    {
+      input: { nodeRunning: true, nodeStarting: false, channelReady: false, pendingLabel: null },
+      expected: { label: 'Node running', tone: 'success' },
+    },
+    {
+      input: { nodeRunning: true, nodeStarting: false, channelReady: false, pendingLabel: 'Waiting for CHANNEL_READY' },
+      expected: { label: 'Node running', tone: 'success' },
+    },
+    {
+      input: { nodeRunning: true, nodeStarting: false, channelReady: true, pendingLabel: null },
+      expected: { label: 'Node running', tone: 'success' },
+    },
+  ];
+
+  for (const { input, expected } of cases) {
+    assert.deepEqual(job.setupParticipantState?.(input), expected);
+  }
+});
+
+test('explains only the unmet prerequisites for disabled setup actions', () => {
+  assert.equal(
+    job.setupChannelActionRequirement?.({
+      role: 'customer',
+      nodePrepared: false,
+      fundingReady: false,
+      actionPending: false,
+      channelReady: false,
+    }),
+    'Prepare both browser nodes before opening a channel.',
+  );
+  assert.equal(
+    job.setupChannelActionRequirement?.({
+      role: 'solver',
+      nodePrepared: true,
+      fundingReady: false,
+      actionPending: false,
+      channelReady: false,
+    }),
+    "Fund Solver C's on-chain address with at least 499 CKB, then select Refresh.",
+  );
+  assert.equal(
+    job.setupChannelActionRequirement?.({
+      role: 'solver',
+      nodePrepared: true,
+      fundingReady: true,
+      actionPending: true,
+      channelReady: false,
+    }),
+    null,
+  );
+  assert.equal(
+    job.setupInboundActionRequirement?.({
+      channelReady: false,
+      inboundReady: false,
+      busy: false,
+    }),
+    "Open Solver C's channel and wait for CHANNEL_READY.",
+  );
+  assert.equal(
+    job.setupInboundActionRequirement?.({
+      channelReady: true,
+      inboundReady: false,
+      busy: false,
+    }),
+    null,
+  );
+});
+
+test('unlocks Customer A and Solver C together after both nodes start', () => {
+  assert.deepEqual(
+    job.setupParticipantLocks?.(false),
+    { customer: true, solver: true },
+  );
+  assert.deepEqual(
+    job.setupParticipantLocks?.(true),
+    { customer: false, solver: false },
+  );
+});
+
+test('tracks simultaneous channel openings independently', () => {
+  const idle = { customer: false, solver: false };
+  const customerOpening = job.updateOpeningRoles?.(idle, 'customer', true);
+  const bothOpening = job.updateOpeningRoles?.(customerOpening, 'solver', true);
+
+  assert.deepEqual(bothOpening, { customer: true, solver: true });
+  assert.deepEqual(
+    job.updateOpeningRoles?.(bothOpening, 'customer', false),
+    { customer: false, solver: true },
   );
 });
 

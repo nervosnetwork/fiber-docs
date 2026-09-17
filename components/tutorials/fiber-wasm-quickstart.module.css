@@ -3255,6 +3255,14 @@
   color: #eeeeee;
 }
 
+.verifiedSetupReviewGrid section > header .verifiedStatusValue {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font: 700 11px/1 var(--font-inter, sans-serif);
+}
+
 .verifiedReviewSummary .verifiedSetupReviewGrid dl {
   display: grid;
   grid-template-columns: 1fr;
@@ -3393,8 +3401,12 @@
   flex: 0 0 auto;
 }
 
-.verifiedSetupDisclosure[data-ready='true'] .verifiedSetupDisclosureStatus {
+.verifiedSetupDisclosureStatus[data-tone='success'] {
   color: var(--status-success);
+}
+
+.verifiedSetupDisclosureStatus[data-tone='waiting'] {
+  color: var(--status-warning);
 }
 
 .verifiedSetupChevron {

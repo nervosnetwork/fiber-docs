@@ -134,14 +134,79 @@ export function nextSetupRole({
 }
 
 export function setupDisclosureRole({
+  nodesPrepared,
   customerReady,
   solverReady,
 }: {
+  nodesPrepared: boolean;
   customerReady: boolean;
   solverReady: boolean;
 }): SetupRole | null {
+  if (!nodesPrepared) return null;
   const role = nextSetupRole({ customerReady, solverReady });
   return role === 'complete' ? null : role;
+}
+
+export function setupParticipantLocks(nodesPrepared: boolean) {
+  const locked = !nodesPrepared;
+  return { customer: locked, solver: locked };
+}
+
+export function setupParticipantState({
+  nodeRunning,
+  nodeStarting,
+}: {
+  nodeRunning: boolean;
+  nodeStarting: boolean;
+}) {
+  if (nodeRunning) return { label: 'Node running', tone: 'success' } as const;
+  if (nodeStarting) return { label: 'Starting node…', tone: 'waiting' } as const;
+  return { label: 'Waiting for nodes', tone: 'idle' } as const;
+}
+
+export function setupChannelActionRequirement({
+  role,
+  nodePrepared,
+  fundingReady,
+  actionPending,
+  channelReady,
+}: {
+  role: SetupRole;
+  nodePrepared: boolean;
+  fundingReady: boolean;
+  actionPending: boolean;
+  channelReady: boolean;
+}) {
+  if (actionPending || channelReady) return null;
+  if (!nodePrepared) return 'Prepare both browser nodes before opening a channel.';
+  if (!fundingReady) {
+    const participant = role === 'customer' ? 'Customer A' : 'Solver C';
+    return `Fund ${participant}'s on-chain address with at least 499 CKB, then select Refresh.`;
+  }
+  return null;
+}
+
+export function setupInboundActionRequirement({
+  channelReady,
+  inboundReady,
+  busy,
+}: {
+  channelReady: boolean;
+  inboundReady: boolean;
+  busy: boolean;
+}) {
+  if (busy || inboundReady) return null;
+  return channelReady
+    ? null
+    : "Open Solver C's channel and wait for CHANNEL_READY.";
+}
+
+export function updateOpeningRoles(
+  openingRoles: Record<SetupRole, boolean>,
+  role: SetupRole,
+  opening: boolean,
+) {
+  return { ...openingRoles, [role]: opening };
 }
 
 export function channelActionState({
