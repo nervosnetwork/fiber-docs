@@ -349,7 +349,7 @@ export const showcaseProjects: ShowcaseProject[] = [
     description:
       "Bruno-based end-to-end request examples from the main Fiber repo.",
     githubUrl:
-      "https://github.com/nervosnetwork/fiber/tree/develop/tests/bruno/e2e",
+      "https://github.com/nervosnetwork/fiber/tree/v0.9.1/tests/bruno/e2e",
     category: "Testing & QA",
     tags: ["E2E Testing", "Bruno"],
     language: "Rust",

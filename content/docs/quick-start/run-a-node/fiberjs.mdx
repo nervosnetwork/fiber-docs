@@ -4,8 +4,8 @@ description: "Run a Fiber node directly in your browser app"
 date: 2026-08-17
 dependencies:
   - name: Fiber JS
-    minVersion: "0.9.0"
-    link: "https://www.npmjs.com/package/@nervosnetwork/fiber-js/v/0.9.0"
+    minVersion: "0.9.1"
+    link: "https://www.npmjs.com/package/@nervosnetwork/fiber-js/v/0.9.1"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -69,18 +69,18 @@ The examples below use `npm`. If your project already uses `pnpm`, use the equiv
 ## Installation
 
 ```bash
-npm install @nervosnetwork/fiber-js@0.9.0
+npm install @nervosnetwork/fiber-js@0.9.1
 # or
-pnpm add @nervosnetwork/fiber-js@0.9.0
+pnpm add @nervosnetwork/fiber-js@0.9.1
 ```
 
-Download the v0.9.0 Testnet config (the same template included in the native release archives) and serve it from your app:
+Download the v0.9.1 Testnet config (the same template included in the native release archives) and serve it from your app:
 
 ```bash
 mkdir -p public/fiber-config
 curl --fail --location \
   --output public/fiber-config/testnet.yml \
-  https://raw.githubusercontent.com/nervosnetwork/fiber/v0.9.0/config/testnet/config.yml
+  https://raw.githubusercontent.com/nervosnetwork/fiber/v0.9.1/config/testnet/config.yml
 ```
 
 The native template contains TCP bootnodes, which browsers cannot reach. Edit the existing `fiber` fields in `testnet.yml` to use browser-reachable WSS peers and avoid announcing a browser-local address. For example:
@@ -146,7 +146,7 @@ console.log("Node started:", info);
 console.log("Connected peers:", await fiber.listPeers());
 ```
 
-> **Expected Output:** The node initializes, connects to a configured `/ws/` or `/wss/` peer, and starts syncing. `nodeInfo()` returns your node's pubkey, `version: "0.9.0"`, and chain info; `listPeers()` should report at least one peer when the selected public node is reachable.
+> **Expected Output:** The node initializes, connects to a configured `/ws/` or `/wss/` peer, and starts syncing. `nodeInfo()` returns your node's pubkey, `version: "0.9.1"`, and chain info; `listPeers()` should report at least one peer when the selected public node is reachable.
 
 ## Common Workflows
 

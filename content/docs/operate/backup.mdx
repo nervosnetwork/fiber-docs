@@ -1,32 +1,36 @@
 ---
 title: Fiber Node Backup
-description: "Back up and restore Fiber v0.9.0 node data"
-date: 2026-08-17
+description: "Back up and restore Fiber v0.9.1 node data"
+date: 2026-09-14
 author: "gpBlockchain"
 authorUrl: "https://github.com/gpBlockchain"
 dependencies:
   - name: Fiber Node
-    minVersion: "0.9.0"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.0"
+    minVersion: "0.9.1"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.1"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
 ## TL;DR
 
-Fiber v0.9.0 creates online backups automatically under
+Fiber v0.9.1 creates online backups automatically under
 `$BASE_DIR/fiber/backups/<timestamp>`. Enable the `admin` RPC module when you
 also need an immediate manual backup. To restore one of these backup
 directories, stop the node, run `fnn --restore <backup-directory>`, and then
 start the node normally with the same `FIBER_SECRET_KEY_PASSWORD`.
 
-## What a v0.9.0 Backup Contains
+## What a v0.9.1 Backup Contains
 
 Each timestamped native-node backup contains:
 
 - `db/` — a consistent RocksDB checkpoint of the Fiber store;
 - `key` — the encrypted CKB private-key file; and
 - `sk` — the Fiber network identity key.
+
+<Callout type="info" title="Nodes created by the installer">
+Back up the entire install directory. The Unix bootstrap installer uses `~/.fiber` by default; guided Unix and Windows installs use the directory you selected. After restoring it, run `./start-node.sh` on Linux/macOS or `.\start-node.ps1` on Windows and provide the same `FIBER_SECRET_KEY_PASSWORD`.
+</Callout>
 
 The backup does not contain `config.yml` or your
 `FIBER_SECRET_KEY_PASSWORD`. Store those separately in an encrypted location.
@@ -35,7 +39,7 @@ funds.
 
 ## Automatic Online Backups
 
-When the Fiber service is running, v0.9.0 schedules a backup every 24 hours.
+When the Fiber service is running, v0.9.1 schedules a backup every 24 hours.
 Important channel-state changes pull the next backup forward so it normally
 runs within 60 seconds. The default location is:
 
@@ -115,14 +119,14 @@ tar -zxvf node1.tar.gz
 FIBER_SECRET_KEY_PASSWORD='YOUR_PASSWORD' ./fnn -c ./node1/config.yml -d ./node1
 ```
 
-## Restore a v0.9.0 Online Backup
+## Restore a v0.9.1 Online Backup
 
 Stop the node before restoring. Pass the timestamped directory itself—not its
 `db` subdirectory—to `--restore`.
 
-<Callout type="warning" title="v0.9.0 native restore workaround">
+<Callout type="warning" title="v0.9.1 native restore requirement">
   Restore into the stopped node's existing, initialized base directory. The
-  v0.9.0 native binary cannot restore into an empty base directory, and its
+  v0.9.1 native binary cannot restore into an empty base directory, and its
   read-only `fiber/sk` file prevents an in-place restore unless you make that
   file writable first. The restored key returns to read-only mode.
 </Callout>
@@ -151,9 +155,9 @@ is spendable merely because it exists in `list_channels`.
 
 ## Cross-Version Restore
 
-### From v0.8.x to v0.9.0
+### From v0.8.x to v0.9.1
 
-For a complete v0.8.x data-directory backup, extract it and start the v0.9.0
+For a complete v0.8.x data-directory backup, extract it and start the v0.9.1
 binary. Fiber detects the older database and runs the supported migration on
 startup after confirmation.
 
@@ -162,11 +166,11 @@ tar -zxvf node1.tar.gz
 FIBER_SECRET_KEY_PASSWORD='YOUR_PASSWORD' ./fnn -c ./node1/config.yml -d ./node1
 ```
 
-### From v0.7.x or Older to v0.9.0
+### From v0.7.x or Older to v0.9.1
 
 Databases older than version `20260302100001` cannot migrate directly with the
-v0.9.0 `fnn` binary. First use the v0.8.x `fnn-migrate` tool to upgrade the
-database, then start v0.9.0:
+v0.9.1 `fnn` binary. First use the v0.8.x `fnn-migrate` tool to upgrade the
+database, then start v0.9.1:
 
 ```bash
 ./fnn-migrate -d ./node1

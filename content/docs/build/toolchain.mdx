@@ -53,7 +53,7 @@ The Fiber ecosystem includes several tools and libraries that serve different ro
 
 ### fnn — Rust Native Node
 
-[fnn](https://github.com/nervosnetwork/fiber) is the reference implementation of the Fiber Network Node, written in Rust. It runs as a native binary on Linux, macOS, and Windows. In the Fiber source tree, the `fnn` binary is built from [`crates/fiber-bin`](https://github.com/nervosnetwork/fiber/tree/main/crates/fiber-bin), which depends on the shared [`crates/fiber-lib`](https://github.com/nervosnetwork/fiber/tree/main/crates/fiber-lib) crate.
+[fnn](https://github.com/nervosnetwork/fiber) is the reference implementation of the Fiber Network Node, written in Rust. It runs as a native binary on Linux, macOS, and Windows. In the Fiber source tree, the `fnn` binary is built from [`crates/fiber-bin`](https://github.com/nervosnetwork/fiber/tree/v0.9.1/crates/fiber-bin), which depends on the shared [`crates/fiber-lib`](https://github.com/nervosnetwork/fiber/tree/v0.9.1/crates/fiber-lib) crate.
 
 **Choose fnn if**:
 - You want to run a production node on a server
@@ -62,9 +62,9 @@ The Fiber ecosystem includes several tools and libraries that serve different ro
 
 ### fiber-js — Browser WASM Node
 
-[fiber-js](https://github.com/nervosnetwork/fiber/tree/main/fiber-js) is the JavaScript/TypeScript API layer above Fiber WASM. It is bundled for browser runtime environments, starts Web Workers for the Fiber node and IndexedDB storage, and exposes common Fiber node operations through a JS API. It also targets modern mobile browsers that support WebAssembly, Web Workers, and IndexedDB, so browser wallets and dApps can offer Fiber functionality on mobile devices without a native app.
+[fiber-js](https://github.com/nervosnetwork/fiber/tree/v0.9.1/fiber-js) is the JavaScript/TypeScript API layer above Fiber WASM. It is bundled for browser runtime environments, starts Web Workers for the Fiber node and IndexedDB storage, and exposes common Fiber node operations through a JS API. It also targets modern mobile browsers that support WebAssembly, Web Workers, and IndexedDB, so browser wallets and dApps can offer Fiber functionality on mobile devices without a native app.
 
-The browser stack has one more layer than the native stack: application code calls `@nervosnetwork/fiber-js`, `fiber-js` loads [`crates/fiber-wasm`](https://github.com/nervosnetwork/fiber/tree/main/crates/fiber-wasm) through a worker, and `fiber-wasm` wraps the same shared `fiber-lib` node core with `wasm-bindgen`.
+The browser stack has one more layer than the native stack: application code calls `@nervosnetwork/fiber-js`, `fiber-js` loads [`crates/fiber-wasm`](https://github.com/nervosnetwork/fiber/tree/v0.9.1/crates/fiber-wasm) through a worker, and `fiber-wasm` wraps the same shared `fiber-lib` node core with `wasm-bindgen`.
 
 `fiber-js` is close to the Fiber RPC shape for common channel, peer, invoice, payment, graph, and info workflows, but it is not a full replacement for `fnn`. The native `fnn` binary remains the more complete choice for long-running nodes, production operations, CCH, watchtower, profiling, and other advanced node scenarios.
 
@@ -132,13 +132,13 @@ The native, WASM, and FFI runtimes have different operational surfaces. Native `
 
 ### fnn-cli
 
-[fnn-cli](https://github.com/nervosnetwork/fiber/tree/main/crates/fiber-cli) is the official command-line tool for managing a Fiber node. It supports both one-shot commands and an interactive REPL with tab completion.
+[fnn-cli](https://github.com/nervosnetwork/fiber/tree/v0.9.1/crates/fiber-cli) is the official command-line tool for managing a Fiber node. It supports both one-shot commands and an interactive REPL with tab completion.
 
 ### Storage Migration
 
-Storage version checking is part of the shared Fiber node startup path. Native `fnn`, `fiber-wasm`, and `fiber-ffi` all call the store opening path from [`crates/fiber-lib`](https://github.com/nervosnetwork/fiber/tree/main/crates/fiber-lib), which initializes the version for a new store and refuses to open an incompatible or older store that needs migration.
+Storage version checking is part of the shared Fiber node startup path. Native `fnn`, `fiber-wasm`, and `fiber-ffi` all call the store opening path from [`crates/fiber-lib`](https://github.com/nervosnetwork/fiber/tree/v0.9.1/crates/fiber-lib), which initializes the version for a new store and refuses to open an incompatible or older store that needs migration.
 
-Starting from v0.9.0, migration is built into the `fnn` binary and runs automatically on startup when needed (with user confirmation). The standalone `fnn-migrate` binary, previously built from the [`migrate`](https://github.com/nervosnetwork/fiber/tree/main/migrate) directory, was deprecated and removed in v0.9.0. For databases created before v0.8.x (database version older than `20260302100001`), you must first upgrade using the v0.8.x `fnn-migrate` tool before starting the current `fnn` binary. See the [backup guide](/docs/operate/backup) for details.
+Starting from v0.9.0, migration is built into the `fnn` binary and runs automatically on startup when needed (with user confirmation). The standalone `fnn-migrate` binary, previously built from the [`migrate`](https://github.com/nervosnetwork/fiber/tree/v0.8.0/migrate) directory, was deprecated and removed in v0.9.0. For databases created before v0.8.x (database version older than `20260302100001`), you must first upgrade using the v0.8.x `fnn-migrate` tool before starting the current `fnn` binary. See the [backup guide](/docs/operate/backup) for details.
 
 ## Cryptography & On-Chain Scripts
 
