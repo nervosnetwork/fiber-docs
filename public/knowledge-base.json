@@ -3285,10 +3285,10 @@
     },
     {
       "id": "chunk-469",
-      "title": "Settle a Verified Agent Job",
-      "content": "import { FiberVerifiedAgentJobTutorial } from '@/components/tutorials/fiber-hold-invoice';\n\n<FiberVerifiedAgentJobTutorial />",
-      "url": "/docs/build/verified-agent-job",
-      "source": "docs/build/verified-agent-job.mdx"
+      "title": "Pay for a Verified Result",
+      "content": "import { FiberVerifiedResultPaymentTutorial } from '@/components/tutorials/fiber-hold-invoice';\n\n<FiberVerifiedResultPaymentTutorial />",
+      "url": "/docs/build/verified-result-payment",
+      "source": "docs/build/verified-result-payment.mdx"
     },
     {
       "id": "chunk-470",

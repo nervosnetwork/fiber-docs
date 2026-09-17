@@ -9,11 +9,11 @@ export async function createVerifierLock() {
   return { preimage: toHex(preimage), paymentHash: toHex(new Uint8Array(digest)) };
 }
 
-export async function releaseSettlement(
-  worker: FiberBrowserNode,
+export async function releasePayment(
+  solver: FiberBrowserNode,
   paymentHash: `0x${string}`,
   preimage: `0x${string}`,
 ) {
-  await worker.settleInvoice({ payment_hash: paymentHash, payment_preimage: preimage });
-  return worker.waitForInvoiceStatus(paymentHash, 'Paid', { timeout: 30_000, interval: 500 });
+  await solver.settleInvoice({ payment_hash: paymentHash, payment_preimage: preimage });
+  return solver.waitForInvoiceStatus(paymentHash, 'Paid', { timeout: 30_000, interval: 500 });
 }

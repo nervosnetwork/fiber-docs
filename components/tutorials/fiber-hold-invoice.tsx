@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   Channel,
@@ -17,6 +18,7 @@ import {
   findReusableChannel,
   hexToCkb,
   samePubkey,
+  shorten,
   useFiberRoutingNode,
 } from './fiber-routing-runtime';
 import {
@@ -26,41 +28,54 @@ import {
   progressFromChannelState,
 } from './fiber-tutorial-utils';
 import styles from './fiber-wasm-quickstart.module.css';
+import {
+  appendObservedChannelState,
+  channelActionState,
+  groupVerificationChecks,
+  paymentDecision,
+  peerConnectionRecoveryMessage,
+  paymentRecoveryState,
+  paymentReceipt,
+  participantStatusLabel,
+  prepareSetupRolesInOrder,
+  nextObservedChannelState,
+  rolesToPrepare,
+  resultStatusLabel,
+  selectReviewStep,
+  selectVerificationSample,
+  setupActionLabels,
+  setupDisclosureRole,
+  setupParticipantSummary,
+  shouldPollPaymentSession,
+  type ResultStatus as JobStatus,
+  type SetupRole,
+  type TutorialVariant,
+  tutorialNodeConfiguration,
+  type VerificationSampleId,
+  verificationSimulationNotice,
+  verificationSamples,
+  verifiedResultStep,
+} from '../../examples/tutorials/verified-result-payment/lib/job';
 
 const channelAmount = '499';
 const inboundSeedAmount = '5';
 
-type TutorialVariant = 'hold-invoice' | 'verified-agent-job';
-type JobStatus =
-  | 'Draft'
-  | 'Funded'
-  | 'Running'
-  | 'Submitted'
-  | 'Verified'
-  | 'Rejected'
-  | 'Settled';
-type WorkerResult = { routeA: number; routeB: number; routeC: number };
+type AllocationResult = { routeA: number; routeB: number; routeC: number };
 type VerificationCheck = { label: string; passed: boolean };
 
-const validWorkerResult: WorkerResult = { routeA: 120, routeB: 100, routeC: 80 };
-const faultyWorkerResult: WorkerResult = { routeA: 150, routeB: 100, routeC: 50 };
+const verifiedResultSteps = ['Set up', 'Hold payment', 'Verify result', 'Outcome'];
 
-function verifyWorkerResult(result: WorkerResult): VerificationCheck[] {
-  const values = [result.routeA, result.routeB, result.routeC];
+function verifyAllocationResult(result: AllocationResult): VerificationCheck[] {
   return [
     {
       label: 'Result has exactly the required JSON fields',
       passed: Object.keys(result).sort().join(',') === 'routeA,routeB,routeC',
     },
-    {
-      label: 'Every allocation is a non-negative integer',
-      passed: values.every((value) => Number.isInteger(value) && value >= 0),
-    },
     { label: 'Route A stays within 120 CKB', passed: result.routeA <= 120 },
     { label: 'Route B stays within 100 CKB', passed: result.routeB <= 100 },
     { label: 'Route C stays within 80 CKB', passed: result.routeC <= 80 },
     {
-      label: 'The three parts total exactly 300 CKB',
+      label: 'The allocations total exactly 300 CKB',
       passed: result.routeA + result.routeB + result.routeC === 300,
     },
   ];
@@ -172,12 +187,12 @@ const holdSectionCode: Record<string, RoutingCodeFocus> = {
   react: { file: 'app', start: 4, end: 23 },
 };
 
-const verifiedJobCodeFiles: RoutingCodeFile[] = [
+const verifiedResultCodeFiles: RoutingCodeFile[] = [
   {
     id: 'job',
     label: 'lib/job.ts',
     language: 'typescript',
-    code: `export type WorkerResult = {
+    code: `export type AllocationResult = {
   routeA: number;
   routeB: number;
   routeC: number;
@@ -188,17 +203,19 @@ export const job = {
   limits: { routeA: 120, routeB: 100, routeC: 80 },
 };
 
-export function verifyResult(result: WorkerResult) {
-  const values = [result.routeA, result.routeB, result.routeC];
-  const checks = [
-    Object.keys(result).sort().join(',') === 'routeA,routeB,routeC',
-    values.every(value => Number.isInteger(value) && value >= 0),
-    result.routeA <= job.limits.routeA,
-    result.routeB <= job.limits.routeB,
-    result.routeC <= job.limits.routeC,
-    result.routeA + result.routeB + result.routeC === job.amount,
+export const verificationSamples = [
+  { id: 'within-limits', result: { routeA: 120, routeB: 100, routeC: 80 } },
+  { id: 'over-route-a', result: { routeA: 150, routeB: 100, routeC: 50 } },
+];
+
+export function verifyResult(result: AllocationResult) {
+  return [
+    { label: 'Exact result shape', passed: Object.keys(result).sort().join(',') === 'routeA,routeB,routeC' },
+    { label: 'Route A within 120', passed: result.routeA <= job.limits.routeA },
+    { label: 'Route B within 100', passed: result.routeB <= job.limits.routeB },
+    { label: 'Route C within 80', passed: result.routeC <= job.limits.routeC },
+    { label: 'Total equals 300', passed: result.routeA + result.routeB + result.routeC === job.amount },
   ];
-  return { checks, passed: checks.every(Boolean) };
 }`,
   },
   {
@@ -217,13 +234,13 @@ export async function createVerifierLock() {
   return { preimage: toHex(preimage), paymentHash: toHex(new Uint8Array(digest)) };
 }
 
-export async function releaseSettlement(
-  worker: FiberBrowserNode,
+export async function releasePayment(
+  solver: FiberBrowserNode,
   paymentHash: \`0x\${string}\`,
   preimage: \`0x\${string}\`,
 ) {
-  await worker.settleInvoice({ payment_hash: paymentHash, payment_preimage: preimage });
-  return worker.waitForInvoiceStatus(paymentHash, 'Paid', {
+  await solver.settleInvoice({ payment_hash: paymentHash, payment_preimage: preimage });
+  return solver.waitForInvoiceStatus(paymentHash, 'Paid', {
     timeout: 30_000,
     interval: 500,
   });
@@ -233,20 +250,20 @@ export async function releaseSettlement(
     id: 'invoice',
     label: 'lib/job-invoice.ts',
     language: 'typescript',
-    code: `export async function createJobInvoice(worker, paymentHash) {
-  return worker.newInvoice({
+    code: `export async function createResultInvoice(solver, paymentHash) {
+  return solver.newInvoice({
     amount: ckbToHex('1'),
     currency: 'Fibt',
     payment_hash: paymentHash,
     hash_algorithm: 'sha256',
     allow_trampoline_routing: true,
-    description: 'Verified agent job',
+    description: 'Verified route allocation',
     expiry: '0xe10',
   });
 }
 
-export async function fundJob(requester, invoice, receiverChannel) {
-  return requester.sendPayment({
+export async function placePaymentOnHold(customer, invoice, receiverChannel) {
+  return customer.sendPayment({
     invoice,
     hop_hints: [lastHopHint(receiverChannel)],
     max_fee_amount: ckbToHex('1'),
@@ -256,37 +273,55 @@ export async function fundJob(requester, invoice, receiverChannel) {
   },
   {
     id: 'app',
-    label: 'app/verified-job/page.tsx',
+    label: 'app/page.tsx',
     language: 'tsx',
     code: `'use client';
 
-export default function VerifiedJobPage() {
-  const [jobStatus, setJobStatus] = useState('Draft');
-  const [result, setResult] = useState(null);
+export default function VerifiedResultPage() {
+  const [invoiceStatus, setInvoiceStatus] = useState('Open');
+  const [paymentStatus, setPaymentStatus] = useState('Not sent');
+  const [resultStatus, setResultStatus] = useState('Draft');
+  const [selected, setSelected] = useState(verificationSamples[0]);
+  const decision = paymentDecision(selected.result);
 
-  async function verifyAndDecide() {
-    const verification = verifyResult(result);
-    setJobStatus(verification.passed ? 'Verified' : 'Rejected');
-    if (verification.passed) {
-      await releaseSettlement(worker, paymentHash, verifierPreimage);
-      setJobStatus('Settled');
+  async function holdPayment() {
+    const payment = await placePaymentOnHold(customer, invoice, solverChannel);
+    setPaymentStatus(payment.status); // Inflight
+    const received = await solver.waitForInvoiceStatus(paymentHash, 'Received');
+    setInvoiceStatus(received.status);
+  }
+
+  async function verifyAndComplete() {
+    if (invoiceStatus !== 'Received') return;
+    if (decision.action === 'release') {
+      setResultStatus('Verified');
+      await releasePayment(solver, paymentHash, preimage);
+      setResultStatus('Paid');
     } else {
-      await worker.cancelInvoice({ payment_hash: paymentHash });
+      setResultStatus('Rejected');
+      await solver.cancelInvoice({ payment_hash: paymentHash });
     }
   }
 
-  return <JobWorkspace status={jobStatus} onVerify={verifyAndDecide} />;
+  return <>
+    <ResultChoices samples={verificationSamples} onSelect={setSelected} />
+    <CheckPreview result={selected.result} status={resultStatus} />
+    <button onClick={verifyAndComplete}>
+      {decision.actionLabel}
+    </button>
+  </>;
 }`,
   },
 ];
 
-const verifiedJobSectionCode: Record<string, RoutingCodeFocus> = {
+const verifiedResultSectionCode: Record<string, RoutingCodeFocus> = {
   contract: { file: 'job', start: 1, end: 10 },
-  lock: { file: 'verifier', start: 3, end: 10 },
-  fund: { file: 'invoice', start: 1, end: 24 },
-  execute: { file: 'job', start: 12, end: 23 },
-  verify: { file: 'app', start: 6, end: 17 },
-  boundary: { file: 'verifier', start: 12, end: 24 },
+  lock: { file: 'verifier', start: 3, end: 11 },
+  invoice: { file: 'invoice', start: 1, end: 10 },
+  fund: { file: 'invoice', start: 13, end: 20 },
+  lifecycle: { file: 'app', start: 4, end: 15 },
+  verify: { file: 'job', start: 12, end: 25 },
+  decide: { file: 'app', start: 17, end: 27 },
 };
 
 function bytesToHex(bytes: Uint8Array) {
@@ -360,10 +395,209 @@ function SetupNode({
   </div>;
 }
 
+function RefreshIcon() {
+  return <svg aria-hidden="true" className={styles.refreshIcon} fill="none" viewBox="0 0 16 16"><path d="M13 5V2m0 0h-3m3 0-2.1 2.1A5 5 0 1 0 13 9"/></svg>;
+}
+
+function VerificationSampleCards({
+  onSelect,
+  selectedId,
+}: {
+  onSelect: (id: VerificationSampleId) => void;
+  selectedId: VerificationSampleId;
+}) {
+  return <div aria-label="Result examples" className={styles.verificationSampleCards} role="group">
+    {verificationSamples.map((sample) => <label className={styles.verificationSampleCard} data-selected={selectedId === sample.id ? 'true' : 'false'} key={sample.id}><input checked={selectedId === sample.id} name="verification-sample" onChange={() => onSelect(sample.id)} type="radio" value={sample.id}/><span><strong>{sample.label}</strong><small>{selectedId === sample.id ? 'Selected' : 'Select'}</small></span><span className={styles.verificationSampleValues}>{Object.entries(sample.result).map(([route, value]) => <span key={route}><small>{route.replace('route', 'Route ')}</small><b>{value} CKB</b></span>)}</span></label>)}
+  </div>;
+}
+
+function VerificationCriteria({
+  checks,
+}: {
+  checks: ReturnType<typeof groupVerificationChecks>;
+}) {
+  return <div aria-label="Selected result verification" className={styles.verificationCriteria}>
+    {checks.map((check) => <div data-passed={check.passed ? 'true' : 'false'} key={check.label}><i aria-hidden="true">{check.passed ? '✓' : '×'}</i><span>{check.label}</span><strong>{check.rule}</strong></div>)}
+  </div>;
+}
+
+function VerifiedSetupParticipant({
+  addEvent,
+  expanded,
+  label,
+  locked,
+  onToggle,
+  runtime,
+  setStage,
+  stage,
+}: {
+  addEvent: (message: string) => void;
+  expanded: boolean;
+  label: 'Customer A' | 'Solver C';
+  locked?: boolean;
+  onToggle: () => void;
+  runtime: ReturnType<typeof useFiberRoutingNode>;
+  setStage: (stage: ChannelProgressStage) => void;
+  stage: ChannelProgressStage;
+}) {
+  const channel = findReusableChannel(runtime.channels, bottlePeer.pubkey);
+  const [channelHistory, setChannelHistory] = useState<string[]>([]);
+  const role: SetupRole = label === 'Solver C' ? 'solver' : 'customer';
+  const actionLabels = setupActionLabels(role);
+  const channelReady = isChannelReady(channel);
+  const peerConnected = runtime.peers.some((key) => samePubkey(key, bottlePeer.pubkey));
+  const nodePrepared = Boolean(runtime.nodeInfo && peerConnected);
+  const fundingReady = (runtime.balance ?? 0n) >= BigInt(ckbToHex(channelAmount));
+  const actionState = channelActionState({
+    stage,
+    busy: runtime.busy === 'open channel',
+  });
+  const status = locked
+    ? 'Waiting for Customer A'
+    : channelReady
+      ? 'Ready'
+      : actionState.pending
+        ? actionState.label.replace('…', '')
+        : !nodePrepared
+          ? 'Waiting for nodes'
+          : !fundingReady
+            ? 'Needs funding'
+            : 'Ready to open';
+  const currentChannelState = channel?.state.state_name;
+  const expectedChannelState = currentChannelState
+    ? nextObservedChannelState(currentChannelState)
+    : null;
+
+  const open = async () => {
+    const node = runtime.nodeRef.current;
+    if (!node) return;
+    setStage('connecting');
+    const connected = runtime.peers.some((key) => samePubkey(key, bottlePeer.pubkey)) || await runtime.connect(bottlePeer);
+    if (!connected) {
+      setStage('error');
+      return;
+    }
+    const existing = findReusableChannel((await node.listChannels()).channels, bottlePeer.pubkey);
+    if (existing) {
+      setStage(progressFromChannelState(existing));
+      addEvent(`${label} reused ${existing.state.state_name}`);
+      await runtime.refresh();
+      return;
+    }
+    setStage('submitting');
+    const result = await runtime.run('open channel', (current) => current.openChannel({
+      pubkey: bottlePeer.pubkey,
+      funding_amount: ckbToHex(channelAmount),
+      public: true,
+    }));
+    if (!result) {
+      setStage('error');
+      return;
+    }
+    setStage('confirming');
+    addEvent(`${label} channel funding submitted`);
+    await runtime.refresh();
+  };
+
+  useEffect(() => {
+    if (channel) setStage(progressFromChannelState(channel));
+  }, [channel, setStage]);
+
+  useEffect(() => {
+    if (!currentChannelState) return;
+    setChannelHistory((states) =>
+      appendObservedChannelState(states, currentChannelState),
+    );
+  }, [currentChannelState]);
+
+  return <section className={styles.verifiedSetupDisclosure} data-expanded={expanded ? 'true' : 'false'} data-ready={channelReady ? 'true' : 'false'}>
+    <button aria-expanded={expanded} className={styles.verifiedSetupDisclosureHeader} disabled={locked} onClick={onToggle} type="button">
+      <span className={styles.verifiedSetupDisclosureNumber}>{role === 'customer' ? '2' : '3'}</span>
+      <span className={styles.verifiedSetupDisclosureTitle}><strong>{label}</strong><small>{role === 'customer' ? 'Fund the payer and open its outbound channel.' : 'Fund the recipient and open its channel.'}</small></span>
+      <span className={styles.verifiedSetupDisclosureStatus}><i className={`${styles.statusDot} ${channelReady ? styles.statusSuccess : actionState.pending ? styles.statusWaiting : styles.statusIdle}`}/><b>{status}</b></span>
+      <i aria-hidden="true" className={styles.verifiedSetupChevron}/>
+    </button>
+    {expanded && <div className={styles.verifiedSetupDisclosureBody}>
+      <div className={styles.verifiedSetupTask}>
+        <div className={styles.paymentFlowBody}><strong>{actionLabels.fund}</strong><div className={styles.addressLine}><code title={runtime.address}>{shorten(runtime.address)}</code><button aria-label={`Copy ${label} funding address`} className={`${styles.demoAction} ${styles.addressCopyButton}`} disabled={!runtime.address} onClick={() => runtime.address && void navigator.clipboard.writeText(runtime.address)} type="button"><Image alt="" aria-hidden="true" height={15} src="/icon-copy.svg" width={15}/></button></div><span>Balance: <b>{hexToCkb(runtime.balance)} CKB</b> · auto-checks every 5s</span></div>
+        <div className={styles.fundingActions}>{runtime.address ? <a className={`${styles.faucetButton} ${styles.demoAction} ${!fundingReady ? styles.demoPrimaryAction : ''}`} href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Get CKB ↗</a> : <button className={`${styles.faucetButton} ${styles.demoAction}`} disabled type="button">Get CKB ↗</button>}<button className={`${styles.refreshButton} ${styles.demoAction}`} disabled={!runtime.nodeInfo || Boolean(runtime.busy)} onClick={() => void runtime.refresh()} type="button"><RefreshIcon/>Refresh</button></div>
+      </div>
+      <div className={styles.verifiedSetupTask}>
+        <div className={styles.paymentFlowBody}><strong>{actionLabels.open}</strong><label><input aria-label={`${label} channel funding amount in CKB`} disabled readOnly value={channelAmount}/><span>CKB</span></label></div>
+        <button className={`${styles.channelButton} ${styles.demoAction} ${nodePrepared && fundingReady && !actionState.disabled ? styles.demoPrimaryAction : ''}`} disabled={locked || !nodePrepared || !fundingReady || actionState.disabled} onClick={() => void open()} type="button">{actionState.label}</button>
+      </div>
+      {channelHistory.length > 0 && <div className={styles.channelTimeline}><span>Observed channel lifecycle</span><div>{channelHistory.map((state, index) => <span key={`${state}-${index}`}>{index > 0 && <i aria-hidden="true">→</i>}<b>{state}</b></span>)}{expectedChannelState && <span aria-label={`Waiting for ${expectedChannelState}`} className={styles.pendingChannelState}><i aria-hidden="true">→</i><b>{expectedChannelState}</b></span>}</div></div>}
+    </div>}
+  </section>;
+}
+
+function VerifiedInboundSetup({
+  addEvent,
+  channelReady,
+  runtime,
+}: {
+  addEvent: (message: string) => void;
+  channelReady: boolean;
+  runtime: ReturnType<typeof useFiberRoutingNode>;
+}) {
+  const channel = findReusableChannel(runtime.channels, bottlePeer.pubkey);
+  const inboundLiquidity = channel ? BigInt(channel.remote_balance) : 0n;
+  const inboundReady = inboundLiquidity >= BigInt(ckbToHex(inboundSeedAmount));
+  const prepareInbound = async () => {
+    const result = await runtime.run('prepare inbound liquidity', async (node) => {
+      const submitted = await node.sendPayment({
+        target_pubkey: bottlePeer.pubkey,
+        amount: ckbToHex(inboundSeedAmount),
+        keysend: true,
+      });
+      if (submitted.status === 'Success' || submitted.status === 'Failed') return submitted;
+      return node.waitForPayment(submitted.payment_hash, { timeout: 60_000, interval: 1_000 });
+    });
+    if (result?.status === 'Success') addEvent(`${inboundSeedAmount} CKB moved to Bottle's side for Solver C`);
+    await runtime.refresh();
+  };
+
+  return <div className={styles.paymentFlow}>
+    <div className={styles.paymentFlowNumber}>4</div>
+    <div className={styles.paymentFlowBody}><strong>Prepare Solver C to receive</strong><span>{inboundReady ? `${hexToCkb(inboundLiquidity)} CKB is available on Bottle's side.` : `Move ${inboundSeedAmount} CKB to Bottle's side so Solver C has inbound liquidity.`}</span></div>
+    <button className={`${styles.paymentButton} ${styles.demoAction} ${channelReady && !inboundReady ? styles.demoPrimaryAction : ''}`} disabled={!channelReady || inboundReady || Boolean(runtime.busy)} onClick={() => void prepareInbound()} type="button">{runtime.busy === 'prepare inbound liquidity' ? 'Moving funds…' : inboundReady ? 'Ready to receive' : 'Move funds'}</button>
+  </div>;
+}
+
+function VerifiedSetupReview({
+  participants,
+}: {
+  participants: ReturnType<typeof setupParticipantSummary>[];
+}) {
+  return <div className={styles.verifiedReviewSummary}>
+    <span>Set up</span>
+    <h2>Payment route ready</h2>
+    <p>Customer A and Solver C each have a ready channel with Bottle.</p>
+    <div className={styles.verifiedSetupReviewGrid}>
+      {participants.map((participant) => <section key={participant.label}>
+        <header><span>{participant.label}</span><strong className={styles.verifiedStatusValue}><i className={`${styles.statusDot} ${participant.status === 'Ready' ? styles.statusSuccess : styles.statusIdle}`}/><b className={styles.verifiedStatusText}>{participant.status}</b></strong></header>
+        <dl>
+          <div><dt>On-chain balance</dt><dd>{hexToCkb(participant.onChainBalance)} CKB</dd></div>
+          <div><dt>Channel with Bottle</dt><dd>{hexToCkb(participant.channelBalance)} CKB</dd></div>
+          <div><dt>{participant.liquidityLabel}</dt><dd>{hexToCkb(participant.liquidityBalance)} CKB</dd></div>
+        </dl>
+      </section>)}
+    </div>
+  </div>;
+}
+
 function FiberHoldInvoiceExperience({ variant }: { variant: TutorialVariant }) {
-  const verifiedJob = variant === 'verified-agent-job';
-  const sender = useFiberRoutingNode('fiber-docs:multi-hop-sender-v1');
-  const receiver = useFiberRoutingNode('fiber-docs:multi-hop-receiver-v1');
+  const verifiedResult = variant === 'verified-result-payment';
+  const senderConfiguration = tutorialNodeConfiguration(variant, 'customer');
+  const receiverConfiguration = tutorialNodeConfiguration(variant, 'solver');
+  const sender = useFiberRoutingNode(
+    senderConfiguration.profileKey,
+    senderConfiguration.transport,
+  );
+  const receiver = useFiberRoutingNode(
+    receiverConfiguration.profileKey,
+    receiverConfiguration.transport,
+  );
   const [senderStage, setSenderStage] = useState<ChannelProgressStage>('idle');
   const [receiverStage, setReceiverStage] = useState<ChannelProgressStage>('idle');
   const [amount, setAmount] = useState('1');
@@ -374,10 +608,16 @@ function FiberHoldInvoiceExperience({ variant }: { variant: TutorialVariant }) {
   const [invoiceStatus, setInvoiceStatus] = useState<CkbInvoiceStatus | 'None'>('None');
   const [paymentStatus, setPaymentStatus] = useState('Not sent');
   const [events, setEvents] = useState<string[]>([]);
-  const [workerMode, setWorkerMode] = useState<'valid' | 'faulty'>('valid');
   const [jobStatus, setJobStatus] = useState<JobStatus>('Draft');
-  const [workerResult, setWorkerResult] = useState<WorkerResult | null>(null);
+  const [selectedSampleId, setSelectedSampleId] = useState<VerificationSampleId>('within-limits');
+  const [reviewStep, setReviewStep] = useState<number | null>(null);
+  const [expandedSetupRole, setExpandedSetupRole] = useState<SetupRole | null>('customer');
+  const [preparingNodes, setPreparingNodes] = useState(false);
+  const [paymentAttempting, setPaymentAttempting] = useState(false);
+  const [paymentAttemptError, setPaymentAttemptError] = useState('');
+  const [allocationResult, setAllocationResult] = useState<AllocationResult | null>(null);
   const [verificationChecks, setVerificationChecks] = useState<VerificationCheck[]>([]);
+  const selectedSample = verificationSamples.find((sample) => sample.id === selectedSampleId) ?? verificationSamples[0];
   const checking = useRef(false);
   const loggedPaymentResult = useRef('');
   const addEvent = useCallback((message: string) => setEvents((items) => [...items.slice(-10), message]), []);
@@ -387,17 +627,64 @@ function FiberHoldInvoiceExperience({ variant }: { variant: TutorialVariant }) {
     try { return BigInt(ckbToHex(amount)); }
     catch { return 0n; }
   })();
-  const senderReady = isChannelReady(senderChannel) && BigInt(senderChannel?.local_balance ?? '0x0') >= paymentAmount;
-  const receiverReady = isChannelReady(receiverChannel) && BigInt(receiverChannel?.remote_balance ?? '0x0') >= paymentAmount;
+  const senderChannelReady = isChannelReady(senderChannel) && BigInt(senderChannel?.local_balance ?? '0x0') >= paymentAmount;
+  const receiverChannelReady = isChannelReady(receiverChannel) && BigInt(receiverChannel?.remote_balance ?? '0x0') >= paymentAmount;
   const senderConnected = sender.peers.some((key) => samePubkey(key, bottlePeer.pubkey));
   const receiverConnected = receiver.peers.some((key) => samePubkey(key, bottlePeer.pubkey));
+  const senderReady = senderChannelReady && senderConnected;
+  const receiverReady = receiverChannelReady && receiverConnected;
   const routeReady = Boolean(
     senderReady &&
     receiverReady &&
-    senderConnected &&
-    receiverConnected &&
     receiverChannel?.channel_outpoint,
   );
+  const nodesPrepared = Boolean(
+    sender.nodeInfo && receiver.nodeInfo && senderConnected && receiverConnected,
+  );
+
+  const prepareVerifiedNodes = useCallback(async () => {
+    if (sender.isolationReady === false || receiver.isolationReady === false) {
+      window.location.reload();
+      return;
+    }
+    setPreparingNodes(true);
+    try {
+      const roles = rolesToPrepare({
+        customerRunning: Boolean(sender.nodeRef.current),
+        solverRunning: Boolean(receiver.nodeRef.current),
+      });
+      await Promise.all(roles.map((role) => role === 'customer' ? sender.start() : receiver.start()));
+      const participants = [
+        { label: 'Customer A', runtime: sender, setStage: setSenderStage },
+        { label: 'Solver C', runtime: receiver, setStage: setReceiverStage },
+      ] as const;
+      const connections = await prepareSetupRolesInOrder(['customer', 'solver'], async (role) => {
+        const { label, runtime, setStage } = role === 'customer' ? participants[0] : participants[1];
+        if (!runtime.nodeRef.current) return false;
+        const currentPeers = (await runtime.nodeRef.current.listPeers()).peers;
+        const alreadyConnected = currentPeers.some((peer) => samePubkey(peer.pubkey, bottlePeer.pubkey));
+        if (alreadyConnected) {
+          await runtime.refresh();
+          return true;
+        }
+        setStage('connecting');
+        const connected = await runtime.connect(bottlePeer);
+        setStage(connected ? 'idle' : 'error');
+        if (connected) {
+          addEvent(`${label} connected to Bottle`);
+        } else {
+          runtime.setError(peerConnectionRecoveryMessage(bottlePeer.name));
+        }
+        await runtime.refresh();
+        return connected;
+      });
+      if (connections.every(({ ready }) => ready)) {
+        addEvent('Customer A and Solver C are running and connected');
+      }
+    } finally {
+      setPreparingNodes(false);
+    }
+  }, [addEvent, receiver, sender]);
 
   const createInvoice = useCallback(async () => {
     const node = receiver.nodeRef.current;
@@ -410,75 +697,149 @@ function FiberHoldInvoiceExperience({ variant }: { variant: TutorialVariant }) {
       amount: ckbToHex(amount), currency: 'Fibt', payment_hash: nextHash,
       hash_algorithm: 'sha256',
       allow_trampoline_routing: true,
-      description: verifiedJob ? 'Verified agent job tutorial' : 'Browser hold invoice tutorial',
+      description: verifiedResult ? 'Verified route allocation tutorial' : 'Browser hold invoice tutorial',
       expiry: '0xe10',
     }));
     if (!result) return;
-    setInvoice(result.invoice_address); setPasted(''); setPaymentHash(nextHash); setPreimage(nextPreimage);
+    setInvoice(result.invoice_address); setPasted(verifiedResult ? result.invoice_address : ''); setPaymentHash(nextHash); setPreimage(nextPreimage);
     setInvoiceStatus('Open'); setPaymentStatus('Not sent');
-    setJobStatus('Draft'); setWorkerResult(null); setVerificationChecks([]);
-    try { await navigator.clipboard.writeText(result.invoice_address); addEvent(verifiedJob ? 'Verifier created the lock; Worker C copied the job Invoice' : 'Node C created and copied a hold invoice'); }
+    setPaymentAttemptError('');
+    setJobStatus('Draft'); setAllocationResult(null); setVerificationChecks([]);
+    setSelectedSampleId('within-limits');
+    try { await navigator.clipboard.writeText(result.invoice_address); addEvent(verifiedResult ? 'Solver C created the held payment request' : 'Node C created and copied a hold invoice'); }
     catch { addEvent('Invoice created; copy it manually'); }
-  }, [addEvent, amount, receiver, verifiedJob]);
+  }, [addEvent, amount, receiver, verifiedResult]);
 
   const pay = useCallback(async () => {
-    if (!routeReady || !receiverChannel) return;
-    const result = await sender.run('submit held payment', (node) => node.sendPayment({
-      invoice: pasted.trim(),
-      hop_hints: browserLastHop(receiverChannel),
-      max_fee_amount: ckbToHex('1'),
-      max_parts: '0x1',
-    }));
-    if (!result) return;
-    setPaymentStatus(result.status);
-    addEvent(`${verifiedJob ? 'Requester funding' : 'Sender payment'} · ${result.status}`);
-  }, [addEvent, pasted, receiverChannel, routeReady, sender, verifiedJob]);
+    const senderNode = sender.nodeRef.current;
+    const receiverNode = receiver.nodeRef.current;
+    if (!senderNode || !receiverNode || !paymentHash || !pasted.trim() || paymentAttempting) return;
+
+    setPaymentAttempting(true);
+    setPaymentAttemptError('');
+    sender.setError('');
+    receiver.setError('');
+    try {
+      const currentInvoice = await receiverNode.getInvoice({ payment_hash: paymentHash });
+      setInvoiceStatus(currentInvoice.status);
+      const currentRecovery = paymentRecoveryState(currentInvoice.status);
+      if (currentRecovery.action === 'continue') {
+        addEvent('The payment is already on hold; continuing to verification');
+        return;
+      }
+      if (currentRecovery.action === 'recreate') {
+        setPaymentAttemptError(currentRecovery.message ?? 'Create a new payment request to continue.');
+        return;
+      }
+
+      const ensureBottleConnection = async (node: typeof senderNode) => {
+        const connected = (await node.listPeers()).peers.some(
+          (peer) => samePubkey(peer.pubkey, bottlePeer.pubkey),
+        );
+        if (!connected) await node.connectPeer(bottlePeer);
+      };
+      await Promise.all([
+        ensureBottleConnection(senderNode),
+        ensureBottleConnection(receiverNode),
+      ]);
+      await Promise.all([sender.refresh(), receiver.refresh()]);
+
+      const latestReceiverChannel = findReusableChannel(
+        (await receiverNode.listChannels()).channels,
+        bottlePeer.pubkey,
+      );
+      if (
+        !isChannelReady(latestReceiverChannel) ||
+        BigInt(latestReceiverChannel?.remote_balance ?? '0x0') < paymentAmount
+      ) {
+        throw new Error('The refreshed route is not ready yet. Wait a moment, then try again.');
+      }
+
+      const attempt = await sender.run('submit held payment', async (node) => {
+        try {
+          return {
+            payment: await node.sendPayment({
+              invoice: pasted.trim(),
+              hop_hints: browserLastHop(latestReceiverChannel),
+              max_fee_amount: ckbToHex('1'),
+              max_parts: '0x1',
+            }),
+          };
+        } catch (error) {
+          return { error: error instanceof Error ? error.message : String(error) };
+        }
+      });
+      if (!attempt) return;
+      if ('payment' in attempt && attempt.payment) {
+        setPaymentStatus(attempt.payment.status);
+        addEvent(`${verifiedResult ? 'Customer payment' : 'Sender payment'} · ${attempt.payment.status}`);
+        return;
+      }
+
+      const latestInvoice = await receiverNode.getInvoice({ payment_hash: paymentHash });
+      setInvoiceStatus(latestInvoice.status);
+      const recovery = paymentRecoveryState(latestInvoice.status, attempt.error);
+      if (recovery.action === 'continue') {
+        addEvent('The payment reached Solver C; continuing to verification');
+        return;
+      }
+      setPaymentStatus('Not sent');
+      setPaymentAttemptError(recovery.message ?? 'The payment was not submitted. Try again.');
+      addEvent(recovery.action === 'recreate' ? 'The payment request must be recreated' : 'Payment route unavailable; retry is ready');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      let latestStatus = invoiceStatus;
+      try {
+        latestStatus = (await receiverNode.getInvoice({ payment_hash: paymentHash })).status;
+        setInvoiceStatus(latestStatus);
+      } catch {
+        // Keep the last known Invoice state when the receiver cannot be queried.
+      }
+      const recovery = paymentRecoveryState(latestStatus, message);
+      setPaymentStatus('Not sent');
+      setPaymentAttemptError(recovery.message ?? message);
+      addEvent(recovery.action === 'recreate' ? 'The payment request must be recreated' : 'Payment route unavailable; retry is ready');
+    } finally {
+      setPaymentAttempting(false);
+    }
+  }, [addEvent, invoiceStatus, pasted, paymentAmount, paymentAttempting, paymentHash, receiver, sender, verifiedResult]);
 
   const settle = useCallback(async () => {
     if (!paymentHash || !preimage) return;
-    addEvent(verifiedJob ? 'Verifier V is releasing the settlement key…' : 'Receiver is releasing the preimage…');
+    addEvent(verifiedResult ? 'The verification key is being released…' : 'Receiver is releasing the preimage…');
     const result = await receiver.run('settle invoice', async (node) => {
       await node.settleInvoice({ payment_hash: paymentHash, payment_preimage: preimage });
       return node.waitForInvoiceStatus(paymentHash, 'Paid', { timeout: 30_000, interval: 500 });
     });
     if (!result) {
-      addEvent('Settlement did not complete; check the error below');
+      addEvent(verifiedResult ? 'Payment release did not complete; check the error below' : 'Settlement did not complete; check the error below');
       return;
     }
     setInvoiceStatus(result.status);
-    if (verifiedJob) setJobStatus('Settled');
-    addEvent(verifiedJob ? 'Verifier released the key; Worker Invoice · Paid' : 'Receiver Invoice · Paid');
-  }, [addEvent, paymentHash, preimage, receiver, verifiedJob]);
+    if (verifiedResult) setJobStatus('Paid');
+    addEvent(verifiedResult ? 'Payment released to Solver C' : 'Receiver Invoice · Paid');
+  }, [addEvent, paymentHash, preimage, receiver, verifiedResult]);
   const cancel = useCallback(async () => {
     if (!paymentHash) return;
     const result = await receiver.run('cancel invoice', (node) => node.cancelInvoice({ payment_hash: paymentHash }));
     if (result) {
       setInvoiceStatus(result.status);
-      addEvent(verifiedJob ? 'Verifier rejected the result; Worker cancelled the job Invoice' : 'Receiver cancelled the held payment');
+      addEvent(verifiedResult ? 'Payment cancelled; 1 CKB is available to Customer A again' : 'Receiver cancelled the held payment');
     }
-  }, [addEvent, paymentHash, receiver, verifiedJob]);
+  }, [addEvent, paymentHash, receiver, verifiedResult]);
 
-  const runWorker = useCallback(async () => {
+  const verifyAndComplete = useCallback(async (sampleResult: AllocationResult) => {
     if (invoiceStatus !== 'Received') return;
-    setJobStatus('Running');
-    setWorkerResult(null);
-    setVerificationChecks([]);
-    addEvent(`Worker C started the ${workerMode} route-planning job`);
-    await new Promise((resolve) => window.setTimeout(resolve, 650));
-    const result = workerMode === 'valid' ? validWorkerResult : faultyWorkerResult;
-    setWorkerResult(result);
-    setJobStatus('Submitted');
-    addEvent('Worker C submitted a structured JSON result');
-  }, [addEvent, invoiceStatus, workerMode]);
-
-  const runVerification = useCallback(() => {
-    if (!workerResult) return;
-    const checks = verifyWorkerResult(workerResult);
+    const result = { ...sampleResult };
+    const checks = verifyAllocationResult(result);
     const passed = checks.every((check) => check.passed);
+    setAllocationResult(result);
     setVerificationChecks(checks);
     setJobStatus(passed ? 'Verified' : 'Rejected');
-    addEvent(passed ? 'Verifier V passed every deterministic check' : 'Verifier V rejected the result; settlement key stays hidden');
-  }, [addEvent, workerResult]);
+    addEvent(passed ? 'Result verified; releasing 1 CKB to Solver C' : 'Result rejected; cancelling the held payment');
+    if (passed) await settle();
+    else await cancel();
+  }, [addEvent, cancel, invoiceStatus, settle]);
 
   useEffect(() => {
     if (!paymentHash) return;
@@ -486,13 +847,13 @@ function FiberHoldInvoiceExperience({ variant }: { variant: TutorialVariant }) {
       if (checking.current) return; checking.current = true;
       try {
         if (receiver.nodeRef.current) setInvoiceStatus((await receiver.nodeRef.current.getInvoice({ payment_hash: paymentHash })).status);
-        if (sender.nodeRef.current) setPaymentStatus((await sender.nodeRef.current.getPayment({ payment_hash: paymentHash })).status);
+        if (sender.nodeRef.current && shouldPollPaymentSession(paymentStatus)) setPaymentStatus((await sender.nodeRef.current.getPayment({ payment_hash: paymentHash })).status);
       } catch { /* The sender may not know the payment until it is submitted. */ }
       finally { checking.current = false; }
     };
     void check(); const timer = window.setInterval(() => void check(), 2_000);
     return () => window.clearInterval(timer);
-  }, [paymentHash, receiver.nodeRef, sender.nodeRef]);
+  }, [paymentHash, paymentStatus, receiver.nodeRef, sender.nodeRef]);
 
   useEffect(() => {
     if (paymentStatus !== 'Success' && paymentStatus !== 'Failed') return;
@@ -502,9 +863,9 @@ function FiberHoldInvoiceExperience({ variant }: { variant: TutorialVariant }) {
   }, [addEvent, paymentStatus]);
 
   useEffect(() => {
-    if (!verifiedJob || invoiceStatus !== 'Received' || jobStatus !== 'Draft') return;
+    if (!verifiedResult || invoiceStatus !== 'Received' || jobStatus !== 'Draft') return;
     setJobStatus('Funded');
-  }, [invoiceStatus, jobStatus, verifiedJob]);
+  }, [invoiceStatus, jobStatus, verifiedResult]);
 
   const holdArticle = <>
     <header className={styles.hero} data-tutorial-section="intro"><div className={styles.eyebrow}><span>Conditional payments</span><span className={styles.eyebrowRule}/><span>20 minute tutorial</span></div><h1>Build a Conditional Payment with a Hold Invoice</h1><p className={styles.lead}>Pause an Invoice payment at the receiver, inspect its pending state, then explicitly settle or cancel it.</p><div className={styles.heroMeta}><span>Hold Invoice</span><span>Settle</span><span>Cancel</span></div></header>
@@ -515,14 +876,94 @@ function FiberHoldInvoiceExperience({ variant }: { variant: TutorialVariant }) {
     <section className={styles.section} data-tutorial-section="react"><div className={styles.stepLabel}><span>5</span> Wire React</div><h2>Expose the pending state as an explicit action</h2><p>The interface enables Settle and Cancel only after the receiver reports <code>Received</code>, preventing an accidental early decision.</p><small className={styles.fileReference}>app/hold/page.tsx · lines 4–23</small></section>
   </>;
 
-  const verifiedJobArticle = <>
-    <header className={styles.hero} data-tutorial-section="intro"><div className={styles.eyebrow}><span>Agent commerce</span><span className={styles.eyebrowRule}/><span>25 minute tutorial</span></div><h1>Settle a Verified Agent Job</h1><p className={styles.lead}>Fund an AI Worker with a real Fiber Hold Invoice, verify its structured result, and reveal the settlement key only after every rule passes.</p><div className={styles.heroMeta}><span>Agent job</span><span>Verifier</span><span>Conditional settlement</span></div></header>
-    <section className={styles.section} data-tutorial-section="contract"><div className={styles.stepLabel}><span>1</span> Define a verifiable job</div><h2>Turn an open-ended request into deterministic checks</h2><p>The Requester asks a Worker to allocate 300 CKB across three routes. Each route has a hard capacity, the result has an exact JSON shape, and the allocations must total 300. These rules make acceptance reproducible.</p><small className={styles.fileReference}>lib/job.ts · lines 1–10</small></section>
-    <section className={styles.section} data-tutorial-section="lock"><div className={styles.stepLabel}><span>2</span> Create the settlement lock</div><h2>Let the Verifier control the secret</h2><p>Verifier V generates a random preimage <code>K</code> and publishes only <code>SHA256(K)</code>. Worker C creates a Hold Invoice using that hash, so neither the Worker nor the Fiber node can settle before the Verifier releases <code>K</code>.</p><div className={styles.note}><strong>Who is the Verifier?</strong><p>In this tutorial it is transparent deterministic code running in your browser. In production it can be a TEE-attested service, an optimistic committee, a zk-proof verifier, or a domain-specific oracle.</p></div><small className={styles.fileReference}>lib/verifier.ts · lines 3–10</small></section>
-    <section className={styles.section} data-tutorial-section="fund"><div className={styles.stepLabel}><span>3</span> Fund without settling</div><h2>Lock the Requester payment in flight</h2><p>Requester A pays the job Invoice through Bottle. Worker C reports <code>Received</code>, while the Requester payment remains <code>Inflight</code>. The funds are committed, but the Worker cannot collect them yet.</p><small className={styles.fileReference}>lib/job-invoice.ts · lines 1–24</small></section>
-    <section className={styles.section} data-tutorial-section="execute"><div className={styles.stepLabel}><span>4</span> Execute the job</div><h2>Submit a machine-checkable result</h2><p>Choose the valid or faulty Worker path. Both return plausible JSON and both total 300 CKB, but the faulty result exceeds Route A&apos;s capacity. This demonstrates why verification must inspect constraints, not only totals.</p><small className={styles.fileReference}>lib/job.ts · lines 12–23</small></section>
-    <section className={styles.section} data-tutorial-section="verify"><div className={styles.stepLabel}><span>5</span> Verify and decide</div><h2>Map the verdict to one settlement action</h2><p>If every check passes, Verifier V reveals <code>K</code> and Worker C settles the Invoice. If any check fails, the key remains hidden and the tutorial cancels the Invoice, returning the held liquidity.</p><small className={styles.fileReference}>app/verified-job/page.tsx · lines 6–17</small></section>
-    <section className={styles.section} data-tutorial-section="boundary"><div className={styles.stepLabel}><span>6</span> Choose a trust model</div><h2>Keep payment atomic; make verification explicit</h2><p>Fiber guarantees that a valid preimage settles the held payment. It does not decide whether an AI result is correct. Your application must define who runs the Verifier, how evidence is authenticated, and how timeouts or disputes are handled.</p><div className={styles.note}><strong>Production boundary</strong><p>Do not keep the settlement key in frontend state for a real marketplace. Put it behind the chosen verifier&apos;s authenticated release policy and persist the job state server-side.</p></div><small className={styles.fileReference}>lib/verifier.ts · lines 12–24</small></section>
+  const verifiedResultArticle = <>
+    <section className={styles.section} data-tutorial-section="intro">
+      <div className={styles.stepLabel}>How it works</div>
+      <h2>Pay for a result your application can verify</h2>
+      <p>A customer needs exactly 300 CKB allocated across three routes. The payment is placed on hold before Solver C submits an answer. Deterministic code checks the answer, then the application either releases the payment or cancels it.</p>
+      <div className={styles.note}><strong>What happens in the demo?</strong><p>The 1 CKB Hold Invoice payment runs on Fiber Testnet. The 300 CKB allocation is a simulated work result; no 300 CKB transfer occurs.</p></div>
+    </section>
+    <section className={styles.section} data-tutorial-section="contract">
+      <div className={styles.stepLabel}><span>1</span> Define the acceptance rules</div>
+      <h2>Make the result unambiguous</h2>
+      <p>The result must contain the three required route amounts. Route A can receive at most 120 CKB, Route B at most 100 CKB, and Route C at most 80 CKB. Together they must equal 300 CKB.</p>
+      <p>These constraints matter more than the kind of software or person producing the result. Any solver can participate as long as it returns the agreed structure.</p>
+      <small className={styles.fileReference}>lib/job.ts · lines 1–10</small>
+    </section>
+    <section className={styles.section} data-tutorial-section="lock">
+      <div className={styles.stepLabel}><span>2</span> Create the payment lock</div>
+      <h2>Keep the release key outside the Invoice</h2>
+      <p>The application generates a random preimage <code>K</code> and puts only <code>SHA256(K)</code> in the Hold Invoice. Solver C can see that a 1 CKB payment is waiting, but cannot claim it without the key.</p>
+      <small className={styles.fileReference}>lib/verifier.ts · lines 3–11</small>
+    </section>
+    <section className={styles.section} data-tutorial-section="invoice">
+      <div className={styles.stepLabel}><span>3</span> Create the Hold Invoice</div>
+      <h2>Encode the payment condition</h2>
+      <p><code>createResultInvoice()</code> requests 1 CKB and includes the payment hash, <code>sha256</code> algorithm, one-hour expiry, and trampoline-routing support. Because the preimage stays in the application, the Invoice can reach <code>Received</code> but cannot settle automatically.</p>
+      <small className={styles.fileReference}>lib/job-invoice.ts · lines 1–10</small>
+    </section>
+    <section className={styles.section} data-tutorial-section="fund">
+      <div className={styles.stepLabel}><span>4</span> Route the held payment</div>
+      <h2>Commit the payment before accepting work</h2>
+      <p>Customer A submits the Invoice with a private Bottle → Solver C last-hop hint. This lets the browser nodes use the newly opened receiver channel without waiting for public gossip, while <code>max_parts: &apos;0x1&apos;</code> keeps the example to one payment part.</p>
+      <small className={styles.fileReference}>lib/job-invoice.ts · lines 13–20</small>
+    </section>
+    <section className={styles.section} data-tutorial-section="lifecycle">
+      <div className={styles.stepLabel}><span>5</span> Track the held state</div>
+      <h2>Keep payment and result states separate</h2>
+      <p>The receiver Invoice becomes <code>Received</code> while Customer A&apos;s payment remains <code>Inflight</code>. That combination proves the payment is committed; it does not say whether the result is valid. The application therefore tracks the result independently and unlocks a decision only after the Invoice reaches <code>Received</code>.</p>
+      <small className={styles.fileReference}>app/page.tsx · lines 4–15</small>
+    </section>
+    <section className={styles.section} data-tutorial-section="verify">
+      <div className={styles.stepLabel}><span>6</span> Verify the result</div>
+      <h2>Keep work delivery separate from payment transport</h2>
+      <p>Solver C returns the route values through the application; Fiber carries only the payment. Customer A runs <code>verifyResult()</code> against the selected values, and the interface groups those checks into result format, route limits, and required total. Result #1 and Result #2 are hard-coded samples rather than output from a live solver.</p>
+      <small className={styles.fileReference}>lib/job.ts · lines 12–25</small>
+    </section>
+    <section className={styles.section} data-tutorial-section="decide">
+      <div className={styles.stepLabel}><span>7</span> Release or cancel payment</div>
+      <h2>Map the verdict to one payment action</h2>
+      <p>The handler first requires the Invoice to be <code>Received</code>. When every check passes, it reveals <code>K</code> and releases 1 CKB to Solver C; when any check fails, it cancels the Invoice and makes the held 1 CKB available to Customer A again. The final Outcome step is a read-only receipt.</p>
+      <div className={styles.note}><strong>Fiber does not judge the result</strong><p>Fiber validates the Invoice and preimage. Your application defines the rules, authenticates the submitted result, and decides when the preimage may be released.</p></div>
+      <small className={styles.fileReference}>app/page.tsx · lines 17–27</small>
+    </section>
+    <section className={styles.section} data-tutorial-section="use-cases">
+      <div className={styles.stepLabel}>More ways to use it</div>
+      <h2>Where verified-result payments fit</h2>
+      <p>This pattern works when acceptance can be decided from explicit evidence:</p>
+      <ul className={styles.scenarioList}>
+        <li><strong>Computation:</strong> release payment when an output matches a reproducible calculation or proof.</li>
+        <li><strong>Automated quality checks:</strong> pay after a build, test suite, or data-validation job passes.</li>
+        <li><strong>Milestone delivery:</strong> release a tranche after signed artifacts and required checks arrive.</li>
+        <li><strong>Oracle-backed outcomes:</strong> pay when an authenticated data source confirms the agreed condition.</li>
+      </ul>
+      <p>It is a poor fit for work that is mainly subjective unless the parties also define a reviewer, dispute process, and timeout policy.</p>
+    </section>
+    <section className={styles.section} data-tutorial-section="local">
+      <div className={styles.stepLabel}>Optional local setup</div>
+      <h2>Run the complete project locally</h2>
+      <p>
+        Select <strong>Download project</strong> in the top-right corner, or{' '}
+        <a
+          className={styles.inlineDownloadLink}
+          download
+          href="/downloads/fiber-verified-result-payment.zip"
+        >
+          download here
+        </a>
+        . The archive already contains the Next.js application, Fiber integration,
+        browser headers, and interface shown here. After extracting it, open the
+        project directory and run:
+      </p>
+      <div className={styles.setupCodeBlock}>
+        <div className={styles.setupCodeHeader}><span>Terminal</span></div>
+        <pre><code>{`npm install
+npm run dev`}</code></pre>
+      </div>
+      <p className={styles.followupParagraph}>
+        Then open <code>http://localhost:3000</code> in your browser.
+      </p>
+    </section>
   </>;
 
   const canDecide = invoiceStatus === 'Received';
@@ -538,49 +979,163 @@ function FiberHoldInvoiceExperience({ variant }: { variant: TutorialVariant }) {
       : invoiceStatus === 'Cancelled'
         ? 'Cancelled'
         : 'Waiting for payment';
-  const senderLabel = verifiedJob ? 'Requester A' : 'Payer A';
-  const receiverLabel = verifiedJob ? 'Worker C' : 'Receiver C';
-  const decisionReady = verifiedJob ? jobStatus === 'Verified' : canDecide;
-  const rejectionReady = verifiedJob ? jobStatus === 'Rejected' : canDecide;
-  const liveDemo = <>
-    <div className={styles.panelHeader}><span><i className={styles.liveDot}/> {verifiedJob ? 'Verified Agent Job · Testnet' : 'Conditional Testnet flow'}</span><button className={styles.headerAction} onClick={() => { void sender.refresh(); void receiver.refresh(); }}>Refresh both</button></div>
-    <div className={`${styles.previewStage} ${styles.paymentPreviewStage}`}>
+  const receipt = invoiceStatus === 'Paid' || invoiceStatus === 'Cancelled'
+    ? paymentReceipt(invoiceStatus)
+    : null;
+  const resultStep = verifiedResultStep({
+    setupReady: routeReady,
+    hasPaymentRequest: Boolean(invoice),
+    invoiceStatus,
+  });
+  const displayedResultStep = reviewStep !== null && reviewStep < resultStep
+    ? reviewStep
+    : resultStep;
+  const reviewingPreviousStep = displayedResultStep < resultStep;
+  const chooseResultStep = (requestedStep: number) => {
+    const selectedStep = selectReviewStep(resultStep, requestedStep);
+    setReviewStep(selectedStep < resultStep ? selectedStep : null);
+  };
+  useEffect(() => {
+    setReviewStep((current) => current !== null && current >= resultStep ? null : current);
+  }, [resultStep]);
+  const activeSetupDisclosure = setupDisclosureRole({
+    customerReady: senderReady,
+    solverReady: isChannelReady(receiverChannel),
+  });
+  useEffect(() => {
+    setExpandedSetupRole(activeSetupDisclosure);
+  }, [activeSetupDisclosure]);
+  const setupReviewParticipants = [
+    setupParticipantSummary({
+      role: 'customer',
+      onChainBalance: sender.balance,
+      localBalance: BigInt(senderChannel?.local_balance ?? '0x0'),
+      remoteBalance: BigInt(senderChannel?.remote_balance ?? '0x0'),
+      channelReady: isChannelReady(senderChannel),
+    }),
+    setupParticipantSummary({
+      role: 'solver',
+      onChainBalance: receiver.balance,
+      localBalance: BigInt(receiverChannel?.local_balance ?? '0x0'),
+      remoteBalance: BigInt(receiverChannel?.remote_balance ?? '0x0'),
+      channelReady: isChannelReady(receiverChannel),
+    }),
+  ];
+  const groupedVerificationChecks = groupVerificationChecks(verificationChecks);
+  const selectedVerificationChecks = verifyAllocationResult({ ...selectedSample.result });
+  const selectedGroupedChecks = groupVerificationChecks(selectedVerificationChecks);
+  const selectedDecision = paymentDecision({ ...selectedSample.result });
+  const paymentRecovery = paymentRecoveryState(invoiceStatus, paymentAttemptError);
+  const chooseVerificationSample = (requestedId: VerificationSampleId) => {
+    const nextId = selectVerificationSample(selectedSampleId, requestedId);
+    setSelectedSampleId(nextId);
+  };
+  const resetVerifiedResult = () => {
+    setInvoice('');
+    setPasted('');
+    setPaymentHash('');
+    setPreimage('');
+    setInvoiceStatus('None');
+    setPaymentStatus('Not sent');
+    setPaymentAttemptError('');
+    setJobStatus('Draft');
+    setAllocationResult(null);
+    setVerificationChecks([]);
+    setSelectedSampleId('within-limits');
+    setReviewStep(null);
+  };
+
+  const verifiedLiveDemo = <div className={styles.channelDemoSurface}>
+    <div className={styles.paymentPreviewStage}>
       <div className={styles.paymentCard}>
-        <div className={styles.routeStatusGrid}><div><span>{senderLabel}</span><strong>{sender.nodeState}</strong></div><div><span>{receiverLabel}</span><strong>{receiver.nodeState}</strong></div><div><span>Invoice</span><strong>{invoiceStatus}</strong></div><div><span>{verifiedJob ? 'Job' : 'Payment'}</span><strong>{verifiedJob ? jobStatus : paymentStatus}</strong></div></div>
-        <SetupNode addEvent={addEvent} label={senderLabel} runtime={sender} setStage={setSenderStage} stage={senderStage}/>
-        <SetupNode addEvent={addEvent} label={receiverLabel} receiver runtime={receiver} setStage={setReceiverStage} stage={receiverStage}/>
-        {(senderReady && receiverReady) && <div className={`${styles.holdRouteRow} ${routeReady ? styles.holdRouteReady : ''}`} aria-live="polite"><div><span>Private last hop</span><strong>{routeReady ? 'Payment route ready' : 'Reconnect the selected peers'}</strong><small>{routeReady ? `${senderLabel} can route through Bottle to ${receiverLabel} with the receiver channel hint.` : 'Both channels have liquidity. Refresh or restart the nodes to reconnect them to Bottle.'}</small></div><div className={styles.holdRouteBadge}>{routeReady ? '✓ A → Bottle → C' : 'Waiting for peers'}</div></div>}
-        {verifiedJob && <div className={styles.jobContract}>
-          <div className={styles.jobContractHeader}><div><span>Job contract · Route allocation</span><strong>Allocate exactly 300 CKB</strong></div><code>deterministic-v1</code></div>
-          <div className={styles.jobLimits}><div><span>Route A</span><strong>≤ 120</strong></div><div><span>Route B</span><strong>≤ 100</strong></div><div><span>Route C</span><strong>≤ 80</strong></div><div><span>Required total</span><strong>= 300</strong></div></div>
-        </div>}
-        <div className={styles.invoiceTransfer}><div className={styles.invoiceSide}><span>{receiverLabel} · {verifiedJob ? 'Job Invoice' : 'Hold'}</span><label><input disabled={!receiverReady} inputMode="decimal" onChange={(e) => setAmount(e.target.value)} value={amount}/><i>CKB</i></label><button disabled={!receiverReady || Boolean(receiver.busy)} onClick={() => void createInvoice()}>{receiver.busy === 'create hold invoice' ? 'Creating…' : verifiedJob ? 'Create locked job Invoice' : 'Create hold invoice & copy'}</button><textarea readOnly placeholder="Held Invoice appears here" value={invoice}/></div><div className={styles.invoiceTransferArrow}><span>Copy</span><b>→</b><span>Fund</span></div><div className={styles.invoiceSide}><span>{senderLabel} · {verifiedJob ? 'Fund' : 'Pay'}</span><textarea onChange={(e) => setPasted(e.target.value)} placeholder="Paste the hold Invoice" value={pasted}/><button disabled={!invoice} onClick={async () => { try { setPasted((await navigator.clipboard.readText()).trim()); } catch { /* manual paste remains available */ } }}>Paste from clipboard</button><button className={styles.paymentButton} disabled={!senderReady || !routeReady || !pasted.trim() || Boolean(sender.busy)} onClick={() => void pay()}>{sender.busy === 'submit held payment' ? 'Submitting…' : !routeReady ? 'Waiting for route…' : verifiedJob ? 'Fund agent job' : 'Submit held payment'}</button>{paymentStatus !== 'Not sent' && <div aria-live="polite" className={`${styles.holdPayerStatus} ${payerFinished ? styles.holdPayerSuccess : payerRejected ? styles.holdPayerRejected : ''}`}><i/><div><strong>{payerFinished ? 'Payment completed' : payerRejected ? 'Payment not completed' : verifiedJob ? 'Funding locked' : `Waiting for ${receiverLabel}`}</strong><span>{payerFinished ? `${receiverLabel} received the settlement preimage.` : payerRejected ? 'The Invoice was cancelled or expired.' : verifiedJob ? 'The Hold Invoice is waiting for a Verifier verdict.' : `Your payment is held. ${receiverLabel} must settle or cancel it.`}</span></div></div>}</div></div>
-        {verifiedJob && <div className={styles.jobWorkspace}>
-          <div className={styles.jobPanel}><div className={styles.jobPanelHeader}><div><span>Worker C · Execution</span><strong>{jobStatus === 'Running' ? 'Computing…' : workerResult ? 'Result submitted' : 'Awaiting funded job'}</strong></div><div className={styles.jobModeSelector}><button aria-pressed={workerMode === 'valid'} disabled={jobStatus === 'Running'} onClick={() => setWorkerMode('valid')}>Valid result</button><button aria-pressed={workerMode === 'faulty'} disabled={jobStatus === 'Running'} onClick={() => setWorkerMode('faulty')}>Faulty result</button></div></div><button className={styles.jobPrimaryAction} disabled={!canDecide || jobStatus === 'Running' || jobStatus === 'Settled'} onClick={() => void runWorker()}>{jobStatus === 'Running' ? 'Running Worker…' : 'Run Worker C'}</button><pre className={styles.jobResult}>{workerResult ? JSON.stringify(workerResult, null, 2) : '// Worker result will appear here'}</pre></div>
-          <div className={styles.jobPanel}><div className={styles.jobPanelHeader}><div><span>Verifier V · Deterministic checks</span><strong>{jobStatus === 'Verified' ? 'Passed' : jobStatus === 'Rejected' ? 'Rejected' : 'Not evaluated'}</strong></div><code>K: {jobStatus === 'Verified' || jobStatus === 'Settled' ? `${preimage.slice(0, 12)}…` : 'hidden'}</code></div><button className={styles.jobPrimaryAction} disabled={jobStatus !== 'Submitted'} onClick={runVerification}>Run verification</button><div className={styles.jobChecks}>{verificationChecks.length ? verificationChecks.map((check) => <div className={check.passed ? styles.jobCheckPassed : styles.jobCheckFailed} key={check.label}><i>{check.passed ? '✓' : '×'}</i><span>{check.label}</span></div>) : <p>Checks unlock after Worker C submits a result.</p>}</div></div>
-        </div>}
-        <div className={styles.holdDecisionPanel}>
-          <div><span>{verifiedJob ? 'Verifier V · Settlement policy' : `${receiverLabel} · Decision`}</span><strong>{verifiedJob ? jobStatus : receiverDecision}</strong><p>{verifiedJob ? jobStatus === 'Verified' ? 'Every rule passed. The settlement key can now be released to Worker C.' : jobStatus === 'Rejected' ? 'At least one rule failed. The key remains hidden; cancel the held Invoice.' : invoiceStatus === 'Paid' ? 'Worker C settled the verified job atomically.' : invoiceStatus === 'Cancelled' ? 'The rejected job was cancelled and held liquidity was released.' : 'Fund the Invoice, run the Worker, then execute the deterministic Verifier.' : canDecide ? 'The payment has arrived. Release the preimage to complete it, or cancel and return the pending liquidity.' : invoiceStatus === 'Paid' ? `The preimage was released and ${senderLabel} can verify success.` : invoiceStatus === 'Cancelled' ? `The held payment was rejected and ${senderLabel} can verify the failure.` : 'These actions unlock when the Invoice reaches Received.'}</p></div>
-          <div className={styles.holdDecisionActions}><button className={styles.holdSettleButton} disabled={!decisionReady || Boolean(receiver.busy)} onClick={() => void settle()}>{receiver.busy === 'settle invoice' ? 'Settling…' : invoiceStatus === 'Paid' ? 'Settled ✓' : verifiedJob ? 'Release key & settle' : 'Settle payment'}</button><button className={styles.holdCancelButton} disabled={!rejectionReady || Boolean(receiver.busy)} onClick={() => void cancel()}>{receiver.busy === 'cancel invoice' ? 'Cancelling…' : invoiceStatus === 'Cancelled' ? 'Cancelled ✓' : verifiedJob ? 'Reject & cancel' : 'Cancel payment'}</button></div>
+        <div className={`${styles.paymentStatusGrid} ${styles.verifiedStatusGrid}`}>
+          <div><span>Customer A</span><strong className={styles.verifiedStatusValue}><i className={`${styles.statusDot} ${sender.nodeInfo ? styles.statusSuccess : styles.statusIdle}`}/><b className={styles.verifiedStatusText}>{participantStatusLabel({ nodeRunning: Boolean(sender.nodeInfo), roleReady: senderReady })}</b></strong></div>
+          <div><span>Solver C</span><strong className={styles.verifiedStatusValue}><i className={`${styles.statusDot} ${receiver.nodeInfo ? styles.statusSuccess : styles.statusIdle}`}/><b className={styles.verifiedStatusText}>{participantStatusLabel({ nodeRunning: Boolean(receiver.nodeInfo), roleReady: receiverReady })}</b></strong></div>
+          <div><span>Invoice</span><strong className={styles.verifiedStatusValue}><i className={`${styles.statusDot} ${invoiceStatus === 'Paid' ? styles.statusSuccess : invoiceStatus === 'Cancelled' ? styles.statusError : invoiceStatus === 'Received' ? styles.statusWaiting : styles.statusIdle}`}/><b className={styles.verifiedStatusText}>{invoiceStatus}</b></strong></div>
+          <div><span>Result</span><strong className={styles.verifiedStatusValue}><i className={`${styles.statusDot} ${jobStatus === 'Verified' || jobStatus === 'Paid' ? styles.statusSuccess : jobStatus === 'Rejected' ? styles.statusError : jobStatus === 'Submitted' ? styles.statusWaiting : styles.statusIdle}`}/><b className={styles.verifiedStatusText}>{resultStatusLabel(jobStatus)}</b></strong></div>
         </div>
+
+        <ol className={styles.verifiedResultProgress} aria-label="Tutorial progress">
+          {verifiedResultSteps.map((label, index) => <li data-state={index < resultStep ? 'done' : index === resultStep ? 'current' : 'upcoming'} data-viewing={index === displayedResultStep ? 'true' : 'false'} key={label}><button aria-current={index === displayedResultStep ? 'step' : undefined} disabled={index > resultStep} onClick={() => chooseResultStep(index)} type="button"><i>{index < resultStep ? '✓' : index + 1}</i><span>{label}</span></button></li>)}
+        </ol>
+
+        {reviewingPreviousStep && <div className={styles.verifiedReviewBar}><span>Reviewing: {verifiedResultSteps[displayedResultStep]}</span><button onClick={() => setReviewStep(null)} type="button">Return to current step</button></div>}
+
+        <section className={`${styles.verifiedResultStage} ${displayedResultStep === 0 && !reviewingPreviousStep ? styles.verifiedSetupStage : ''} ${displayedResultStep === 1 ? styles.verifiedPaymentStage : ''}`}>
+          {displayedResultStep === 0 && <>
+            {reviewingPreviousStep ? <VerifiedSetupReview participants={setupReviewParticipants}/> : <>
+              <div className={styles.verifiedSetupNode}>
+                <div className={styles.paymentFlow}>
+                  <div className={styles.paymentFlowNumber}>1</div>
+                  <div className={styles.paymentFlowBody}><strong>Start Customer A and Solver C</strong><span>Starts two local browser nodes and connects both to Bottle.</span></div>
+                  <button className={`${styles.startButton} ${styles.demoAction} ${!nodesPrepared ? styles.demoPrimaryAction : ''}`} disabled={preparingNodes || nodesPrepared} onClick={sender.isolationReady === false || receiver.isolationReady === false ? () => window.location.reload() : () => void prepareVerifiedNodes()} type="button">{preparingNodes ? 'Preparing…' : sender.isolationReady === false || receiver.isolationReady === false ? 'Reload to enable WASM' : nodesPrepared ? 'Nodes running' : 'Prepare nodes'}</button>
+                </div>
+                <div className={styles.verifiedSetupDisclosures}>
+                  <VerifiedSetupParticipant addEvent={addEvent} expanded={expandedSetupRole === 'customer'} label="Customer A" onToggle={() => setExpandedSetupRole((current) => current === 'customer' ? null : 'customer')} runtime={sender} setStage={setSenderStage} stage={senderStage}/>
+                  <VerifiedSetupParticipant addEvent={addEvent} expanded={expandedSetupRole === 'solver'} label="Solver C" locked={!senderReady} onToggle={() => setExpandedSetupRole((current) => current === 'solver' ? null : 'solver')} runtime={receiver} setStage={setReceiverStage} stage={receiverStage}/>
+                </div>
+                <VerifiedInboundSetup addEvent={addEvent} channelReady={isChannelReady(receiverChannel)} runtime={receiver}/>
+              </div>
+            </>}
+          </>}
+          {displayedResultStep === 1 && <>
+            <div className={styles.verifiedAgreement}><div><span>Job title</span><strong>Allocate exactly 300 CKB</strong></div><span className={styles.verifiedCriteriaLabel}>Verification criteria</span><dl><div><dt>Route A</dt><dd>≤ 120</dd></div><div><dt>Route B</dt><dd>≤ 100</dd></div><div><dt>Route C</dt><dd>≤ 80</dd></div><div><dt>Total</dt><dd>= 300</dd></div></dl></div>
+            <div className={styles.verifiedHoldExplanation}><code>K</code><div><strong>The release key stays private</strong><span>Once placed on hold, Customer A&apos;s 1 CKB stays pending. A passing result reveals K; a failing result cancels the payment.</span></div></div>
+            <div className={`${styles.testnetNotice} ${styles.verifiedPaymentNotice}`}><strong>Testnet CKB</strong><span>This payment uses 1 Testnet CKB.</span></div>
+            {reviewingPreviousStep ? <div className={styles.verifiedReviewState}><span>Payment request</span><strong>{invoiceStatus === 'None' ? 'Created and funded' : invoiceStatus}</strong><p>The 1 CKB payment request was created and submitted before the result was accepted.</p></div> : !invoice ? <button className={styles.verifiedPrimaryAction} disabled={Boolean(receiver.busy)} onClick={() => void createInvoice()}>{receiver.busy === 'create hold invoice' ? 'Creating payment request…' : 'Create payment request'}</button> : paymentStatus === 'Not sent' ? <div className={styles.verifiedActionBlock}><div><span>Payment request ready</span><code title={invoice}>{invoice.slice(0, 32)}…</code></div>{paymentRecovery.message && <div aria-live="polite" className={styles.verifiedPaymentRecovery}><strong>{paymentRecovery.action === 'recreate' ? 'New request required' : 'Payment not submitted'}</strong><span>{paymentRecovery.message}</span></div>}<button className={styles.verifiedPrimaryAction} disabled={paymentAttempting || Boolean(sender.busy) || Boolean(receiver.busy)} onClick={() => void (paymentRecovery.action === 'recreate' ? createInvoice() : pay())}>{paymentAttempting || sender.busy === 'submit held payment' ? paymentRecovery.action === 'retry' ? 'Refreshing route…' : 'Placing 1 CKB on hold…' : paymentRecovery.actionLabel}</button></div> : <div className={styles.verifiedWaiting}><i className={styles.liveDot}/><div><strong>Waiting for 1 CKB to be held</strong><span>Customer A: {paymentStatus} · Payment request: {invoiceStatus}</span></div></div>}
+          </>}
+          {displayedResultStep === 2 && <>
+            {reviewingPreviousStep && allocationResult ? <><div className={styles.submittedAllocation}>{Object.entries(allocationResult).map(([route, value]) => <div key={route}><span>{route.replace('route', 'Route ')}</span><strong>{value} CKB</strong></div>)}</div><VerificationCriteria checks={groupedVerificationChecks}/></> : <><div className={`${styles.testnetNotice} ${styles.verifiedPaymentNotice}`}><strong>Demo simulation</strong><span>{verificationSimulationNotice}</span></div><VerificationSampleCards onSelect={chooseVerificationSample} selectedId={selectedSampleId}/><VerificationCriteria checks={selectedGroupedChecks}/><button className={selectedDecision.passed ? styles.verifiedPrimaryAction : styles.verifiedCancelAction} disabled={Boolean(receiver.busy)} onClick={() => void verifyAndComplete({ ...selectedSample.result })} type="button">{receiver.busy ? selectedDecision.passed ? 'Releasing 1 CKB…' : 'Cancelling payment…' : selectedDecision.actionLabel}</button></>}
+          </>}
+          {displayedResultStep === 3 && receipt && <div aria-live="polite" className={styles.verifiedReceipt} data-outcome={invoiceStatus.toLowerCase()}><i className={styles.verifiedReceiptMark}>{invoiceStatus === 'Paid' ? '✓' : '↩'}</i><span>{receipt.statusLabel}</span><h2>{receipt.title}</h2><p>{receipt.description}</p><dl><div><dt>Result</dt><dd>{receipt.result}</dd></div><div><dt>Invoice</dt><dd>{invoiceStatus}</dd></div><div><dt>Final payment</dt><dd>{receipt.payment}</dd></div></dl><button onClick={resetVerifiedResult}>Start another payment</button></div>}
+        </section>
         {(sender.error || receiver.error) && <div className={styles.paymentError}>{sender.error || receiver.error}</div>}
       </div>
-      <div className={styles.eventPanel}><div className={styles.eventPanelHeader}><span>{verifiedJob ? 'Job, verification, and settlement events' : 'Hold events and results'}</span><i className={styles.liveDot}/></div><div aria-live="polite" className={styles.eventList}>{events.map((event, index) => <div key={`${event}-${index}`}><time>{String(index + 1).padStart(2, '0')}</time><code>{verifiedJob ? 'job' : 'hold'}</code><span>{event}</span></div>)}</div></div>
+
+      <div className={styles.eventPanel}>
+        <div className={styles.eventPanelHeader}><span>Runtime events and results</span><i className={styles.liveDot}/></div>
+        <div aria-live="polite" className={styles.eventList}>
+          <div className={sender.nodeInfo ? styles.eventConnected : undefined}><time>A</time><code>customer</code><span>{senderReady ? 'Payment channel ready' : sender.nodeInfo ? sender.nodeState : 'Node not started'}</span></div>
+          <div className={receiver.nodeInfo ? styles.eventConnected : undefined}><time>C</time><code>solver</code><span>{receiverReady ? 'Inbound liquidity ready' : receiver.nodeInfo ? receiver.nodeState : 'Node not started'}</span></div>
+          <div><time>INV</time><code>invoice</code><span>{invoiceStatus}</span></div>
+          <div><time>PAY</time><code>payment</code><span>{paymentStatus}</span></div>
+          {events.length === 0 && !sender.error && !receiver.error && <div className={styles.eventEmpty}><span>Node, channel, result, and payment events will appear here.</span></div>}
+          {events.map((event, index) => <div key={`${event}-${index}`}><time>{String(index + 1).padStart(2, '0')}</time><code>flow</code><span>{event}</span></div>)}
+          {(sender.error || receiver.error) && <div className={styles.eventError}><time>!</time><code>error</code><span>{sender.error || receiver.error}</span></div>}
+        </div>
+      </div>
+    </div>
+  </div>;
+
+  const holdLiveDemo = <>
+    <div className={styles.panelHeader}><span><i className={styles.liveDot}/> Conditional Testnet flow</span><button className={styles.headerAction} onClick={() => { void sender.refresh(); void receiver.refresh(); }}>Refresh both</button></div>
+    <div className={`${styles.previewStage} ${styles.paymentPreviewStage}`}>
+      <div className={styles.paymentCard}>
+        <div className={styles.routeStatusGrid}><div><span>Payer A</span><strong>{sender.nodeState}</strong></div><div><span>Receiver C</span><strong>{receiver.nodeState}</strong></div><div><span>Invoice</span><strong>{invoiceStatus}</strong></div><div><span>Payment</span><strong>{paymentStatus}</strong></div></div>
+        <SetupNode addEvent={addEvent} label="Payer A" runtime={sender} setStage={setSenderStage} stage={senderStage}/>
+        <SetupNode addEvent={addEvent} label="Receiver C" receiver runtime={receiver} setStage={setReceiverStage} stage={receiverStage}/>
+        {(senderReady && receiverReady) && <div className={`${styles.holdRouteRow} ${routeReady ? styles.holdRouteReady : ''}`} aria-live="polite"><div><span>Private last hop</span><strong>{routeReady ? 'Payment route ready' : 'Reconnect the selected peers'}</strong><small>{routeReady ? 'Payer A can route through Bottle to Receiver C with the receiver channel hint.' : 'Both channels have liquidity. Refresh or restart the nodes to reconnect them to Bottle.'}</small></div><div className={styles.holdRouteBadge}>{routeReady ? '✓ A → Bottle → C' : 'Waiting for peers'}</div></div>}
+        <div className={styles.invoiceTransfer}><div className={styles.invoiceSide}><span>Receiver C · Hold</span><label><input disabled={!receiverReady} inputMode="decimal" onChange={(e) => setAmount(e.target.value)} value={amount}/><i>CKB</i></label><button disabled={!receiverReady || Boolean(receiver.busy)} onClick={() => void createInvoice()}>{receiver.busy === 'create hold invoice' ? 'Creating…' : 'Create hold invoice & copy'}</button><textarea readOnly placeholder="Held Invoice appears here" value={invoice}/></div><div className={styles.invoiceTransferArrow}><span>Copy</span><b>→</b><span>Fund</span></div><div className={styles.invoiceSide}><span>Payer A · Pay</span><textarea onChange={(e) => setPasted(e.target.value)} placeholder="Paste the hold Invoice" value={pasted}/><button disabled={!invoice} onClick={async () => { try { setPasted((await navigator.clipboard.readText()).trim()); } catch { /* manual paste remains available */ } }}>Paste from clipboard</button><button className={styles.paymentButton} disabled={!senderReady || !routeReady || !pasted.trim() || Boolean(sender.busy)} onClick={() => void pay()}>{sender.busy === 'submit held payment' ? 'Submitting…' : !routeReady ? 'Waiting for route…' : 'Submit held payment'}</button>{paymentStatus !== 'Not sent' && <div aria-live="polite" className={`${styles.holdPayerStatus} ${payerFinished ? styles.holdPayerSuccess : payerRejected ? styles.holdPayerRejected : ''}`}><i/><div><strong>{payerFinished ? 'Payment completed' : payerRejected ? 'Payment not completed' : 'Waiting for Receiver C'}</strong><span>{payerFinished ? 'Receiver C received the settlement preimage.' : payerRejected ? 'The Invoice was cancelled or expired.' : 'Your payment is held. Receiver C must settle or cancel it.'}</span></div></div>}</div></div>
+        <div className={styles.holdDecisionPanel}><div><span>Receiver C · Decision</span><strong>{receiverDecision}</strong><p>{canDecide ? 'The payment has arrived. Release the preimage to complete it, or cancel and return the pending liquidity.' : invoiceStatus === 'Paid' ? 'The preimage was released and Payer A can verify success.' : invoiceStatus === 'Cancelled' ? 'The held payment was rejected and Payer A can verify the failure.' : 'These actions unlock when the Invoice reaches Received.'}</p></div><div className={styles.holdDecisionActions}><button className={styles.holdSettleButton} disabled={!canDecide || Boolean(receiver.busy)} onClick={() => void settle()}>{receiver.busy === 'settle invoice' ? 'Settling…' : invoiceStatus === 'Paid' ? 'Settled ✓' : 'Settle payment'}</button><button className={styles.holdCancelButton} disabled={!canDecide || Boolean(receiver.busy)} onClick={() => void cancel()}>{receiver.busy === 'cancel invoice' ? 'Cancelling…' : invoiceStatus === 'Cancelled' ? 'Cancelled ✓' : 'Cancel payment'}</button></div></div>
+        {(sender.error || receiver.error) && <div className={styles.paymentError}>{sender.error || receiver.error}</div>}
+      </div>
+      <div className={styles.eventPanel}><div className={styles.eventPanelHeader}><span>Hold events and results</span><i className={styles.liveDot}/></div><div aria-live="polite" className={styles.eventList}>{events.map((event, index) => <div key={`${event}-${index}`}><time>{String(index + 1).padStart(2, '0')}</time><code>hold</code><span>{event}</span></div>)}</div></div>
     </div>
   </>;
 
   return <RoutingTutorialFrame
-    article={verifiedJob ? verifiedJobArticle : holdArticle}
-    codeFiles={verifiedJob ? verifiedJobCodeFiles : holdCodeFiles}
-    currentTutorialIndex={verifiedJob ? 6 : 4}
-    defaultFile={verifiedJob ? 'job' : 'hold'}
-    demoDescription={verifiedJob ? 'Fund a real Hold Invoice, verify the Worker result, then release or withhold the settlement key.' : 'Create a real Hold Invoice, observe the pending receiver state, then settle or cancel it.'}
-    demoTitle={verifiedJob ? 'Run the Verified Agent Job' : 'Run the Hold Invoice Demo'}
-    downloadHref={verifiedJob ? '/downloads/fiber-verified-agent-job.zip' : '/downloads/fiber-hold-invoice.zip'}
-    liveDemo={liveDemo}
-    nextHref={verifiedJob ? '/docs/build/rusd-payment' : '/docs/build/encrypted-data-payment'}
-    previousHref={verifiedJob ? '/docs/build/encrypted-data-payment' : '/docs/build/unidirectional-channel'}
-    sectionCode={verifiedJob ? verifiedJobSectionCode : holdSectionCode}
+    article={verifiedResult ? verifiedResultArticle : holdArticle}
+    codeFiles={verifiedResult ? verifiedResultCodeFiles : holdCodeFiles}
+    currentTutorialIndex={verifiedResult ? 6 : 4}
+    defaultFile={verifiedResult ? 'job' : 'hold'}
+    demoDescription={verifiedResult ? 'Place a 1 CKB Testnet payment on hold, verify a sample 300 CKB route allocation, and release or cancel payment from the result.' : 'Create a real Hold Invoice, observe the pending receiver state, then settle or cancel it.'}
+    demoFirst={verifiedResult}
+    demoTitle={verifiedResult ? 'Pay for a Verified Result' : 'Run the Hold Invoice Demo'}
+    downloadHref={verifiedResult ? '/downloads/fiber-verified-result-payment.zip' : '/downloads/fiber-hold-invoice.zip'}
+    liveDemo={verifiedResult ? verifiedLiveDemo : holdLiveDemo}
+    nextHref={verifiedResult ? '/docs/build/rusd-payment' : '/docs/build/encrypted-data-payment'}
+    previousHref={verifiedResult ? '/docs/build/encrypted-data-payment' : '/docs/build/unidirectional-channel'}
+    sectionCode={verifiedResult ? verifiedResultSectionCode : holdSectionCode}
   />;
 }
 
@@ -588,6 +1143,6 @@ export function FiberHoldInvoiceTutorial() {
   return <FiberHoldInvoiceExperience variant="hold-invoice"/>;
 }
 
-export function FiberVerifiedAgentJobTutorial() {
-  return <FiberHoldInvoiceExperience variant="verified-agent-job"/>;
+export function FiberVerifiedResultPaymentTutorial() {
+  return <FiberHoldInvoiceExperience variant="verified-result-payment"/>;
 }

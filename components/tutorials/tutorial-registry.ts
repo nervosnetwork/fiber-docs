@@ -126,16 +126,16 @@ export const liveTutorials: Tutorial[] = [
     href: '/docs/build/encrypted-data-payment',
   },
   {
-    id: 'verified-agent-job',
+    id: 'verified-result-payment',
     level: 'Hard',
     mode: 'Testnet',
     duration: '~25 min',
-    title: 'Settle a Verified Agent Job',
-    shortTitle: 'Settle a verified Agent job',
+    title: 'Pay for a Verified Result',
+    shortTitle: 'Pay for a verified result',
     description:
-      'Fund a Hold Invoice, verify a Worker result, and release its settlement preimage only after every check passes.',
-    tags: ['Agents', 'Hold Invoice', 'Verification'],
-    href: '/docs/build/verified-agent-job',
+      'Place a Hold Invoice payment, verify a structured result, and release or cancel payment from the verdict.',
+    tags: ['Verification', 'Hold Invoice', 'Conditional payment'],
+    href: '/docs/build/verified-result-payment',
   },
   {
     id: 'rusd-payment',

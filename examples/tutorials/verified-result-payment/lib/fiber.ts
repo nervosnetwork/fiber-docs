@@ -1,4 +1,5 @@
 import type { Channel, FiberBrowserNode } from '@fiber-pay/sdk/browser';
+import { browserNodeTransport } from './job';
 
 export const bottle = {
   pubkey: '0x02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71' as const,
@@ -15,8 +16,8 @@ const wait = (milliseconds: number) =>
 export const ckbToHex = (value: string) =>
   `0x${BigInt(Math.round(Number(value) * 100_000_000)).toString(16)}` as `0x${string}`;
 
-function profile(role: 'requester' | 'worker') {
-  const storageKey = `fiber-verified-agent-job-${role}-v1`;
+function profile(role: 'customer' | 'solver') {
+  const storageKey = `fiber-verified-result-payment-${role}-v1`;
   const saved = localStorage.getItem(storageKey);
   if (saved) {
     const value = JSON.parse(saved) as { fiberKey: string; ckbKey: string; identifier: string };
@@ -35,13 +36,13 @@ function profile(role: 'requester' | 'worker') {
   return { fiberKey: fromHex(value.fiberKey), ckbKey: fromHex(value.ckbKey), identifier: value.identifier };
 }
 
-export async function startRole(role: 'requester' | 'worker') {
+export async function startRole(role: 'customer' | 'solver') {
   const { FiberBrowserNode, RawKeyCredentialProvider } = await import('@fiber-pay/sdk/browser');
   const keys = profile(role);
   const node = new FiberBrowserNode({
     network: 'testnet',
     credential: new RawKeyCredentialProvider(keys.fiberKey, keys.ckbKey, keys.identifier),
-    nodeConfig: { bootnodes: [], logLevel: 'info' },
+    nodeConfig: { bootnodes: [], logLevel: 'info', ...browserNodeTransport(role) },
   });
   await node.start();
   return node;
@@ -70,7 +71,7 @@ export async function connectAndOpenChannel(node: FiberBrowserNode) {
   throw new Error('Channel is still confirming. Retry after it reaches CHANNEL_READY.');
 }
 
-export async function prepareWorkerInbound(node: FiberBrowserNode) {
+export async function prepareSolverInbound(node: FiberBrowserNode) {
   const submitted = await node.sendPayment({
     target_pubkey: bottle.pubkey,
     amount: ckbToHex('5'),

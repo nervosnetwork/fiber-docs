@@ -1,7 +1,9 @@
 {
-  "name": "fiber-verified-agent-job",
+  "name": "fiber-verified-result-payment",
+  "type": "module",
   "private": true,
   "scripts": {
+    "test": "tsx --test lib/job.test.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start"
@@ -16,6 +18,7 @@
     "@types/node": "^22.15.28",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
+    "tsx": "^4.23.13",
     "typescript": "^5.8.3"
   }
 }

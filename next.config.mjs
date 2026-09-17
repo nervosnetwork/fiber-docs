@@ -46,7 +46,7 @@ const config = {
       ...[
         '/docs/build/hold-invoice',
         '/docs/build/encrypted-data-payment',
-        '/docs/build/verified-agent-job',
+        '/docs/build/verified-result-payment',
         '/docs/build/rusd-payment',
         '/docs/build/close-channel',
       ].map((source) => ({
@@ -60,6 +60,16 @@ const config = {
   },
   async redirects() {
     return [
+      {
+        source: '/docs/build/verified-agent-job',
+        destination: '/docs/build/verified-result-payment',
+        permanent: true,
+      },
+      {
+        source: '/downloads/fiber-verified-agent-job.zip',
+        destination: '/downloads/fiber-verified-result-payment.zip',
+        permanent: true,
+      },
       {
         source: '/docs/build/channel-rebalancing',
         destination: '/docs/build/unidirectional-channel',

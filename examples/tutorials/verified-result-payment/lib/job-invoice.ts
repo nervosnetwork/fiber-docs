@@ -1,17 +1,17 @@
 import type { Channel, FiberBrowserNode, SendPaymentParams } from '@fiber-pay/sdk/browser';
 import { bottle, ckbToHex } from './fiber';
 
-export async function createJobInvoice(
-  worker: FiberBrowserNode,
+export async function createResultInvoice(
+  solver: FiberBrowserNode,
   paymentHash: `0x${string}`,
 ) {
-  return worker.newInvoice({
+  return solver.newInvoice({
     amount: ckbToHex('1'),
     currency: 'Fibt',
     payment_hash: paymentHash,
     hash_algorithm: 'sha256',
     allow_trampoline_routing: true,
-    description: 'Verified agent job',
+    description: 'Verified route allocation',
     expiry: '0xe10',
   });
 }
@@ -25,14 +25,14 @@ function lastHopHint(channel: Channel) {
   }] as unknown as NonNullable<SendPaymentParams['hop_hints']>;
 }
 
-export function fundJob(
-  requester: FiberBrowserNode,
+export function placePaymentOnHold(
+  customer: FiberBrowserNode,
   invoice: string,
-  workerChannel: Channel,
+  solverChannel: Channel,
 ) {
-  return requester.sendPayment({
+  return customer.sendPayment({
     invoice,
-    hop_hints: lastHopHint(workerChannel),
+    hop_hints: lastHopHint(solverChannel),
     max_fee_amount: ckbToHex('1'),
     max_parts: '0x1',
   });
