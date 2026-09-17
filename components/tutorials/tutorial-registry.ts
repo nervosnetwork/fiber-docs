@@ -126,6 +126,18 @@ export const liveTutorials: Tutorial[] = [
     href: '/docs/build/encrypted-data-payment',
   },
   {
+    id: 'verified-result-payment',
+    level: 'Hard',
+    mode: 'Testnet',
+    duration: '~25 min',
+    title: 'Pay for a Verified Result',
+    shortTitle: 'Pay for a verified result',
+    description:
+      'Place a Hold Invoice payment, verify a structured result, and release or cancel payment from the verdict.',
+    tags: ['Verification', 'Hold Invoice', 'Conditional payment'],
+    href: '/docs/build/verified-result-payment',
+  },
+  {
     id: 'rusd-payment',
     level: 'Hard',
     mode: 'Testnet',

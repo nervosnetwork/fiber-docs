@@ -162,7 +162,13 @@ async function queryCkbBalance(script: NodeInfoResult['default_funding_lock_scri
   return BigInt(payload.result.capacity);
 }
 
-export function useFiberRoutingNode(profileKey: string) {
+export function useFiberRoutingNode(
+  profileKey: string,
+  transport?: {
+    p2pListeningAddr: string;
+    rpcListeningAddr: string;
+  },
+) {
   const nodeRef = useRef<FiberBrowserNode | null>(null);
   const [nodeState, setNodeState] = useState<BrowserNodeState>('idle');
   const [nodeInfo, setNodeInfo] = useState<NodeInfoResult | null>(null);
@@ -209,7 +215,7 @@ export function useFiberRoutingNode(profileKey: string) {
           profile.ckbKey,
           profile.identifier,
         ),
-        nodeConfig: { bootnodes: [], logLevel: 'info' },
+        nodeConfig: { bootnodes: [], logLevel: 'info', ...transport },
       });
       node.on('stateChange', setNodeState);
       node.on('error', (nodeError) => setError(nodeError.message));
@@ -249,7 +255,7 @@ export function useFiberRoutingNode(profileKey: string) {
     } finally {
       setBusy('');
     }
-  }, [busy, profileKey]);
+  }, [busy, profileKey, transport?.p2pListeningAddr, transport?.rpcListeningAddr]);
 
   const connect = useCallback(
     async (peer: PublicFiberPeer) => {
