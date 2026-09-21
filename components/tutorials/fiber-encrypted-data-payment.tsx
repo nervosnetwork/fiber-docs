@@ -941,7 +941,7 @@ export function FiberEncryptedDataPaymentTutorial() {
       demoTitle="Run the Pay-to-Decrypt Demo"
       downloadHref="/downloads/fiber-encrypted-data-payment.zip"
       liveDemo={liveDemo}
-      nextHref="/docs/build/rusd-payment"
+      nextHref="/docs/build/verified-result-payment"
       previousHref="/docs/build/hold-invoice"
       sectionCode={sectionCode}
     />

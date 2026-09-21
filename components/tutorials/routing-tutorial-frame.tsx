@@ -131,6 +131,7 @@ export function RoutingTutorialFrame({
   liveDemo,
   previousHref,
   nextHref,
+  demoFirst = false,
 }: {
   article: ReactNode;
   currentTutorialIndex: number;
@@ -143,10 +144,12 @@ export function RoutingTutorialFrame({
   liveDemo: ReactNode;
   previousHref: string;
   nextHref?: string;
+  demoFirst?: boolean;
 }) {
   const router = useRouter();
   const topRef = useRef<HTMLDivElement | null>(null);
   const demoRef = useRef<HTMLElement | null>(null);
+  const walkthroughRef = useRef<HTMLElement | null>(null);
   const articleRef = useRef<HTMLDivElement | null>(null);
   const tutorialMenuRef = useRef<HTMLDivElement | null>(null);
   const [activeSection, setActiveSection] = useState('intro');
@@ -255,14 +258,98 @@ export function RoutingTutorialFrame({
 
   const toggleDemo = useCallback(() => {
     if (liveDemoActive) {
-      topRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      if (demoFirst) {
+        walkthroughRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        topRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      }
       return;
     }
     demoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [liveDemoActive]);
+  }, [demoFirst, liveDemoActive]);
+
+  const articlePanel = (
+    <div
+      className={styles.article}
+      onClick={(event) => {
+        const section = (event.target as HTMLElement).closest<HTMLElement>(
+          '[data-tutorial-section]',
+        );
+        if (section?.dataset.tutorialSection) {
+          syncToSection(section.dataset.tutorialSection);
+        }
+      }}
+      ref={articleRef}
+    >
+      {article}
+    </div>
+  );
+
+  const codePanel = (
+    <section className={styles.codePanel} aria-label="Tutorial project files">
+      <div className={styles.fileTabs} role="tablist" aria-label="Code files">
+        {codeFiles.map((file) => (
+          <button
+            aria-selected={file.id === activeFile}
+            className={file.id === activeFile ? styles.activeTab : ''}
+            key={file.id}
+            onClick={() => {
+              setActiveFile(file.id);
+              setCodeFocus(null);
+            }}
+            role="tab"
+            type="button"
+          >
+            {file.label}
+          </button>
+        ))}
+      </div>
+      <CodeBlock file={currentFile} focus={codeFocus} />
+      <div className={styles.codeMeta}>
+        <span>
+          {currentFile.label} <i>{currentFile.language}</i>
+        </span>
+        <button
+          aria-label={
+            copied ? `${currentFile.label} copied` : `Copy ${currentFile.label}`
+          }
+          className={styles.copyButton}
+          onClick={copyCode}
+          type="button"
+        >
+          <Image
+            alt=""
+            aria-hidden="true"
+            height={18}
+            src={copied ? '/icon-checkmark.svg' : '/icon-copy.svg'}
+            width={18}
+          />
+          {copied ? 'Copied' : 'Copy file'}
+        </button>
+      </div>
+    </section>
+  );
+
+  const footer = (
+    <nav className={styles.tutorialFooter} aria-label="Tutorial navigation">
+      <button onClick={() => router.push(previousHref)} type="button">
+        <span aria-hidden="true">←</span> Previous
+      </button>
+      <button
+        disabled={!nextHref}
+        onClick={() => nextHref && router.push(nextHref)}
+        type="button"
+      >
+        Next <span aria-hidden="true">→</span>
+      </button>
+    </nav>
+  );
 
   return (
-    <div className={`${styles.shell} ${styles.paymentShell}`} ref={topRef}>
+    <div
+      className={`${styles.shell} ${demoFirst ? '' : styles.paymentShell}`}
+      ref={topRef}
+    >
       <header className={styles.tutorialToolbar}>
         <div className={styles.tutorialSelect} ref={tutorialMenuRef}>
           <button
@@ -315,8 +402,14 @@ export function RoutingTutorialFrame({
           )}
         </div>
         <button className={styles.runDemoAction} onClick={toggleDemo} type="button">
-          {liveDemoActive ? 'Back to tutorial' : 'Run live demo'}{' '}
-          <span aria-hidden="true">{liveDemoActive ? '↑' : '↓'}</span>
+          {demoFirst
+            ? liveDemoActive
+              ? 'View code walkthrough'
+              : 'Try live demo'
+            : liveDemoActive
+              ? 'Back to tutorial'
+              : 'Run live demo'}{' '}
+          <span aria-hidden="true">{liveDemoActive ? (demoFirst ? '↓' : '↑') : demoFirst ? '↑' : '↓'}</span>
         </button>
         <div className={styles.toolbarActions}>
           <a download href={downloadHref}>
@@ -338,92 +431,57 @@ export function RoutingTutorialFrame({
         </div>
       </header>
 
-      <div
-        className={styles.article}
-        onClick={(event) => {
-          const section = (event.target as HTMLElement).closest<HTMLElement>(
-            '[data-tutorial-section]',
-          );
-          if (section?.dataset.tutorialSection) {
-            syncToSection(section.dataset.tutorialSection);
-          }
-        }}
-        ref={articleRef}
-      >
-        {article}
-      </div>
-
-      <aside
-        className={`${styles.workspace} ${styles.paymentWorkspace}`}
-        aria-label="Live Fiber preview and tutorial project files"
-      >
-        <section className={styles.preview} ref={demoRef}>
-          <div className={styles.liveDemoHeading}>
-            <div>
-              <span>Fiber Testnet</span>
-              <h2>{demoTitle}</h2>
-              <p>{demoDescription}</p>
+      {demoFirst ? (
+        <>
+          <section className={`${styles.liveDemo} ${styles.channelLiveDemo}`} ref={demoRef}>
+            <div className={styles.liveDemoHeading}>
+              <div>
+                <span>Interactive tutorial · About 25 minutes</span>
+                <h1>{demoTitle}</h1>
+                <p>{demoDescription}</p>
+              </div>
             </div>
-          </div>
-          {liveDemo}
-        </section>
-
-        <section className={styles.codePanel} aria-label="Tutorial project files">
-          <div className={styles.fileTabs} role="tablist" aria-label="Code files">
-            {codeFiles.map((file) => (
-              <button
-                aria-selected={file.id === activeFile}
-                className={file.id === activeFile ? styles.activeTab : ''}
-                key={file.id}
-                onClick={() => {
-                  setActiveFile(file.id);
-                  setCodeFocus(null);
-                }}
-                role="tab"
-                type="button"
-              >
-                {file.label}
-              </button>
-            ))}
-          </div>
-          <CodeBlock file={currentFile} focus={codeFocus} />
-          <div className={styles.codeMeta}>
-            <span>
-              {currentFile.label} <i>{currentFile.language}</i>
-            </span>
-            <button
-              aria-label={
-                copied ? `${currentFile.label} copied` : `Copy ${currentFile.label}`
-              }
-              className={styles.copyButton}
-              onClick={copyCode}
-              type="button"
-            >
-              <Image
-                alt=""
-                aria-hidden="true"
-                height={18}
-                src={copied ? '/icon-checkmark.svg' : '/icon-copy.svg'}
-                width={18}
-              />
-              {copied ? 'Copied' : 'Copy file'}
-            </button>
-          </div>
-        </section>
-      </aside>
-
-      <nav className={styles.tutorialFooter} aria-label="Tutorial navigation">
-        <button onClick={() => router.push(previousHref)} type="button">
-          <span aria-hidden="true">←</span> Previous
-        </button>
-        <button
-          disabled={!nextHref}
-          onClick={() => nextHref && router.push(nextHref)}
-          type="button"
-        >
-          Next <span aria-hidden="true">→</span>
-        </button>
-      </nav>
+            {liveDemo}
+          </section>
+          <div aria-hidden="true" className={styles.sectionDivider} />
+          <header className={styles.walkthroughHeader} ref={walkthroughRef}>
+            <span>Implementation walkthrough</span>
+            <h2>Behind the scenes</h2>
+            <p>
+              See how the result rules, Hold Invoice, and payment decision map
+              to the Fiber SDK calls used by the demo.
+            </p>
+          </header>
+          <section className={styles.instructionWorkspace}>
+            <div className={styles.instructionGrid}>
+              {articlePanel}
+              {codePanel}
+            </div>
+            {footer}
+          </section>
+        </>
+      ) : (
+        <>
+          {articlePanel}
+          <aside
+            className={`${styles.workspace} ${styles.paymentWorkspace}`}
+            aria-label="Live Fiber preview and tutorial project files"
+          >
+            <section className={styles.preview} ref={demoRef}>
+              <div className={styles.liveDemoHeading}>
+                <div>
+                  <span>Fiber Testnet</span>
+                  <h2>{demoTitle}</h2>
+                  <p>{demoDescription}</p>
+                </div>
+              </div>
+              {liveDemo}
+            </section>
+            {codePanel}
+          </aside>
+          {footer}
+        </>
+      )}
     </div>
   );
 }
