@@ -2995,6 +2995,62 @@
   text-transform: uppercase;
 }
 
+.testnetFundingNotice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  border-bottom: 1px solid rgb(232 178 67 / 34%);
+  padding: 14px 16px;
+  background: linear-gradient(90deg, rgb(232 178 67 / 13%), rgb(232 178 67 / 4%));
+}
+
+.testnetFundingNotice > div {
+  min-width: 0;
+}
+
+.testnetFundingNotice span {
+  display: block;
+  color: #e8b243;
+  font: 800 8px/1 var(--font-inter, sans-serif);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.testnetFundingNotice strong {
+  display: block;
+  margin-top: 6px;
+  color: #f1eadc;
+  font: 700 11px/1.35 var(--font-inter, sans-serif);
+}
+
+.testnetFundingNotice p {
+  max-width: 720px;
+  margin: 5px 0 0;
+  color: #aaa397;
+  font: 500 9px/1.55 var(--font-inter, sans-serif);
+}
+
+.testnetFundingNotice a {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e8b243;
+  border-radius: 8px;
+  padding: 0 13px;
+  background: #e8b243;
+  color: #17130c;
+  font: 800 9px/1 var(--font-inter, sans-serif);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.testnetFundingNotice a:hover,
+.testnetFundingNotice a:focus-visible {
+  background: #f3c35f;
+}
+
 .oneWayChannelFacts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3420,6 +3476,14 @@
   }
 
   .compactActions {
+    width: 100%;
+  }
+
+  .testnetFundingNotice {
+    grid-template-columns: 1fr;
+  }
+
+  .testnetFundingNotice a {
     width: 100%;
   }
 
