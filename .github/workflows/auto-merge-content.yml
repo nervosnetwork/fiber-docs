@@ -1,0 +1,82 @@
+name: Auto-merge content PRs
+
+on:
+  pull_request_target:
+    branches: [master]
+    types: [opened, reopened, synchronize, ready_for_review, edited]
+  # Retry after checks finish, and pick up existing eligible PRs.
+  schedule:
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: auto-merge-content
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: github.event_name != 'pull_request_target' || github.event.pull_request.user.login == 'linnnsss'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Do not check out or execute PR code with this privileged token.
+      - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        with:
+          script: |
+            const repo = context.repo;
+            const eligible = pr =>
+              pr.user.login === 'linnnsss' &&
+              pr.base.ref === 'master' &&
+              pr.state === 'open' && !pr.draft;
+            const allowedPath = path =>
+              typeof path === 'string' &&
+              /^(content\/blog\/|content\/pulse\/).+/.test(path) &&
+              !path.split('/').some(part => part === '..' || part === '.');
+            const candidates = context.payload.pull_request
+              ? [context.payload.pull_request]
+              : await github.paginate(github.rest.pulls.list, {
+                  ...repo, state: 'open', base: 'master', per_page: 100,
+                });
+
+            for (const candidate of candidates) {
+              if (!eligible(candidate)) continue;
+              const args = { ...repo, pull_number: candidate.number };
+              const { data: pr } = await github.rest.pulls.get(args);
+              if (!eligible(pr)) continue;
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                ...args, per_page: 100,
+              });
+              // Fail closed if GitHub truncates the file list (maximum 3,000).
+              if (!files.length || files.length !== pr.changed_files ||
+                  !files.every(file => allowedPath(file.filename) &&
+                    (!file.previous_filename || allowedPath(file.previous_filename)))) {
+                core.info(`#${pr.number}: contains changes outside blog/pulse, or incomplete file list.`);
+                continue;
+              }
+
+              // Re-fetch after pagination so a concurrent push cannot reuse an old file list.
+              const { data: latest } = await github.rest.pulls.get(args);
+              if (!eligible(latest) || latest.head.sha !== pr.head.sha ||
+                  latest.base.sha !== pr.base.sha || latest.changed_files !== files.length) {
+                core.info(`#${pr.number}: PR changed during validation; retry on next run.`);
+                continue;
+              }
+              if (latest.mergeable !== true || latest.mergeable_state !== 'clean') {
+                core.info(`#${pr.number}: waiting for checks, branch rules, or conflict resolution.`);
+                continue;
+              }
+              try {
+                const { data: result } = await github.rest.pulls.merge({
+                  ...args, sha: pr.head.sha, merge_method: 'squash',
+                });
+                if (!result.merged) throw new Error(result.message);
+                core.info(`#${pr.number}: merged ${pr.head.sha}.`);
+              } catch (error) {
+                if (![405, 409].includes(error.status)) throw error;
+                core.info(`#${pr.number}: merge blocked or head changed; retry on next run.`);
+              }
+            }
