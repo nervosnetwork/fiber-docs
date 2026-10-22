@@ -394,6 +394,37 @@
   font-size: 0.92em;
 }
 
+.invoiceStatusTable {
+  width: 100%;
+  max-width: 620px;
+  margin-top: 24px;
+  border-collapse: collapse;
+  color: #bababa;
+  font: 400 15px/1.6 var(--font-inter, sans-serif);
+  text-align: left;
+}
+
+.invoiceStatusTable th,
+.invoiceStatusTable td {
+  border-bottom: 1px solid var(--tutorial-line);
+  padding: 12px 0;
+  vertical-align: top;
+}
+
+.invoiceStatusTable th {
+  color: var(--tutorial-ink);
+  font-weight: 600;
+}
+
+.invoiceStatusTable th:first-child {
+  width: 28%;
+  padding-right: 16px;
+}
+
+.invoiceStatusTable code {
+  font-size: 0.9em;
+}
+
 .amountConversion {
   display: grid;
   grid-template-columns: minmax(0, 0.8fr) auto minmax(0, 1.45fr) auto minmax(0, 1fr);
@@ -3031,6 +3062,716 @@
   margin-top: 0;
 }
 
+.multiHopDemo {
+  overflow: hidden;
+}
+
+.multiHopDemo button:focus-visible,
+.multiHopDemo summary:focus-visible,
+.multiHopDemo a:focus-visible {
+  outline: 2px solid #eeeeee;
+  outline-offset: 3px;
+}
+
+.multiHopStage {
+  --verified-stage-padding: clamp(20px, 2.5vw, 30px);
+  min-height: 0;
+  scroll-margin-top: 90px;
+}
+
+.multiHopStage.verifiedSetupStage {
+  min-height: 0;
+}
+
+.multiHopDemo .verifiedResultProgress span {
+  display: block;
+}
+
+.multiHopRoute {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 18px;
+  color: #777777;
+  font: 500 12px/1.4 var(--font-inter, sans-serif);
+}
+
+.multiHopRoute b {
+  color: #dedede;
+  font-weight: 600;
+}
+
+.multiHopSetupHint {
+  margin: 0;
+  padding: 14px 24px;
+  color: #a5a5a5;
+  font: 400 11px/1.6 var(--font-inter, sans-serif);
+}
+
+.multiHopForm {
+  display: grid;
+  max-width: 680px;
+  gap: 18px;
+  margin: 0 auto;
+}
+
+.multiHopLifecycle > span {
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.multiHopDemo .verifiedReceipt[data-outcome='pending'] {
+  border-color: #786b43;
+  box-shadow: inset 0 3px 0 #e8cb83;
+}
+
+.multiHopDemo .verifiedReceipt[data-outcome='pending'] .verifiedReceiptMark {
+  border-color: #786b43;
+  color: #e8cb83;
+}
+
+.multiHopDemo .verifiedReceipt[data-outcome='failed'] {
+  border-color: #69403d;
+  box-shadow: inset 0 3px 0 #d38a82;
+}
+
+.multiHopDemo .verifiedReceipt[data-outcome='failed'] .verifiedReceiptMark {
+  border-color: #69403d;
+  color: #f0a29a;
+}
+
+.multiHopDemo .verifiedReceipt > button + button {
+  margin-left: 8px;
+}
+
+.multiHopLifecycle > span small {
+  font: inherit;
+  font-weight: 400;
+}
+
+.multiHopLifecycle > div {
+  flex-wrap: wrap;
+  row-gap: 8px;
+  overflow: visible;
+}
+
+.multiHopLifecycle [data-state='upcoming'] b {
+  border-style: dashed;
+  color: #777777;
+}
+
+.multiHopLifecycle [data-state='current'] b {
+  border-color: #e8cb83;
+  background: #2c271b;
+  color: #f1dba8;
+}
+
+.multiHopLifecycle [data-state='complete'] b,
+.multiHopLifecycle [data-state='complete'] b i {
+  border-color: #527a61;
+  color: #b8e4c7;
+}
+
+.multiHopCopy {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.multiHopCopy button[data-copied='true'] {
+  border-color: #80bc97;
+  color: #b8e4c7;
+}
+
+.multiHopCopy .multiHopCopyFeedback:not(:empty) {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 6px);
+  right: 0;
+  width: max-content;
+  max-width: 220px;
+  border: 1px solid #527a61;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #18271e;
+  color: #b8e4c7;
+  font: 500 12px/1.4 var(--font-inter, sans-serif);
+  text-transform: none;
+  box-shadow: 0 4px 12px #0006;
+}
+
+.multiHopCopy .multiHopCopyFeedback[data-error='true'] {
+  border-color: #995b54;
+  background: #301f1d;
+  color: #ffc5bc;
+}
+
+.multiHopCopy[data-icon-only='true'] .multiHopCopyFeedback {
+  right: auto;
+  left: 0;
+  max-width: 180px;
+}
+
+.multiHopRole {
+  display: block;
+  color: #a5a5a5;
+  font: 600 11px/1.4 var(--font-inter, sans-serif);
+}
+
+.multiHopField {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  color: #cccccc;
+  font: 600 12px/1.5 var(--font-inter, sans-serif);
+}
+
+.multiHopField input,
+.multiHopField textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #505050;
+  border-radius: 6px;
+  padding: 12px 14px;
+  background: #0e0e0e;
+  color: #f2f2f2;
+  font: 400 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.multiHopField input {
+  max-width: 220px;
+  height: 42px;
+  box-sizing: border-box;
+  border-radius: 0;
+  padding: 8px 14px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.multiHopAmountInput {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 220px;
+}
+
+.multiHopAmountInput input {
+  padding-right: 54px;
+}
+
+.multiHopAmountInput > span {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #a5a5a5;
+  font: 600 12px/1 var(--font-inter, sans-serif);
+  pointer-events: none;
+}
+
+.multiHopField textarea {
+  min-height: 112px;
+  resize: vertical;
+  overflow-wrap: anywhere;
+}
+
+.multiHopField textarea::placeholder {
+  color: #929292;
+}
+
+.multiHopField input[aria-invalid='true'] {
+  border-color: #f1a49c;
+}
+
+.multiHopField input:focus-visible,
+.multiHopField textarea:focus-visible {
+  outline: 2px solid #eeeeee;
+  outline-offset: 2px;
+}
+
+.multiHopAmountInput input:focus {
+  outline: none;
+}
+
+.multiHopExpiryNote {
+  color: #929292;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.multiHopRestore {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid #303030;
+  padding-top: 18px;
+}
+
+.multiHopRestoreHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #e5e5e5;
+  font: 600 14px/1.5 var(--font-inter, sans-serif);
+}
+
+.multiHopForm .multiHopRestoreHeading button {
+  min-height: 28px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  font-size: 20px;
+}
+
+.multiHopRestoreStatus {
+  display: grid;
+  gap: 10px;
+  color: #cccccc;
+  font: 400 13px/1.5 var(--font-inter, sans-serif);
+}
+
+.multiHopRestoreHash {
+  color: #929292;
+  font: 400 11px/1.5 var(--font-inter, sans-serif);
+  overflow-wrap: anywhere;
+}
+
+.multiHopLiquidity {
+  display: grid;
+  gap: 22px;
+  width: 100%;
+  max-width: 420px;
+  margin: 4px 0;
+}
+
+.multiHopLiquidityChannel {
+  min-width: 0;
+}
+
+.multiHopLiquidityTrack {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 16px;
+  gap: 12px;
+  align-items: center;
+  color: #e5e5e5;
+  font: 600 12px/1.5 var(--font-inter, sans-serif);
+}
+
+.multiHopLiquidityTrack > b:last-child {
+  text-align: right;
+}
+
+.multiHopLiquidityBar {
+  height: 6px;
+  background: #666666;
+  overflow: hidden;
+}
+
+.multiHopLiquidityBar[data-known='false'] {
+  background: #303030;
+}
+
+.multiHopLiquidityBar > span {
+  display: block;
+  height: 100%;
+  background: #92cda2;
+  transition: width 180ms ease;
+}
+
+.multiHopLiquidityLabels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 6px;
+  font: 400 11px/1.5 var(--font-inter, sans-serif);
+}
+
+.multiHopLiquidityLabels > div {
+  display: grid;
+  gap: 2px;
+  color: #a5a5a5;
+  overflow-wrap: anywhere;
+}
+
+.multiHopLiquidityLabels > div:last-child {
+  text-align: right;
+}
+
+.multiHopLiquidityLabels strong {
+  color: #e5e5e5;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.multiHopLiquidityLabels [data-empty='true'] strong {
+  color: #f1a49c;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .multiHopLiquidityBar > span {
+    transition: none;
+  }
+}
+
+.multiHopForm button:not(.verifiedPrimaryAction),
+.multiHopInvoiceSource button {
+  min-height: 40px;
+  justify-self: start;
+  border: 1px solid #505050;
+  border-radius: 6px;
+  padding: 9px 14px;
+  background: #202020;
+  color: #eeeeee;
+  font: 600 12px/1.4 var(--font-inter, sans-serif);
+}
+
+.multiHopForm button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.multiHopForm > .verifiedPrimaryAction {
+  justify-self: start;
+}
+
+.multiHopForm .verifiedPrimaryAction {
+  width: auto;
+  min-height: 42px;
+  margin-top: 0;
+  padding: 11px 18px;
+  font-size: 12px;
+}
+
+.multiHopActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.multiHopHelp,
+.multiHopError {
+  margin: 0;
+  color: #a5a5a5;
+  font: 400 12px/1.6 var(--font-inter, sans-serif);
+}
+
+.multiHopError {
+  color: #f1a49c;
+  overflow-wrap: anywhere;
+}
+
+.multiHopInvoiceSource {
+  min-width: 0;
+  border: 1px solid #383838;
+  border-radius: 6px;
+  padding: 14px;
+  background: #101010;
+}
+
+.multiHopInvoiceSource summary {
+  cursor: pointer;
+  color: #bdbdbd;
+  font: 600 12px/1.5 var(--font-inter, sans-serif);
+}
+
+.multiHopInvoiceText {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.multiHopInvoiceText > code {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+  color: #dddddd;
+  font: 400 12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace;
+  user-select: text;
+}
+
+.multiHopInvoiceText > .multiHopCopy {
+  flex-shrink: 0;
+}
+
+.multiHopInvoiceText .multiHopCopy[data-icon-only='true'] .multiHopCopyFeedback,
+.multiHopProofValue .multiHopCopy[data-icon-only='true'] .multiHopCopyFeedback {
+  right: 0;
+  left: auto;
+}
+
+.multiHopPaymentDetails {
+  display: grid;
+  min-width: 0;
+  gap: 22px;
+  margin: 0 0 8px;
+}
+
+.multiHopPaymentDetails > div {
+  min-width: 0;
+}
+
+.multiHopPaymentDetails dt {
+  margin-bottom: 8px;
+  color: #a5a5a5;
+  font: 500 12px/1.5 var(--font-inter, sans-serif);
+}
+
+.multiHopPaymentDetails dd {
+  margin: 0;
+  color: #dddddd;
+  font: 400 13px/1.7 var(--font-inter, sans-serif);
+}
+
+.multiHopPaymentDetails .multiHopInvoiceText > code {
+  font-size: 13px;
+}
+
+.multiHopPaymentDetails .multiHopPaymentAmount dd {
+  color: #f4f4f4;
+  font: 600 32px/1.2 var(--font-inter, sans-serif);
+  letter-spacing: -0.03em;
+}
+
+.multiHopPaymentAmount dd span {
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.multiHopInvoiceSource[open] > :not(summary) {
+  margin-top: 14px;
+}
+
+.multiHopEvents .multiHopRoute {
+  margin: 0;
+  border-bottom: 1px solid #343434;
+  padding: 16px 18px;
+}
+
+.multiHopHash {
+  display: block;
+  overflow-wrap: anywhere;
+  color: #cccccc;
+  font: 400 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.multiHopProofValue {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.multiHopProofValue > code {
+  min-width: 0;
+  flex: 1;
+}
+
+.multiHopDemo .verifiedReceipt > .multiHopField {
+  text-align: left;
+}
+
+.multiHopDemo .multiHopProofValue button {
+  margin-top: 0;
+}
+
+.multiHopDemo .verifiedReceipt dl {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 22px 0;
+}
+
+.multiHopOutcome {
+  display: grid;
+  min-width: 0;
+  gap: 26px;
+  text-align: left;
+}
+
+.multiHopOutcomeHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.multiHopOutcomeHeader h2 {
+  margin: 0;
+  color: #f4f4f4;
+  font: 600 clamp(22px, 2.5vw, 26px)/1.2 var(--font-inter, sans-serif);
+  letter-spacing: -0.035em;
+}
+
+.multiHopOutcomeMark {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid #786b43;
+  border-radius: 50%;
+  background: #211e14;
+  color: var(--status-warning);
+  font: 500 20px/1 var(--font-inter, sans-serif);
+}
+
+.multiHopOutcome[data-outcome='paid'] .multiHopOutcomeMark {
+  border-color: #405730;
+  background: #141b10;
+  color: var(--status-success);
+}
+
+.multiHopOutcome[data-outcome='failed'] .multiHopOutcomeMark {
+  border-color: #69403d;
+  background: #1c1211;
+  color: var(--status-error);
+}
+
+.multiHopPendingDots {
+  display: flex;
+  gap: 4px;
+}
+
+.multiHopPendingDots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: multiHopProcessing 1.2s ease-in-out infinite;
+}
+
+.multiHopPendingDots i:nth-child(2) { animation-delay: 0.15s; }
+.multiHopPendingDots i:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes multiHopProcessing {
+  0%, 60%, 100% { opacity: 0.35; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+
+.multiHopOutcomeFacts {
+  display: grid;
+  min-width: 0;
+  gap: 24px;
+  margin: 0;
+}
+
+.multiHopOutcomeFacts > div {
+  min-width: 0;
+}
+
+.multiHopOutcomeFacts dt {
+  margin-bottom: 9px;
+  color: #9a9a9a;
+  font: 500 12px/1.4 var(--font-inter, sans-serif);
+}
+
+.multiHopOutcomeFacts dd {
+  margin: 0;
+  color: #dddddd;
+  font: 500 13px/1.5 var(--font-inter, sans-serif);
+}
+
+.multiHopOutcomeAmount dd {
+  color: #f4f4f4;
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+
+.multiHopOutcomeAmount dd span {
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.multiHopOutcomeFlow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.multiHopOutcomeFlow span { white-space: nowrap; }
+.multiHopOutcomeFlow i { color: #777777; font-style: normal; }
+
+.multiHopOutcomeInvoice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.multiHopOutcome > .multiHopField {
+  border-top: 1px solid #303030;
+  padding-top: 22px;
+}
+
+.multiHopOutcome > button {
+  min-height: 42px;
+  justify-self: start;
+  border: 1px solid #464646;
+  padding: 11px 14px;
+  background: #191919;
+  color: #dddddd;
+  font: 600 12px/1.4 var(--font-inter, sans-serif);
+}
+
+.multiHopOutcome > button:disabled { cursor: not-allowed; opacity: 0.45; }
+
+.multiHopOutcome .multiHopProofValue button {
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  min-width: 40px;
+  margin: 0;
+  border: 0;
+  padding: 8px;
+  background: transparent;
+}
+
+@media (max-width: 600px) {
+  .multiHopDemo .verifiedSetupDisclosureHeader {
+    grid-template-columns: 24px minmax(0, 1fr) 16px;
+  }
+
+  .multiHopDemo .verifiedSetupDisclosureStatus {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .multiHopDemo .verifiedSetupChevron {
+    grid-column: 3;
+    grid-row: 1 / 3;
+  }
+
+  .multiHopDemo .verifiedSetupTask {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .multiHopDemo .verifiedSetupTask > button,
+  .multiHopDemo .fundingActions {
+    justify-self: start;
+  }
+
+  .multiHopDemo .verifiedSetupReviewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .multiHopDemo .verifiedResultProgress span {
+    font-size: 10px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .multiHopDemo .verifiedResultProgress button {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
 .verifiedResultProgress {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -4374,7 +5115,199 @@
   }
 }
 
+.mobileChapterButton,
+.mobileEventToggle {
+  display: none;
+}
+
+.shell button,
+.shell .toolbarActions a {
+  border-radius: 0 !important;
+}
+
+.mobileTutorialDialog {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: #141514;
+  color: #f4f4f4;
+}
+
+.mobileTutorialDialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobileTutorialDialog::backdrop {
+  background: #0a0a0a;
+}
+
+.mobileTutorialDialog > header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #343434;
+  padding: calc(24px + env(safe-area-inset-top)) 20px 24px;
+}
+
+.mobileTutorialDialog header small {
+  color: #9a9a9a;
+  font: 600 10px/1.4 var(--font-inter, sans-serif);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.mobileTutorialDialog h2 {
+  margin: 8px 0 0;
+  font: 600 24px/1.2 var(--font-inter, sans-serif);
+  letter-spacing: -0.03em;
+}
+
+.mobileTutorialDialog header button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid #454545;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.mobileTutorialDialog nav {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.mobileTutorialDialog nav a {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 16px;
+  min-height: 84px;
+  border-bottom: 1px solid #303030;
+  padding: 20px;
+  color: #b8b8b8;
+  font: 500 14px/1.4 var(--font-inter, sans-serif);
+  text-decoration: none;
+}
+
+.mobileTutorialDialog nav a[aria-current='page'],
+.mobileTutorialDialog nav a:hover {
+  background: #202320;
+  color: #f4f4f4;
+}
+
+.mobileTutorialDialog nav strong,
+.mobileTutorialDialog nav small {
+  display: block;
+}
+
+.mobileTutorialDialog nav small {
+  margin-top: 6px;
+  color: #9a9a9a;
+  font-size: 11px;
+}
+
+.mobileChapterNumber {
+  color: #8a8a8a;
+  font: 400 12px/1 ui-monospace, monospace;
+}
+
+.mobileTutorialDialog :focus-visible,
+.mobileChapterButton:focus-visible,
+.mobileEventToggle:focus-visible {
+  outline: 2px solid #a8f04b;
+  outline-offset: -3px;
+}
+
+@media (max-width: 600px) {
+  .multiHopInvoiceText > code {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .routingToolbar {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 12px;
+    padding-inline: 14px;
+  }
+
+  .routingToolbar .tutorialSelect,
+  .routingToolbar .toolbarActions {
+    display: none;
+  }
+
+  .mobileChapterButton {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .routingToolbar .runDemoAction {
+    min-height: 44px;
+    justify-self: end;
+    font-size: 12px;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .routingToolbar .runDemoAction span {
+    margin-left: 6px;
+    font-size: 12px;
+  }
+
+  .multiHopDesktopEventHeader {
+    display: none;
+  }
+
+  .mobileEventToggle {
+    display: flex;
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid #343434;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .mobileEventToggle[aria-expanded='false'] {
+    border-bottom: 0;
+  }
+
+  .mobileEventToggle > span:last-child {
+    font-size: 20px;
+    font-weight: 400;
+  }
+
+  .multiHopEventBody[data-expanded='false'] {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .multiHopPendingDots i {
+    animation: none;
+    opacity: 1;
+  }
   .article {
     scroll-behavior: auto;
   }
@@ -4390,4 +5323,37 @@
   .holdPayerStatus > i {
     animation: none;
   }
+}
+
+.multiHopSetupActions {
+  display: grid;
+  gap: 8px;
+  min-width: 144px;
+}
+
+.multiHopSetupActions button {
+  width: 100%;
+}
+
+.multiHopLiquidityExplanation {
+  color: var(--color-fd-muted-foreground);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.multiHopLiquidityExplanation summary {
+  cursor: pointer;
+  color: var(--color-fd-foreground);
+}
+.multiHopLiquidityExplanation p { margin: 12px 0; }
+.multiHopLiquidityExplanation dl { margin: 12px 0; }
+.multiHopLiquidityExplanation dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 0;
+}
+.multiHopLiquidityExplanation dd {
+  margin: 0;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }

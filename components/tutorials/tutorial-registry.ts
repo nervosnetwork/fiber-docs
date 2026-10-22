@@ -85,7 +85,7 @@ export const liveTutorials: Tutorial[] = [
     title: 'Send a Multi-Hop Invoice Payment',
     shortTitle: 'Send a multi-hop invoice payment',
     description:
-      'Copy an invoice between two browser nodes and pay it through one public Fiber intermediary.',
+      'Create an invoice on a receiver node and pay it through one public Fiber intermediary.',
     tags: ['Invoice', 'Multi-hop', 'WASM'],
     href: '/docs/build/multi-hop-invoice',
   },

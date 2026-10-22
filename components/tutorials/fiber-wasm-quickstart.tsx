@@ -1,5 +1,7 @@
 'use client';
 
+import { createBrowserNodeSession } from './browser-node-session';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -383,6 +385,7 @@ function CodeBlock({
 export function FiberWasmQuickstart() {
   const router = useRouter();
   const nodeRef = useRef<FiberBrowserNode | null>(null);
+  const nodeSessionRef = useRef<ReturnType<typeof createBrowserNodeSession> | null>(null);
   const topRef = useRef<HTMLElement | null>(null);
   const demoRef = useRef<HTMLElement | null>(null);
   const articleRef = useRef<HTMLDivElement | null>(null);
@@ -448,7 +451,10 @@ export function FiberWasmQuickstart() {
     setIsolationReady(supported);
 
     return () => {
-      void nodeRef.current?.stop();
+      const session = nodeSessionRef.current;
+      nodeSessionRef.current = null;
+      nodeRef.current = null;
+      void session?.stop().catch(() => { /* Keep the lease if shutdown fails. */ });
     };
   }, []);
 
@@ -569,7 +575,7 @@ export function FiberWasmQuickstart() {
   }, [busyAction, error, nodeInfo, nodeState, peerCount]);
 
   const startNode = useCallback(async () => {
-    if (busyAction || nodeRef.current) return;
+    if (busyAction || Boolean(nodeRef.current)) return;
     setBusyAction('start');
     setError('');
     setPeerCount(0);
@@ -579,31 +585,35 @@ export function FiberWasmQuickstart() {
         throw new Error('Cross-origin isolation is not enabled for this page.');
       }
 
-      const {
-        FiberBrowserNode,
-        RawKeyCredentialProvider,
-      } = await import('@fiber-pay/sdk/browser');
-      const profile = getOrCreateProfile();
-      const credential = new RawKeyCredentialProvider(
-        profile.fiberKey,
-        profile.ckbKey,
-        profile.identifier,
-      );
-      const node = new FiberBrowserNode({
-        network: 'testnet',
-        credential,
-        nodeConfig: {
-          bootnodes: [],
-          logLevel: 'info',
-        },
+      const session = nodeSessionRef.current ??= createBrowserNodeSession();
+      await session.start(profileKey, async (trackNode) => {
+        const {
+          FiberBrowserNode,
+          RawKeyCredentialProvider,
+        } = await import('@fiber-pay/sdk/browser');
+        const profile = getOrCreateProfile();
+        const credential = new RawKeyCredentialProvider(
+          profile.fiberKey,
+          profile.ckbKey,
+          profile.identifier,
+        );
+        const node = new FiberBrowserNode({
+          network: 'testnet',
+          credential,
+          nodeConfig: {
+            bootnodes: [],
+            logLevel: 'info',
+          },
+        });
+
+        node.on('stateChange', (state) => setNodeState(state));
+        node.on('error', (nodeError) => setError(nodeError.message));
+        trackNode(node);
+        nodeRef.current = node;
+
+        const info = await node.start();
+        setNodeInfo(info);
       });
-
-      node.on('stateChange', (state) => setNodeState(state));
-      node.on('error', (nodeError) => setError(nodeError.message));
-      nodeRef.current = node;
-
-      const info = await node.start();
-      setNodeInfo(info);
     } catch (startError) {
       setError(
         startError instanceof Error
