@@ -7,7 +7,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 
-const FIBER_PROJECT_ROOT = "/Users/sonny/nervos/fiber";
+const FIBER_PROJECT_ROOT = path.resolve(
+  process.env.FIBER_PROJECT_ROOT || "/Users/sonny/nervos/fiber",
+);
+const FIBER_DOCS_REF = process.env.FIBER_DOCS_REF || "v0.9.1";
 
 const DOC_DIRS = [
   path.join(PROJECT_ROOT, "content"),
@@ -77,7 +80,7 @@ function computeUrl(filePath, frontmatter) {
     return `/docs/${cleaned}`;
   }
   if (filePath.includes("/nervos/fiber/docs/")) {
-    return `https://github.com/nervosnetwork/fiber/blob/main/docs/${rel}`;
+    return `https://github.com/nervosnetwork/fiber/blob/${FIBER_DOCS_REF}/docs/${rel}`;
   }
   return `/${withoutExt}`;
 }

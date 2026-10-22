@@ -16,7 +16,7 @@ docker run --rm -d \
   -e FIBER_SECRET_KEY_PASSWORD='YOUR_PASSWORD' \
   -v "$(pwd)/fiber-node:/fiber" \
   -p 8228:8228 \
-  nervos/fiber:0.9.0
+  nervos/fiber:0.9.1
 ```
 
 ## Prerequisites
@@ -38,13 +38,13 @@ The Fiber image is published to two registries:
 
 ```bash
 # From Docker Hub
-docker pull nervos/fiber:0.9.0
+docker pull nervos/fiber:0.9.1
 
 # Or from GHCR
-docker pull ghcr.io/nervosnetwork/fiber:0.9.0
+docker pull ghcr.io/nervosnetwork/fiber:0.9.1
 ```
 
-Check [Docker Hub](https://hub.docker.com/r/nervos/fiber/tags) or [GHCR](https://github.com/nervosnetwork/fiber/pkgs/container/fiber) for available tags. For production, pin a specific version tag (for example, `0.9.0`) to avoid unexpected upgrades.
+Check [Docker Hub](https://hub.docker.com/r/nervos/fiber/tags) or [GHCR](https://github.com/nervosnetwork/fiber/pkgs/container/fiber) for available tags. For production, pin a specific version tag (for example, `0.9.1`) to avoid unexpected upgrades.
 
 ### 2. Prepare the Data Directory
 
@@ -83,7 +83,7 @@ docker run --rm -it \
   -e RUST_LOG='info' \
   -v "$(pwd)/fiber-node:/fiber" \
   -p 8228:8228 \
-  nervos/fiber:0.9.0
+  nervos/fiber:0.9.1
 ```
 
 | Port | Purpose | Exposure |
@@ -120,7 +120,7 @@ docker run --rm -it \
   -e FIBER_CONFIG_TEMPLATE='/usr/local/share/fiber/config/mainnet/config.yml' \
   -v "$(pwd)/fiber-node:/fiber" \
   -p 8228:8228 \
-  nervos/fiber:0.9.0
+  nervos/fiber:0.9.1
 ```
 
 <Callout type="info">
@@ -153,7 +153,7 @@ docker run --rm -it \
   -v "$(pwd)/fiber-node:/fiber" \
   -p 8228:8228 \
   -p 127.0.0.1:8227:8227 \
-  nervos/fiber:0.9.0
+  nervos/fiber:0.9.1
 ```
 
 Once the RPC port is mapped, you can call the JSON-RPC interface directly from the host:
@@ -165,7 +165,7 @@ curl -X POST -H "Content-Type: application/json" \
 ```
 
 <Callout type="warning" title="Security Risk">
-Exposing the RPC port to the public internet allows remote callers to control your node, including opening channels and sending payments. Keep the host-side mapping on `127.0.0.1` unless you have configured v0.9.0 RPC authentication and a secure access layer. Do not publish an unauthenticated RPC endpoint.
+Exposing the RPC port to the public internet allows remote callers to control your node, including opening channels and sending payments. Keep the host-side mapping on `127.0.0.1` unless you have configured v0.9.1 RPC authentication and a secure access layer. Do not publish an unauthenticated RPC endpoint.
 </Callout>
 
 ### 8. Build the Image Locally
@@ -178,7 +178,7 @@ cd fiber
 docker build -f docker/Dockerfile -t fiber:local .
 ```
 
-Then run the locally built image using `fiber:local` instead of `nervos/fiber:0.9.0`.
+Then run the locally built image using `fiber:local` instead of `nervos/fiber:0.9.1`.
 
 ### 9. Upgrade an Existing Data Directory
 
@@ -186,13 +186,13 @@ Stop the old container and back up the complete bind-mounted directory before ch
 
 ```bash
 docker stop fiber-node
-cp -a ./fiber-node ./fiber-node.backup-before-v0.9.0
+cp -a ./fiber-node ./fiber-node.backup-before-v0.9.1
 ```
 
-Then start `nervos/fiber:0.9.0` with the same `/fiber` mount. v0.9.0 has migration support built into `fnn`; do not delete `fiber/store` and do not run two versions against the same directory.
+Then start `nervos/fiber:0.9.1` with the same `/fiber` mount. v0.9.1 has migration support built into `fnn`; do not delete `fiber/store` and do not run two versions against the same directory.
 
 <Callout type="warning" title="Databases older than v0.8.x">
-v0.9.0 cannot directly migrate a pre-v0.8.x database. First use the matching v0.8.x `fnn-migrate` tool, then start v0.9.0. Follow [Backup and Restore](/docs/operate/backup) rather than guessing a migration command for valuable channel data.
+v0.9.1 cannot directly migrate a pre-v0.8.x database. First use the matching v0.8.x `fnn-migrate` tool, then start v0.9.1. Follow [Backup and Restore](/docs/operate/backup) rather than guessing a migration command for valuable channel data.
 </Callout>
 
 ## Next Steps

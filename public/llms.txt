@@ -12,7 +12,7 @@ Fiber Network Node (FNN) is the reference Rust implementation. fiber-js provides
 ## Quick Start
 
 - [Overview](https://www.fiber.world/docs/quick-start/run-a-node): What it means to run a Fiber node, the available node forms, and how to pick the right deployment for your use case
-- [Run a Native Node](https://www.fiber.world/docs/quick-start/run-a-node/rust): Run a native Fiber Network Node (FNN) binary on your local machine or server
+- [Run a Native Node](https://www.fiber.world/docs/quick-start/run-a-node/rust): Install and run a native Fiber Network Node (FNN) on your local machine or server
 - [Run a Native Node (Docker)](https://www.fiber.world/docs/quick-start/run-a-node/docker): Deploy the native Fiber Network Node using Docker
 - [Run a WASM Node](https://www.fiber.world/docs/quick-start/run-a-node/fiberjs): Run a Fiber node directly in your browser app
 - [Basic Transfer Example](https://www.fiber.world/docs/quick-start/basic-transfer): Learn how to set up and execute transfers between two nodes
@@ -39,7 +39,7 @@ Fiber Network Node (FNN) is the reference Rust implementation. fiber-js provides
 ## Node Operations
 
 - [Configuration Reference](https://www.fiber.world/docs/operate/config-reference): Reference for Fiber Node config.yml fields, supported overrides, and defaults
-- [Fiber Node Backup](https://www.fiber.world/docs/operate/backup): Back up and restore Fiber v0.9.0 node data
+- [Fiber Node Backup](https://www.fiber.world/docs/operate/backup): Back up and restore Fiber v0.9.1 node data
 - [Connect Public Nodes](https://www.fiber.world/docs/operate/connect-nodes): Connect your Fiber node to public Mainnet or Testnet nodes
 
 ## Concepts
@@ -92,7 +92,7 @@ Fiber Network Node (FNN) is the reference Rust implementation. fiber-js provides
 ## Optional
 
 - [Fiber GitHub Repository](https://github.com/nervosnetwork/fiber): The main FNN source code
-- [Fiber RPC API Reference](https://github.com/nervosnetwork/fiber/blob/main/crates/fiber-lib/src/rpc/README.md): Complete auto-generated RPC documentation
+- [Fiber RPC API Reference](https://github.com/nervosnetwork/fiber/blob/v0.9.1/crates/fiber-lib/src/rpc/README.md): Complete auto-generated RPC documentation
 - [fiber-scripts](https://github.com/nervosnetwork/fiber-scripts): On-chain CKB scripts for payment channels
 - [fiber-sphinx](https://github.com/nervosnetwork/fiber-sphinx): Onion routing cryptography library
 - [Fiber Network Dashboard](https://dashboard.fiber.channel/nodes): Live network status

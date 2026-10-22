@@ -191,7 +191,7 @@ Watchtower's **penalty mechanism** ensures that old commitment transactions are 
 
 ## **Other Technical Decisions**
 
-- **Storage**: We use RocksDB as the storage layer, leveraging its scheme-less storage design to simplify encoding and decoding structs with `serde`. Data migration remains a challenge, which we address by [this standalone program](https://github.com/nervosnetwork/fiber/blob/develop/migrate/src/main.rs).
+- **Storage**: We use RocksDB as the storage layer, leveraging its scheme-less storage design to simplify encoding and decoding structs with `serde`. Data migration remains a challenge, which we address by [this standalone program](https://github.com/nervosnetwork/fiber/blob/v0.8.0/migrate/src/main.rs).
 - **Serialization**: Messages between nodes are serialized and deserialized using [Molecule](https://github.com/nervosnetwork/molecule), bringing efficiency, compatibility, and security advantages. It ensures determinism, meaning the same message serializes identically on all nodes, which is crucial for signature generation and verification.
 
 ## Future Prospects

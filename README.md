@@ -38,6 +38,28 @@ In the GA4 web data stream, keep **Enhanced measurement** enabled and make sure
 both page loads and browser-history page changes are tracked. This records
 client-side navigation in the Next.js app without custom page-view events.
 
+## Automatic content merges
+
+The `Auto-merge content PRs` workflow squash-merges non-draft PRs by `linnnsss`
+targeting `master` when every changed file is under `content/blog/` or
+`content/pulse/` (including images). Renames must have both their old and new
+paths inside those directories. Changes to any other path require manual review.
+
+The workflow checks PR updates immediately and retries open PRs every 30 minutes
+(scheduled runs can be delayed by GitHub). It only merges when GitHub reports a
+clean, mergeable PR, respects branch protection, and pins the merge to the
+validated head SHA. Required reviews still need to be satisfied if configured.
+It never checks out or executes PR code. The workflow must be on `master` to
+activate; it also processes existing eligible PRs on its next scheduled run.
+
+No PAT or repository Auto-merge setting is needed; GitHub Actions must be enabled
+and allow the workflow's `contents: write` and `pull-requests: write` permissions.
+Merges made with `GITHUB_TOKEN` do not trigger subsequent `push` workflows in
+GitHub Actions. If deployment later relies on such a workflow, configure an
+explicit deployment trigger or a GitHub App token first.
+
+Run the automation regression tests with `node --test test/auto-merge-content.test.mjs`.
+
 ## Explore
 
 In the project, you can see:
