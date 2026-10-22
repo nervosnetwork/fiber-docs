@@ -1,5 +1,7 @@
 'use client';
 
+import { createBrowserNodeSession } from './browser-node-session';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -669,6 +671,7 @@ type ChannelList = Awaited<
 export function FiberChannelPaymentTutorial() {
   const router = useRouter();
   const nodeRef = useRef<FiberBrowserNode | null>(null);
+  const nodeSessionRef = useRef<ReturnType<typeof createBrowserNodeSession> | null>(null);
   const topRef = useRef<HTMLDivElement | null>(null);
   const demoRef = useRef<HTMLElement | null>(null);
   const articleRef = useRef<HTMLDivElement | null>(null);
@@ -792,7 +795,10 @@ export function FiberChannelPaymentTutorial() {
 
     setIsolationReady(supported);
     return () => {
-      void nodeRef.current?.stop();
+      const session = nodeSessionRef.current;
+      nodeSessionRef.current = null;
+      nodeRef.current = null;
+      void session?.stop().catch(() => { /* Keep the lease if shutdown fails. */ });
     };
   }, []);
 
@@ -986,65 +992,69 @@ export function FiberChannelPaymentTutorial() {
         throw new Error('Cross-origin isolation is not enabled for this page.');
       }
 
-      let node = nodeRef.current;
-      let info = nodeInfo;
-      if (!node?.isRunning) {
-        const {
-          FiberBrowserNode,
-          RawKeyCredentialProvider,
-        } = await import('@fiber-pay/sdk/browser');
-        const profile = getOrCreateProfile();
-        const credential = new RawKeyCredentialProvider(
-          profile.fiberKey,
-          profile.ckbKey,
-          profile.identifier,
-        );
-        node = new FiberBrowserNode({
-          network: 'testnet',
-          credential,
-          nodeConfig: { bootnodes: [], logLevel: 'info' },
-        });
+      const session = nodeSessionRef.current ??= createBrowserNodeSession();
+      await session.start(profileKey, async (trackNode) => {
+        let node = nodeRef.current;
+        let info = nodeInfo;
+        if (!node?.isRunning) {
+          const {
+            FiberBrowserNode,
+            RawKeyCredentialProvider,
+          } = await import('@fiber-pay/sdk/browser');
+          const profile = getOrCreateProfile();
+          const credential = new RawKeyCredentialProvider(
+            profile.fiberKey,
+            profile.ckbKey,
+            profile.identifier,
+          );
+          node = new FiberBrowserNode({
+            network: 'testnet',
+            credential,
+            nodeConfig: { bootnodes: [], logLevel: 'info' },
+          });
 
-        node.on('stateChange', setNodeState);
-        node.on('error', (nodeError) => setError(nodeError.message));
-        nodeRef.current = node;
-        info = await node.start();
-      }
-
-      if (!info) info = await node.nodeInfo();
-      setNodeInfo(info);
-      const { scriptToAddress } = await import('@fiber-pay/sdk/browser');
-      setCkbAddress(
-        scriptToAddress(info.default_funding_lock_script, 'testnet'),
-      );
-      try {
-        setCkbBalance(await queryCkbBalance(info.default_funding_lock_script));
-      } catch (balanceError) {
-        setError(
-          balanceError instanceof Error
-            ? balanceError.message
-            : 'Unable to read the Testnet balance.',
-        );
-      }
-
-      const { channels } = await node.listChannels();
-      applyChannelSnapshot(channels);
-      if (peerCount === 0) {
-        await node.connectPeer({
-          address: routerAddress,
-          pubkey: routerPubkey,
-        });
-
-        let peers = (await node.listPeers()).peers;
-        for (let attempt = 0; peers.length === 0 && attempt < 10; attempt += 1) {
-          await wait(800);
-          peers = (await node.listPeers()).peers;
+          node.on('stateChange', setNodeState);
+          node.on('error', (nodeError) => setError(nodeError.message));
+          trackNode(node);
+          nodeRef.current = node;
+          info = await node.start();
         }
-        if (peers.length === 0) {
-          throw new Error('The public peer handshake timed out.');
+
+        if (!info) info = await node.nodeInfo();
+        setNodeInfo(info);
+        const { scriptToAddress } = await import('@fiber-pay/sdk/browser');
+        setCkbAddress(
+          scriptToAddress(info.default_funding_lock_script, 'testnet'),
+        );
+        try {
+          setCkbBalance(await queryCkbBalance(info.default_funding_lock_script));
+        } catch (balanceError) {
+          setError(
+            balanceError instanceof Error
+              ? balanceError.message
+              : 'Unable to read the Testnet balance.',
+          );
         }
-        setPeerCount(peers.length);
-      }
+
+        const { channels } = await node.listChannels();
+        applyChannelSnapshot(channels);
+        if (peerCount === 0) {
+          await node.connectPeer({
+            address: routerAddress,
+            pubkey: routerPubkey,
+          });
+
+          let peers = (await node.listPeers()).peers;
+          for (let attempt = 0; peers.length === 0 && attempt < 10; attempt += 1) {
+            await wait(800);
+            peers = (await node.listPeers()).peers;
+          }
+          if (peers.length === 0) {
+            throw new Error('The public peer handshake timed out.');
+          }
+          setPeerCount(peers.length);
+        }
+      });
     } catch (prepareError) {
       setError(
         prepareError instanceof Error

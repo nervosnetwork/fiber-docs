@@ -1,5 +1,7 @@
 'use client';
 
+import { createBrowserNodeSession } from './browser-node-session';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   BrowserNodeState,
@@ -170,6 +172,7 @@ export function useFiberRoutingNode(
   },
 ) {
   const nodeRef = useRef<FiberBrowserNode | null>(null);
+  const nodeSessionRef = useRef<ReturnType<typeof createBrowserNodeSession> | null>(null);
   const [nodeState, setNodeState] = useState<BrowserNodeState>('idle');
   const [nodeInfo, setNodeInfo] = useState<NodeInfoResult | null>(null);
   const [address, setAddress] = useState('');
@@ -195,58 +198,62 @@ export function useFiberRoutingNode(
   }, []);
 
   const start = useCallback(async () => {
-    if (nodeRef.current || busy) return;
+    if (Boolean(nodeRef.current) || busy) return;
     setBusy('start');
     setError('');
     try {
       if (!window.crossOriginIsolated) {
         throw new Error('Cross-origin isolation is required. Reload this page once.');
       }
-      const {
-        FiberBrowserNode,
-        RawKeyCredentialProvider,
-        scriptToAddress,
-      } = await import('@fiber-pay/sdk/browser');
-      const profile = getOrCreateProfile(profileKey);
-      const node = new FiberBrowserNode({
-        network: 'testnet',
-        credential: new RawKeyCredentialProvider(
-          profile.fiberKey,
-          profile.ckbKey,
-          profile.identifier,
-        ),
-        nodeConfig: { bootnodes: [], logLevel: 'info', ...transport },
-      });
-      node.on('stateChange', setNodeState);
-      node.on('error', (nodeError) => setError(nodeError.message));
-      nodeRef.current = node;
-      const info = await node.start();
-      setNodeInfo(info);
-      setAddress(scriptToAddress(info.default_funding_lock_script, 'testnet'));
-      const [{ peers: initialPeers }, { channels: currentChannels }, currentBalance] =
-        await Promise.all([
-          node.listPeers(),
-          node.listChannels(),
-          queryCkbBalance(info.default_funding_lock_script),
-        ]);
+      const session = nodeSessionRef.current ??= createBrowserNodeSession();
+      await session.start(profileKey, async (trackNode) => {
+        const {
+          FiberBrowserNode,
+          RawKeyCredentialProvider,
+          scriptToAddress,
+        } = await import('@fiber-pay/sdk/browser');
+        const profile = getOrCreateProfile(profileKey);
+        const node = new FiberBrowserNode({
+          network: 'testnet',
+          credential: new RawKeyCredentialProvider(
+            profile.fiberKey,
+            profile.ckbKey,
+            profile.identifier,
+          ),
+          nodeConfig: { bootnodes: [], logLevel: 'info', ...transport },
+        });
+        node.on('stateChange', setNodeState);
+        node.on('error', (nodeError) => setError(nodeError.message));
+        trackNode(node);
+        nodeRef.current = node;
+        const info = await node.start();
+        setNodeInfo(info);
+        setAddress(scriptToAddress(info.default_funding_lock_script, 'testnet'));
+        const [{ peers: initialPeers }, { channels: currentChannels }, currentBalance] =
+          await Promise.all([
+            node.listPeers(),
+            node.listChannels(),
+            queryCkbBalance(info.default_funding_lock_script),
+          ]);
 
-      // Channel state survives a reload, but WebSocket peer connections do not.
-      // Reconnect known public peers so a persisted CHANNEL_READY channel is
-      // immediately usable for invoices and trampoline payments.
-      const knownPeers = [bottlePeer, bracerPeer].filter((peer) =>
-        currentChannels.some((channel) => samePubkey(channel.pubkey, peer.pubkey)),
-      );
-      await Promise.allSettled(
-        knownPeers
-          .filter((peer) =>
-            !initialPeers.some((connected) => samePubkey(connected.pubkey, peer.pubkey)),
-          )
-          .map((peer) => node.connectPeer({ address: peer.address, pubkey: peer.pubkey })),
-      );
-      const currentPeers = (await node.listPeers()).peers;
-      setPeers(currentPeers.map((peer) => peer.pubkey));
-      setChannels(currentChannels);
-      setBalance(currentBalance);
+        // Channel state survives a reload, but WebSocket peer connections do not.
+        // Reconnect known public peers so a persisted CHANNEL_READY channel is
+        // immediately usable for invoices and trampoline payments.
+        const knownPeers = [bottlePeer, bracerPeer].filter((peer) =>
+          currentChannels.some((channel) => samePubkey(channel.pubkey, peer.pubkey)),
+        );
+        await Promise.allSettled(
+          knownPeers
+            .filter((peer) =>
+              !initialPeers.some((connected) => samePubkey(connected.pubkey, peer.pubkey)),
+            )
+            .map((peer) => node.connectPeer({ address: peer.address, pubkey: peer.pubkey })),
+        );
+        const currentPeers = (await node.listPeers()).peers;
+        setPeers(currentPeers.map((peer) => peer.pubkey));
+        setChannels(currentChannels);
+        setBalance(currentBalance);
+      });
     } catch (startError) {
       setError(
         startError instanceof Error ? startError.message : 'Unable to start the node.',
@@ -341,8 +348,10 @@ export function useFiberRoutingNode(
 
     setIsolationReady(supported);
     return () => {
-      void nodeRef.current?.stop();
+      const session = nodeSessionRef.current;
+      nodeSessionRef.current = null;
       nodeRef.current = null;
+      void session?.stop().catch(() => { /* Keep the lease if shutdown fails. */ });
     };
   }, []);
 
