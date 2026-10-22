@@ -11,7 +11,7 @@
     "next": "16.2.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "@nervosnetwork/fiber-js": "0.9.0"
+    "@nervosnetwork/fiber-js": "0.9.1"
   },
   "devDependencies": {
     "@types/node": "^22.15.28",
