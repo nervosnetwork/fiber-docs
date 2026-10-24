@@ -351,6 +351,9 @@ function SetupNode({
   const remoteBalance = channel ? BigInt(channel.remote_balance) : 0n;
   const inboundReady = remoteBalance >= BigInt(ckbToHex(paymentAmount));
   const funded = (runtime.balance ?? 0n) >= BigInt(ckbToHex(channelAmount));
+  const fundingNoticeId = seller
+    ? 'seller-testnet-funding-notice'
+    : 'buyer-testnet-funding-notice';
 
   const open = async () => {
     const node = runtime.nodeRef.current;
@@ -431,6 +434,11 @@ function SetupNode({
             {runtime.busy === 'start' ? 'Starting node…' : 'Start local node'}
           </button>
           <button
+            aria-describedby={
+              runtime.nodeInfo && !channel && !funded
+                ? fundingNoticeId
+                : undefined
+            }
             className={styles.connectButton}
             disabled={
               !runtime.nodeInfo ||
@@ -450,7 +458,9 @@ function SetupNode({
                   ? 'Opening…'
                   : stage === 'confirming'
                     ? 'Confirming…'
-                    : `Connect & open ${channelAmount} CKB`}
+                    : runtime.nodeInfo && !funded
+                      ? 'Get Testnet CKB first'
+                      : `Connect & open ${channelAmount} CKB`}
           </button>
         </div>
       </div>
@@ -458,7 +468,28 @@ function SetupNode({
         <div className={styles.rebalanceAddress}>
           <code title={runtime.address}>{runtime.address}</code>
           <button onClick={() => void navigator.clipboard.writeText(runtime.address)}>Copy</button>
-          <a className={styles.faucetButton} href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Faucet ↗</a>
+          <a className={styles.faucetButton} href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Get Testnet CKB ↗</a>
+        </div>
+      )}
+      {runtime.address && !channel && !funded && (
+        <div
+          aria-live="polite"
+          className={styles.testnetFundingNotice}
+          id={fundingNoticeId}
+          role="status"
+        >
+          <div>
+            <span>Next step · Testnet funds required</span>
+            <strong>Fund {label} before opening its channel</strong>
+            <p>
+              Current balance: {hexToCkb(runtime.balance)} CKB. Copy the address
+              above, request at least {channelAmount} Testnet CKB from the Faucet,
+              then return here. This page checks the balance every five seconds.
+            </p>
+          </div>
+          <a href="https://faucet.nervos.org" rel="noreferrer" target="_blank">
+            Open Faucet ↗
+          </a>
         </div>
       )}
       <ChannelProgress label={`${label} channel progress`} stage={stage} />
