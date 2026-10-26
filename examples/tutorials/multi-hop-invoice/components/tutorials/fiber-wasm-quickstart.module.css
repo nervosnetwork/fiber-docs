@@ -3096,6 +3096,14 @@
   font: 500 12px/1.4 var(--font-inter, sans-serif);
 }
 
+.multiHopChannelConnector {
+  width: 32px;
+  height: 6px;
+  flex-shrink: 0;
+  border-top: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+}
+
 .multiHopRoute b {
   color: #dedede;
   font-weight: 600;
@@ -3444,6 +3452,11 @@
   font-size: 12px;
 }
 
+.multiHopForm .multiHopInvoiceAction {
+  width: 220px;
+  max-width: 100%;
+}
+
 .multiHopActions {
   display: flex;
   flex-wrap: wrap;
@@ -3545,6 +3558,11 @@
   margin-top: 14px;
 }
 
+.multiHopEvents .eventList {
+  max-height: none;
+  overflow-y: visible;
+}
+
 .multiHopEvents .multiHopRoute {
   margin: 0;
   border-bottom: 1px solid #343434;
@@ -3559,15 +3577,19 @@
 }
 
 .multiHopProofValue {
-  display: flex;
+  position: relative;
   min-width: 0;
-  align-items: center;
-  gap: 12px;
+  overflow-wrap: anywhere;
 }
 
 .multiHopProofValue > code {
-  min-width: 0;
-  flex: 1;
+  display: inline;
+}
+
+.multiHopProofValue > .multiHopCopy {
+  position: static;
+  margin-left: 4px;
+  vertical-align: middle;
 }
 
 .multiHopDemo .verifiedReceipt > .multiHopField {
@@ -3720,14 +3742,14 @@
 
 .multiHopOutcome > button:disabled { cursor: not-allowed; opacity: 0.45; }
 
-.multiHopOutcome .multiHopProofValue button {
-  width: 40px;
-  height: 40px;
-  min-height: 40px;
-  min-width: 40px;
+.multiHopProofValue .multiHopCopy button {
+  width: 15px;
+  height: 15px;
+  min-height: 15px;
+  min-width: 15px;
   margin: 0;
   border: 0;
-  padding: 8px;
+  padding: 0;
   background: transparent;
 }
 

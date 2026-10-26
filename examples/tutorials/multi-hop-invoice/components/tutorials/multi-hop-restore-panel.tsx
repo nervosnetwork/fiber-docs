@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createLiquidityRestore, type LiquidityReturn } from './multi-hop-restore';
 import { availableChannelBalance, maximumInvoiceAmount, invoiceAmountError } from './multi-hop-progress';
 import { bottlePeer, findReusableChannel, hexToCkb, useFiberRoutingNode } from './fiber-routing-runtime';
+import { CopyValue } from './multi-hop-copy-value';
 import styles from './fiber-wasm-quickstart.module.css';
 
 type Runtime = ReturnType<typeof useFiberRoutingNode>;
@@ -14,7 +15,7 @@ export function RestoreLiquidityPanel({ sender, receiver, onBlocked, onRestored 
   onRestored: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [amount, setAmount] = useState('100');
+  const [amount, setAmount] = useState('1');
   const [record, setRecord] = useState<LiquidityReturn | null>(null);
   const [working, setWorking] = useState(false);
   const [settling, setSettling] = useState(false);
@@ -86,7 +87,7 @@ export function RestoreLiquidityPanel({ sender, receiver, onBlocked, onRestored 
   }, [sender.nodeInfo?.pubkey, receiver.nodeInfo?.pubkey, sender.nodeRef, receiver.nodeRef, sender.refresh, receiver.refresh]);
 
   const open = () => {
-    const suggested = maximum === undefined || maximum >= 10_000_000_000n ? 10_000_000_000n : maximum;
+    const suggested = maximum === undefined || maximum >= 100_000_000n ? 100_000_000n : maximum;
     setAmount(hexToCkb(suggested));
     setError('');
     if (record?.phase === 'success') setRecord(null);
@@ -103,9 +104,9 @@ export function RestoreLiquidityPanel({ sender, receiver, onBlocked, onRestored 
 
   return (
     <div className={styles.multiHopRestore}>
-      {!expanded ? <button type="button" disabled={!ready || Boolean(sender.busy) || Boolean(receiver.busy)} onClick={open}>Restore receiving liquidity</button> : <>
+      {!expanded ? <button className={styles.multiHopInvoiceAction} type="button" disabled={!ready || Boolean(sender.busy) || Boolean(receiver.busy)} onClick={open}>Restore receiving liquidity</button> : <>
         <div className={styles.multiHopRestoreHeading}><strong>Restore receiving liquidity</strong>{!blocked && <button type="button" onClick={() => setExpanded(false)} aria-label="Close liquidity restoration">×</button>}</div>
-        <p className={styles.multiHopHelp}>Send funds back from C through Bottle to A so you can practise receiving again.</p>
+        <p className={styles.multiHopHelp}>Send funds back from C through Bottle to A so you can practice receiving again.</p>
         {pending || working ? <div role="status" className={styles.multiHopRestoreStatus}>
           <strong>{record?.phase === 'pending' ? 'Return payment pending…' : 'Preparing return payment…'}</strong>
           <span>C → B → A · {record?.amount ?? amount} CKB</span>
@@ -114,17 +115,18 @@ export function RestoreLiquidityPanel({ sender, receiver, onBlocked, onRestored 
           <button type="button" onClick={() => void controller.current?.check()}>Check return status</button>
         </div> : record?.phase === 'success' ? <div role="status" className={styles.multiHopRestoreStatus}>
           <strong>Liquidity restored</strong><span>{record.amount} CKB received by A.</span>
+          <span>Actual routing fee: {record.fee !== undefined ? `${hexToCkb(record.fee)} CKB` : 'Unavailable'} · Maximum: 1 CKB</span>
           <button type="button" disabled={settling} onClick={() => { setRecord(null); setExpanded(false); }}>{settling ? 'Refreshing channel liquidity…' : 'Continue with a new invoice'}</button>
         </div> : <>
           <label className={styles.multiHopField}>Amount to return to A
             <span className={styles.multiHopAmountInput}><input value={amount} onChange={event => setAmount(event.target.value)} inputMode="decimal" aria-invalid={Boolean(validation)} aria-describedby="return-amount-help" /><span>CKB</span></span>
           </label>
-          <p className={styles.multiHopHelp} id="return-amount-help">C → B → A · Max. routing fee: 1 CKB · Maximum return: {hexToCkb(maximum)} CKB</p>
+          <p className={styles.multiHopHelp} id="return-amount-help">Max. routing fee: 1 CKB · Maximum return: {hexToCkb(maximum)} CKB</p>
           {validation && <p role="alert" className={styles.multiHopError}>{validation}</p>}
           {record?.phase === 'failed' && <p role="alert" className={styles.multiHopError}>The return payment failed. {record.detail}</p>}
           <button type="button" className={styles.verifiedPrimaryAction} disabled={!ready || Boolean(validation) || Boolean(sender.busy) || Boolean(receiver.busy)} onClick={() => void send()}>Send back to A</button>
         </>}
-        {record && <span className={styles.multiHopRestoreHash}>Return payment hash: <code>{record.hash}</code></span>}
+        {record && <div className={styles.multiHopRestoreHash}><span>Return payment hash</span><div className={styles.multiHopProofValue}><code>{record.hash}</code><CopyValue value={record.hash} label="Copy return payment hash" iconOnly /></div></div>}
         {error && <p role="alert" className={styles.multiHopError}>{error}</p>}
       </>}
     </div>

@@ -8,6 +8,7 @@ export type LiquidityReturn = {
   amount: string;
   phase: 'pending' | 'failed' | 'success';
   detail?: string;
+  fee?: `0x${string}`;
 };
 
 // A separate payment identity keeps recovery independent of the tutorial receipt.
@@ -23,7 +24,8 @@ export function createLiquidityRestore(options: {
   const saved = options.storage.getItem(options.key);
   let record: LiquidityReturn | null = saved ? JSON.parse(saved) : null;
   if (record && (!/^0x[0-9a-f]+$/i.test(record.hash) || typeof record.invoice !== 'string'
-    || typeof record.amount !== 'string' || !['pending', 'failed', 'success'].includes(record.phase))) {
+    || typeof record.amount !== 'string' || !['pending', 'failed', 'success'].includes(record.phase)
+    || (record.fee !== undefined && (typeof record.fee !== 'string' || !/^0x[0-9a-f]+$/i.test(record.fee))))) {
     throw new Error('Unable to read the saved return payment. Keep this node profile and check its payment history before sending again.');
   }
   let sending = false;
@@ -38,6 +40,7 @@ export function createLiquidityRestore(options: {
       if (!persisted || persisted.hash !== next.hash
         || (persisted.phase !== 'pending' && next.phase === 'pending')
         || (persisted.phase === 'success' && next.phase !== 'success')) return;
+      next.fee ??= persisted.fee;
     }
     // Persist before notifying React, and especially before submitting any funds.
     options.storage.setItem(options.key, JSON.stringify(next));
@@ -45,7 +48,7 @@ export function createLiquidityRestore(options: {
     if (!disposed) options.onChange(next);
   };
   const check = async () => {
-    if (!record || record.phase !== 'pending' || checking) return;
+    if (!record || record.phase === 'failed' || (record.phase === 'success' && record.fee !== undefined) || checking) return;
     checking = true;
     const attempt = record;
     try {
@@ -57,8 +60,8 @@ export function createLiquidityRestore(options: {
       const latest = options.storage.getItem(options.key);
       if (record !== attempt || !latest || JSON.parse(latest).hash !== attempt.hash) return;
       if (payment.status === 'Success' && invoice.status === 'Paid') {
-        save({ ...attempt, phase: 'success', detail: undefined });
-      } else if (payment.status === 'Failed' && invoice.status !== 'Paid') {
+        save({ ...attempt, phase: 'success', fee: payment.fee ?? attempt.fee, detail: undefined });
+      } else if (attempt.phase === 'pending' && payment.status === 'Failed' && invoice.status !== 'Paid') {
         save({ ...attempt, phase: 'failed', detail: payment.failed_error || 'The return payment failed. Check the channels and try again.' });
       }
     } catch {
@@ -97,6 +100,7 @@ export function createLiquidityRestore(options: {
         save(attempt, true);
         try {
           const payment = await options.payer.sendPayment({ invoice: attempt.invoice, trampoline_hops: [options.bottle], max_fee_amount: '0x5f5e100' });
+          if (payment.status === 'Success') save({ ...attempt, fee: payment.fee });
           if (payment.status === 'Failed') save({ ...attempt, phase: 'failed', detail: payment.failed_error || 'The return payment failed.' });
         } catch (error) {
           // Retain the identity even if the submission response was lost. Never
