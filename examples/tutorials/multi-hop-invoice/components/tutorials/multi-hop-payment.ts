@@ -10,6 +10,7 @@ export type ForwardPayment = {
   detail: string;
   attempt: string;
   route?: string[];
+  fee?: `0x${string}`;
 };
 const pending = (record: ForwardPayment) => record.submitted && record.status !== 'Failed'
   && !(record.status === 'Success' && record.invoiceStatus === 'Paid');
@@ -34,6 +35,7 @@ export function createForwardPayment(options: {
         || !['Not sent','Sending','Created','Inflight','Success','Failed'].includes(value.status)
         || !['Open','Received','Paid','Cancelled','Expired'].includes(value.invoiceStatus)
         || typeof value.detail !== 'string'
+        || (value.fee !== undefined && (typeof value.fee !== 'string' || !/^0x[0-9a-f]+$/i.test(value.fee)))
         || (value.route !== undefined && (!Array.isArray(value.route) || !value.route.every((hop: unknown) => typeof hop === 'string')))) throw Error();
       return value;
     } catch {
@@ -50,6 +52,7 @@ export function createForwardPayment(options: {
       if (!latest || latest.attempt !== next.attempt
         || (latest.status === 'Success' && next.status !== 'Success')
         || (latest.status === 'Failed' && !['Success','Failed'].includes(next.status))) return;
+      next.fee ??= latest.fee;
       if (latest.invoiceStatus === 'Paid') next = { ...next, invoiceStatus: 'Paid' };
     }
     options.storage.setItem(options.key, JSON.stringify(next));
@@ -70,6 +73,7 @@ export function createForwardPayment(options: {
       save({ ...attempt,
         invoiceStatus: invoice.status === 'fulfilled' ? invoice.value.status : attempt.invoiceStatus,
         status: result?.status ?? attempt.status,
+        fee: result?.status === 'Success' ? result.fee ?? attempt.fee : attempt.fee,
         route: result?.routers?.[0]?.nodes.map(node => node.pubkey) ?? attempt.route,
         detail: result ? result.failed_error || '' : attempt.detail,
       });
@@ -95,7 +99,7 @@ export function createForwardPayment(options: {
         save(attempt, true);
         try {
           const result = await options.payer.sendPayment({ invoice: attempt.invoice, trampoline_hops: [options.bottle], max_fee_amount: '0x5f5e100' });
-          save({ ...attempt, status: result.status, detail: result.failed_error || '', route: result.routers?.[0]?.nodes.map(node => node.pubkey) ?? attempt.route });
+          save({ ...attempt, status: result.status, fee: result.status === 'Success' ? result.fee : undefined, detail: result.failed_error || '', route: result.routers?.[0]?.nodes.map(node => node.pubkey) ?? attempt.route });
         } catch (error) {
           const detail = error instanceof Error ? error.message : String(error);
           save({ ...attempt, status: /Send payment error: Failed to build route/i.test(detail) ? 'Failed' : 'Sending', detail });

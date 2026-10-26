@@ -115,3 +115,52 @@ test('a late response from an old controller cannot overwrite a newer return', a
   assert.equal(JSON.parse(f.data.get('return:C:A')).hash, '0x2');
   assert.equal(JSON.parse(f.data.get('return:C:A')).phase, 'pending');
 });
+
+test('return fee is saved from the settled payment and survives reload', async () => {
+  const f=fixture(); const flow=createLiquidityRestore(f.dependencies);
+  await flow.send('1');
+  f.dependencies.payer.getPayment=async()=>({status:'Success',fee:'0x7a120'});
+  f.setStatuses('Success','Paid'); await flow.check();
+  assert.equal(flow.current().fee,'0x7a120');
+  assert.equal(createLiquidityRestore(f.dependencies).current().fee,'0x7a120');
+});
+test('an older successful return without a fee can recover it without resending', async () => {
+  const f=fixture(); const flow=createLiquidityRestore(f.dependencies);
+  await flow.send('1'); f.setStatuses('Success','Paid'); await flow.check();
+  const resumed=createLiquidityRestore(f.dependencies);
+  f.dependencies.payer.getPayment=async()=>({status:'Success',fee:'0x0'});
+  await resumed.check();
+  assert.equal(resumed.current().fee,'0x0');
+  assert.equal(f.calls.filter(([kind])=>kind==='send-from-C').length,1);
+});
+test('successful send response preserves the return fee when status read is unavailable', async () => {
+  const f=fixture();
+  f.dependencies.payer.sendPayment=async()=>({status:'Success',fee:'0x7a120'});
+  f.dependencies.payer.getPayment=async()=>{throw Error('offline')};
+  const flow=createLiquidityRestore(f.dependencies); await flow.send('1');
+  assert.equal(flow.current().fee,'0x7a120');
+  assert.equal(flow.current().phase,'pending');
+});
+
+test('a late status response cannot erase the fee recovered by a replacement controller', async () => {
+  const f = fixture(); const old = createLiquidityRestore(f.dependencies);
+  await old.send('1'); f.setStatuses('Success', 'Paid');
+  let release;
+  f.dependencies.payer.getPayment = () => new Promise(resolve => { release = resolve; });
+  const checking = old.check(); old.dispose();
+  const resumed = createLiquidityRestore(f.dependencies);
+  f.dependencies.payer.getPayment = async () => ({ status: 'Success', fee: '0x7a120' });
+  await resumed.check();
+  release({ status: 'Success' }); await checking;
+  assert.equal(createLiquidityRestore(f.dependencies).current().fee, '0x7a120');
+});
+
+test('malformed saved fees block recovery before they reach the formatter', async () => {
+  const f = fixture(); const flow = createLiquidityRestore(f.dependencies);
+  await flow.send('1');
+  const saved = flow.current();
+  for (const fee of ['invalid', '-1', 500000, null]) {
+    f.data.set('return:C:A', JSON.stringify({ ...saved, fee }));
+    assert.throws(() => createLiquidityRestore(f.dependencies), /saved return payment/i);
+  }
+});
