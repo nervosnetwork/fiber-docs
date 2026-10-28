@@ -1,6 +1,6 @@
 'use client';
 
-import { createBrowserNodeSession } from './browser-node-session';
+import { createBrowserNodeSession, PeerHandshakeTimeoutError } from './browser-node-session';
 
 import Image from 'next/image';
 import Link from 'next/link';
@@ -18,6 +18,9 @@ import type {
   NodeInfoResult,
 } from '@fiber-pay/sdk/browser';
 import { ExplainedTerm } from './explained-term';
+import { MobileTutorialPicker } from './mobile-tutorial-picker';
+import { CopyIconButton } from './copy-icon-button';
+import { channelOpeningStates, channelOpeningProgress, channelOpeningDescriptions, channelStateLabel, isMultiHopChannelReady as isChannelReady } from './multi-hop-progress';
 import styles from './fiber-wasm-quickstart.module.css';
 
 const routerAddress =
@@ -299,7 +302,7 @@ export async function sendKeysend(
     language: 'tsx',
     code: `'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   scriptToAddress,
   type FiberBrowserNode,
@@ -309,7 +312,7 @@ import {
   routerPubkey,
   startFiber,
 } from '@/lib/fiber';
-import { openCkbChannel } from '@/lib/channel';
+import { openCkbChannel, watchChannelStates } from '@/lib/channel';
 import { sendKeysend } from '@/lib/payment';
 
 export default function PayPage() {
@@ -338,8 +341,15 @@ export default function PayPage() {
   async function openChannel() {
     if (!node.current || !connected) return;
     await openCkbChannel(node.current, routerPubkey, '499');
-    setChannelReady(true);
+    // Opening only starts negotiation; wait for CHANNEL_READY.
   }
+
+  useEffect(() => {
+    if (!connected || !node.current) return;
+    return watchChannelStates(node.current, (state) => {
+      setChannelReady(state.replace(/_/g, '').toLowerCase() === 'channelready');
+    });
+  }, [connected]);
 
   async function pay() {
     if (!node.current || !channelReady) return;
@@ -374,14 +384,14 @@ type CodeFocus = {
 };
 
 const sectionCode: Record<string, CodeFocus> = {
-  model: { file: 'app', start: 39, end: 48 },
+  model: { file: 'app', start: 39, end: 56 },
   identity: { file: 'app', start: 23, end: 31 },
   fund: { file: 'balance', start: 7, end: 45 },
   amounts: { file: 'amounts', start: 1, end: 18 },
   open: { file: 'channel', start: 7, end: 19 },
   ready: { file: 'channel', start: 21, end: 40 },
   pay: { file: 'payment', start: 4, end: 26 },
-  react: { file: 'app', start: 16, end: 65 },
+  react: { file: 'app', start: 16, end: 74 },
 };
 
 const syntaxPattern =
@@ -631,26 +641,6 @@ function RefreshIcon() {
 const wait = (milliseconds: number) =>
   new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 
-const channelStateSequence = [
-  'NEGOTIATING_FUNDING',
-  'COLLABORATING_FUNDING_TX',
-  'SIGNING_COMMITMENT',
-  'AWAITING_TX_SIGNATURES',
-  'AWAITING_CHANNEL_READY',
-  'CHANNEL_READY',
-] as const;
-
-function nextChannelState(current: string) {
-  const normalized = current.replace(/[^a-z0-9]/gi, '').toLowerCase();
-  const index = channelStateSequence.findIndex(
-    (state) => state.replace(/_/g, '').toLowerCase() === normalized,
-  );
-
-  return index >= 0 && index < channelStateSequence.length - 1
-    ? channelStateSequence[index + 1]
-    : null;
-}
-
 type BusyAction =
   | 'prepare'
   | 'refresh'
@@ -698,6 +688,8 @@ export function FiberChannelPaymentTutorial() {
   const [paymentHash, setPaymentHash] = useState('');
   const [receiptAmount, setReceiptAmount] = useState('');
   const [activeChannelId, setActiveChannelId] = useState('');
+  const [fundingTxHash, setFundingTxHash] = useState('');
+  const fundingExplorerUrl = fundingTxHash ? `https://testnet.explorer.nervos.org/transaction/${fundingTxHash}` : '';
   const [localBalanceBefore, setLocalBalanceBefore] = useState<bigint | null>(null);
   const [localBalanceAfter, setLocalBalanceAfter] = useState<bigint | null>(null);
   const [paymentLogs, setPaymentLogs] = useState<PaymentLog[]>([]);
@@ -709,16 +701,15 @@ export function FiberChannelPaymentTutorial() {
 
   const applyChannelSnapshot = useCallback((channels: ChannelList) => {
     const ready = channels.filter((channel) =>
-      channel.state.state_name.toLowerCase().includes('ready'),
+      isChannelReady(channel.state.state_name),
     );
-    const nextState = channels.at(-1)?.state.state_name;
     const activeChannel = ready.at(-1) ?? channels.at(-1);
+    const nextState = activeChannel ? channelStateLabel(activeChannel.state.state_name) : undefined;
 
     setChannelCount(channels.length);
     setReadyChannelCount(ready.length);
-    if (activeChannel) {
-      setActiveChannelId(activeChannel.channel_id);
-    }
+    setActiveChannelId(activeChannel?.channel_id ?? '');
+    setFundingTxHash(activeChannel?.channel_outpoint?.tx_hash ?? '');
     if (!nextState) {
       setChannelState((current) =>
         current.startsWith('Opening') ? current : 'Not opened',
@@ -762,7 +753,7 @@ export function FiberChannelPaymentTutorial() {
     readyChannelCount === 0 &&
     channelState !== 'Not opened' &&
     channelState !== 'Open failed';
-  const expectedChannelState = nextChannelState(channelState);
+  const lifecycle = channelOpeningProgress(channelState);
 
   const syncToSection = useCallback((section: string) => {
     setActiveSection(section);
@@ -1050,7 +1041,7 @@ export function FiberChannelPaymentTutorial() {
             peers = (await node.listPeers()).peers;
           }
           if (peers.length === 0) {
-            throw new Error('The public peer handshake timed out.');
+            throw new PeerHandshakeTimeoutError('Prepare browser node');
           }
           setPeerCount(peers.length);
         }
@@ -1130,7 +1121,7 @@ export function FiberChannelPaymentTutorial() {
       const beforeChannel = beforeChannels.find(
         (channel) => channel.channel_id === activeChannelId,
       ) ?? beforeChannels.find((channel) =>
-        channel.state.state_name.toLowerCase().includes('ready'),
+        isChannelReady(channel.state.state_name),
       );
       setLocalBalanceBefore(
         beforeChannel ? BigInt(beforeChannel.local_balance) : null,
@@ -1140,6 +1131,7 @@ export function FiberChannelPaymentTutorial() {
         amount: ckbToHex(submittedAmount),
         keysend: true,
       });
+      setPaymentHash(submitted.payment_hash);
       addPaymentLog(
         `Submitted · ${shorten(submitted.payment_hash)}`,
         'pending',
@@ -1277,7 +1269,8 @@ export function FiberChannelPaymentTutorial() {
 
   return (
     <div className={styles.shell}>
-      <header className={styles.tutorialToolbar}>
+      <header className={`${styles.tutorialToolbar} ${styles.routingToolbar}`}>
+        <MobileTutorialPicker currentTutorialIndex={currentTutorialIndex} />
         <div className={styles.tutorialSelect} ref={tutorialMenuRef}>
           <button
             aria-expanded={tutorialMenuOpen}
@@ -1454,7 +1447,7 @@ export function FiberChannelPaymentTutorial() {
                     </button>
                   </div>
                   <span>
-                    Balance: <b>{formatCkb(ckbBalance)}</b> · auto-checks every 5s
+                    Balance: <b>{formatCkb(ckbBalance)}</b> · Faucet CKB may take up to 30s to confirm on-chain.
                   </span>
                 </div>
                 <div className={styles.fundingActions}>
@@ -1485,7 +1478,16 @@ export function FiberChannelPaymentTutorial() {
                   <strong>
                     Open a{' '}
                     <ExplainedTerm
-                      explanation="The selected public peer requires at least 499 CKB to open a channel. Keep extra Testnet CKB available for the transaction fee."
+                      explanation={
+                        <>
+                          <span className={styles.fundingReserveTitle}>499 CKB breakdown:</span>
+                          <span className={styles.fundingReserveList} role="list">
+                            <span role="listitem">400 CKB initially available for payments</span>
+                            <span role="listitem">98 CKB reserved for the commitment cell used in on-chain settlement</span>
+                            <span role="listitem">1 CKB reserved for the transaction fee when closing the channel</span>
+                          </span>
+                        </>
+                      }
                       id="channel-minimum-funding"
                     >
                       499 CKB
@@ -1526,26 +1528,27 @@ export function FiberChannelPaymentTutorial() {
                 </ActionHint>
               </div>
 
-              {channelHistory.length > 0 && (
-                <div className={styles.channelTimeline}>
-                  <span>Observed channel lifecycle</span>
+              {(channelHistory.length > 0 || channelOpening) && (
+                <div className={`${styles.channelTimeline} ${styles.multiHopLifecycle}`}>
+                  <span>Observed channel states <small>(This may take up to 1 min)</small></span>
                   <div>
-                    {channelHistory.map((state, index) => (
-                      <span key={`${state}-${index}`}>
-                        {index > 0 && <i>→</i>}
-                        <b>{state}</b>
+                    {lifecycle.map(({ state, status }, index) => (
+                      <span aria-current={status === 'current' ? 'step' : undefined} aria-label={`${state}: ${status}`} data-state={status} key={state}>
+                        {index > 0 && <i aria-hidden="true">→</i>}
+                        <b title={channelOpeningDescriptions[state]}>{status === 'complete' && <i aria-hidden="true">✓ </i>}{state}</b>
                       </span>
                     ))}
-                    {expectedChannelState && (
-                      <span
-                        aria-label={`Waiting for ${expectedChannelState}`}
-                        className={styles.pendingChannelState}
-                      >
-                        <i aria-hidden="true">→</i>
-                        <b>{expectedChannelState}</b>
-                      </span>
-                    )}
                   </div>
+                </div>
+              )}
+
+              {activeChannelId && (
+                <div className={`${styles.paymentReceipt} ${styles.channelDetails}`}>
+                  <span>Channel details</span>
+                  <dl>
+                    <div><dt>Channel ID</dt><dd className={styles.copyableValue}><span title={activeChannelId}>{shorten(activeChannelId)}</span><CopyIconButton value={activeChannelId} label="Copy full channel ID" /></dd></div>
+                    <div><dt>Funding transaction</dt><dd className={styles.copyableValue}>{fundingExplorerUrl ? <><a href={fundingExplorerUrl} rel="noreferrer" target="_blank" title={fundingTxHash}>View in explorer ↗</a><CopyIconButton value={fundingExplorerUrl} label="Copy funding transaction explorer link" /></> : <span>Waiting for funding transaction…</span>}</dd></div>
+                  </dl>
                 </div>
               )}
 
@@ -1589,8 +1592,8 @@ export function FiberChannelPaymentTutorial() {
                   <dl>
                     <div><dt>Status</dt><dd>{paymentStatus}</dd></div>
                     <div><dt>Amount</dt><dd>{receiptAmount} CKB</dd></div>
-                    <div><dt>Channel ID</dt><dd title={activeChannelId}>{shorten(activeChannelId)}</dd></div>
-                    <div><dt>Payment hash</dt><dd title={paymentHash}>{shorten(paymentHash)}</dd></div>
+                    <div><dt>Channel ID</dt><dd className={styles.copyableValue}><span title={activeChannelId}>{shorten(activeChannelId)}</span><CopyIconButton value={activeChannelId} label="Copy full channel ID" /></dd></div>
+                    <div><dt>Payment hash</dt><dd className={styles.copyableValue}><span title={paymentHash}>{shorten(paymentHash)}</span><CopyIconButton value={paymentHash} label="Copy full payment hash" /></dd></div>
                     <div><dt>Local balance</dt><dd>{formatCkb(localBalanceBefore)} → {formatCkb(localBalanceAfter)}</dd></div>
                   </dl>
                 </div>
@@ -1669,7 +1672,7 @@ export function FiberChannelPaymentTutorial() {
                 <div><b>Public Fiber peer</b><span>Receives payment</span></div>
               </div>
               <div className={`${styles.note} ${styles.noteInfo}`}><strong>Testnet state is real</strong><p>Preparing the node starts it locally and connects it to the public peer. Opening the channel and sending payments are separate actions.</p></div>
-              <small className={styles.fileReference}>app/pay/page.tsx · lines 39–48</small>
+              <small className={styles.fileReference}>app/pay/page.tsx · lines 39–56</small>
             </section>
 
             <section className={styles.section} data-tutorial-section="identity">
@@ -1678,6 +1681,7 @@ export function FiberChannelPaymentTutorial() {
               <p><code>start()</code> starts the browser node and reveals the Testnet address that must be funded. It calls <code>startFiber()</code>, reads the node information, and uses <code>scriptToAddress()</code> to convert <code>default_funding_lock_script</code> into its Testnet address.</p>
               <p className={styles.followupParagraph}>The demo combines startup and <code>connectToRouter()</code> into one preparation action. The downloaded source keeps the helpers separate, so an application can expose more control when needed.</p>
               <small className={styles.fileReference}>app/pay/page.tsx · lines 23–31</small>
+              <p className={styles.followupParagraph}><strong>Node already in use:</strong> close the other tutorial tab to stop its saved node session, then select <strong>Prepare browser node</strong> here. <strong>Peer handshake timed out:</strong> the node is running; check your network and select <strong>Prepare browser node</strong> again to retry the connection. If timeouts continue, the public peer may be unavailable.</p>
             </section>
 
             <section className={styles.section} data-tutorial-section="fund">
@@ -1713,8 +1717,9 @@ export function FiberChannelPaymentTutorial() {
             <section className={styles.section} data-tutorial-section="ready">
               <div className={styles.stepLabel}><span>5</span> Observe confirmation</div>
               <h2>Wait for ChannelReady</h2>
-              <p><code>watchChannelStates()</code> keeps payment controls locked until the funding transaction and peer handshake complete. It polls <code>listChannels()</code> and reports each new <code>state_name</code> as the channel moves through the following states:</p>
-              <div className={styles.checkList}><span>NegotiatingFunding → agree on channel parameters</span><span>CollaboratingFundingTx → build the funding transaction</span><span>AwaitingChannelReady → wait for confirmation and both peers</span><span>ChannelReady → allow payments</span></div>
+              <p><code>watchChannelStates()</code> keeps payment controls locked until the funding transaction and peer handshake complete. It polls <code>listChannels()</code> and reports each new <code>state_name</code>, displayed in the same uppercase format as the multi-hop tutorial, as the channel moves through the following states:</p>
+              <div className={styles.checkList}>{channelOpeningStates.map((state) => <span key={state}><strong>{state}</strong> — {channelOpeningDescriptions[state]}</span>)}</div>
+              <p className={styles.followupParagraph}>This may take up to 1 min. The progress display lists all six stages, highlights the current state, and marks earlier stages complete. Some transitions happen between polls, so the event log may skip a state. Keep the node running while it progresses. If it stays in one state for more than a minute, refresh the live state, check the peer connection, and inspect the funding transaction in the explorer when available. A longer Testnet confirmation wait does not by itself mean the operation failed; avoid opening another channel while this one is pending.</p>
               <small className={styles.fileReference}>lib/channel.ts · lines 21–40</small>
             </section>
 
@@ -1722,7 +1727,7 @@ export function FiberChannelPaymentTutorial() {
               <div className={styles.stepLabel}><span>6</span> Pay and verify</div>
               <h2>Send and confirm the keysend payment</h2>
               <p><code>sendKeysend()</code> sends a direct payment without first requesting an invoice. Fiber calls this a keysend payment because it does not require the receiving peer to create an invoice. The function calls <code>sendPayment()</code> with the recipient pubkey, amount, and <code>keysend: true</code>.</p>
-              <p className={styles.followupParagraph}>If the response is still in flight, <code>waitForPayment()</code> waits for <code>Success</code> or <code>Failed</code>. The demo then shows the payment hash and the channel&apos;s local balance before and after.</p>
+              <p className={styles.followupParagraph}>If the response is still in flight, <code>waitForPayment()</code> waits for <code>Success</code> or <code>Failed</code>. The demo then shows the payment hash and the channel&apos;s local balance before and after. Use the copy icons for the full channel ID, payment hash, or funding-transaction explorer link. A tooltip confirms successful copying. The funding link appears once the node reports the transaction outpoint.</p>
               <small className={styles.fileReference}>lib/payment.ts · lines 4–26</small>
             </section>
 
@@ -1734,7 +1739,7 @@ export function FiberChannelPaymentTutorial() {
                 <strong>Production requirements</strong>
                 <p>A production product should also encrypt keys, support backup and recovery, surface fees and timeouts, and use server-side verification when payments unlock orders or access.</p>
               </div>
-              <small className={styles.fileReference}>app/pay/page.tsx · lines 16–65</small>
+              <small className={styles.fileReference}>app/pay/page.tsx · lines 16–74</small>
             </section>
 
             <section className={styles.section} data-tutorial-section="download">

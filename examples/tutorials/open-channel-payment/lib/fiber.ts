@@ -1,3 +1,4 @@
+import { createBrowserNodeSession, PeerHandshakeTimeoutError } from './browser-node-session';
 import type { BrowserNodeState, FiberBrowserNode } from '@fiber-pay/sdk/browser';
 export const routerPubkey = '0x02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71';
 const routerAddress = '/dns4/bottle.fiber.channel/tcp/443/wss/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo';
@@ -14,14 +15,25 @@ function profile() {
   localStorage.setItem(profileKey, JSON.stringify(value));
   return { fiberKey: fromHex(value.fiberKey), ckbKey: fromHex(value.ckbKey), identifier: value.identifier };
 }
-export async function startFiber(onState: (state: BrowserNodeState) => void) {
+export async function startFiber(onState: (state: BrowserNodeState) => void, session: ReturnType<typeof createBrowserNodeSession>) {
   if (!crossOriginIsolated) throw new Error('This page must be cross-origin isolated.');
-  const { FiberBrowserNode, RawKeyCredentialProvider } = await import('@fiber-pay/sdk/browser');
-  const keys = profile();
-  const node = new FiberBrowserNode({ network: 'testnet', credential: new RawKeyCredentialProvider(keys.fiberKey, keys.ckbKey, keys.identifier), nodeConfig: { bootnodes: [], logLevel: 'info' } });
-  node.on('stateChange', onState);
-  await node.start(); return node;
+  let started: FiberBrowserNode | undefined;
+  await session.start(profileKey, async (track) => {
+    const { FiberBrowserNode, RawKeyCredentialProvider } = await import('@fiber-pay/sdk/browser');
+    const keys = profile();
+    const node = new FiberBrowserNode({ network: 'testnet', credential: new RawKeyCredentialProvider(keys.fiberKey, keys.ckbKey, keys.identifier), nodeConfig: { bootnodes: [], logLevel: 'info' } });
+    node.on('stateChange', onState);
+    track(node);
+    await node.start();
+    started = node;
+  });
+  return started!;
 }
 export async function connectToRouter(node: FiberBrowserNode) {
   await node.connectPeer({ address: routerAddress, pubkey: routerPubkey });
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    if ((await node.listPeers()).peers.some((peer) => peer.pubkey === routerPubkey)) return;
+    await new Promise((resolve) => setTimeout(resolve, 800));
+  }
+  throw new PeerHandshakeTimeoutError('Prepare browser node');
 }

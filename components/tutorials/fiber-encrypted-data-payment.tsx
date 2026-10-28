@@ -420,6 +420,7 @@ function SetupNode({
                 : `${hexToCkb(runtime.balance)} CKB on-chain · opens a ${channelAmount} CKB channel`
               : 'Start an independent browser identity.'}
           </span>
+          {runtime.address && <span>Faucet CKB may take up to 30s to confirm on-chain.</span>}
         </div>
         <div className={styles.compactActions}>
           <button

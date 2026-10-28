@@ -106,14 +106,14 @@ export default function Page() {
           <strong>Buyer Node A</strong>
           <button onClick={() => void start('buyer')}>Start Buyer</button>
           <code>{buyerAddress || 'Funding address appears here'}</code>
-          <a href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Open Testnet faucet ↗</a>
+          <a href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Open Testnet faucet ↗</a><small>Faucet CKB may take up to 30s to confirm on-chain.</small>
           <button onClick={() => void open('buyer')}>Connect & open 499 CKB channel</button>
         </section>
         <section className="card">
           <strong>Seller Node C</strong>
           <button onClick={() => void start('seller')}>Start Seller</button>
           <code>{sellerAddress || 'Funding address appears here'}</code>
-          <a href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Open Testnet faucet ↗</a>
+          <a href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Open Testnet faucet ↗</a><small>Faucet CKB may take up to 30s to confirm on-chain.</small>
           <button onClick={() => void open('seller')}>Connect & open 499 CKB channel</button>
           <button onClick={() => void prepareInbound()}>Prepare 5 CKB inbound</button>
         </section>

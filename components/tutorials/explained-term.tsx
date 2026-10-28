@@ -20,7 +20,7 @@ export function ExplainedTerm({
   ariaLabel?: string;
   children: ReactNode;
   className?: string;
-  explanation: string;
+  explanation: ReactNode;
   id: string;
 }) {
   const triggerRef = useRef<HTMLSpanElement | null>(null);

@@ -67,7 +67,7 @@ export default function Page() {
     <section className="card">
       <span>Funding address</span>
       <code>{address || 'Start the node to create an address'}</code>
-      <a href="https://faucet.nervos.org" target="_blank">Open Testnet faucet ↗</a>
+      <a href="https://faucet.nervos.org" target="_blank">Open Testnet faucet ↗</a><small>Faucet CKB may take up to 30s to confirm on-chain.</small>
     </section>
     <button disabled={!node.current || Boolean(channel)} onClick={connectAndOpen}>
       {channel ? channel.state.state_name : 'Connect and open 499 CKB one-way channel'}

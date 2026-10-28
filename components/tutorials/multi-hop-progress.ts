@@ -3,7 +3,7 @@ export function channelStateLabel(state?: string) {
   return state.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase();
 }
 
-const channelOpeningStates = [
+export const channelOpeningStates = [
   'NEGOTIATING_FUNDING',
   'COLLABORATING_FUNDING_TX',
   'SIGNING_COMMITMENT',
@@ -11,6 +11,15 @@ const channelOpeningStates = [
   'AWAITING_CHANNEL_READY',
   'CHANNEL_READY',
 ];
+
+export const channelOpeningDescriptions: Record<string, string> = {
+  NEGOTIATING_FUNDING: 'The two peers agree on channel parameters and funding contributions.',
+  COLLABORATING_FUNDING_TX: 'The peers build the on-chain transaction that will fund the channel.',
+  SIGNING_COMMITMENT: 'The peers sign the initial commitment transactions that protect their channel balances.',
+  AWAITING_TX_SIGNATURES: 'The peers exchange funding-transaction signatures before the transaction can be broadcast.',
+  AWAITING_CHANNEL_READY: 'The funding transaction is awaiting confirmation and the peers are exchanging readiness messages. Payments are still disabled.',
+  CHANNEL_READY: 'The channel is ready. You can now send an off-chain payment.',
+};
 
 export function channelOpeningProgress(currentState?: string) {
   const current = channelOpeningStates.indexOf(channelStateLabel(currentState));

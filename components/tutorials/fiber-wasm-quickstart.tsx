@@ -1,6 +1,6 @@
 'use client';
 
-import { createBrowserNodeSession } from './browser-node-session';
+import { createBrowserNodeSession, PeerHandshakeTimeoutError } from './browser-node-session';
 
 import Image from 'next/image';
 import Link from 'next/link';
@@ -19,6 +19,8 @@ import type {
   NodeInfoResult,
 } from '@fiber-pay/sdk/browser';
 import { ExplainedTerm } from './explained-term';
+import { CopyIconButton } from './copy-icon-button';
+import { MobileTutorialPicker } from './mobile-tutorial-picker';
 import styles from './fiber-wasm-quickstart.module.css';
 
 const routerAddress =
@@ -645,7 +647,7 @@ export function FiberWasmQuickstart() {
       }
 
       if (peers.length === 0) {
-        throw new Error('The node is running, but the peer handshake timed out.');
+        throw new PeerHandshakeTimeoutError('Connect public peer');
       }
       setPeerCount(peers.length);
     } catch (connectError) {
@@ -682,7 +684,8 @@ export function FiberWasmQuickstart() {
 
   return (
     <div className={styles.shell}>
-      <header className={styles.tutorialToolbar}>
+      <header className={`${styles.tutorialToolbar} ${styles.routingToolbar}`}>
+        <MobileTutorialPicker currentTutorialIndex={currentTutorialIndex} />
           <div className={styles.tutorialSelect} ref={tutorialMenuRef}>
             <button
               aria-expanded={tutorialMenuOpen}
@@ -809,7 +812,10 @@ export function FiberWasmQuickstart() {
             </div>
             <div className={styles.nodeIdentity}>
               <span>Node pubkey</span>
-              <code>{shorten(nodeInfo?.pubkey)}</code>
+              <div className={styles.nodePubkeyValue}>
+                <code title={nodeInfo?.pubkey}>{shorten(nodeInfo?.pubkey)}</code>
+                {nodeState === 'running' && nodeInfo?.pubkey && <CopyIconButton value={nodeInfo.pubkey} label="Copy full node pubkey" />}
+              </div>
             </div>
             <div className={styles.nodeStats}>
               {logs.map(([label, value]) => (
@@ -863,7 +869,7 @@ export function FiberWasmQuickstart() {
             <div className={styles.eventList}>
               <div><time>01</time><code>wasm_runtime</code><span>{isolationReady ? 'ready' : 'checking'}</span></div>
               <div><time>02</time><code>node_state</code><span>{friendlyState(nodeState)}</span></div>
-              {nodeInfo && <div><time>03</time><code>node_started</code><span>{shorten(nodeInfo.pubkey)}</span></div>}
+              {nodeInfo && <div><time>03</time><code>node_started</code><span className={styles.nodePubkeyValue}><span title={nodeInfo.pubkey}>{shorten(nodeInfo.pubkey)}</span>{nodeState === 'running' && nodeInfo.pubkey && <CopyIconButton value={nodeInfo.pubkey} label="Copy full node pubkey" />}</span></div>}
               {peerCount > 0 && (
                 <div className={styles.eventConnected}>
                   <time>04</time>

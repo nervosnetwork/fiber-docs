@@ -114,3 +114,19 @@ button:disabled, .row-actions a.disabled { border-color: #454545; background: tr
   .receipt dl { grid-template-columns: 1fr; }
   .events > div { grid-template-columns: 58px minmax(100px, .75fr) minmax(0, 1fr); padding-inline: 14px; }
 }
+
+.receipt .copyable-value { display: flex; min-height: 28px; align-items: center; gap: 4px; }
+.copyable-value > span:not([role='status']), .copyable-value > a { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.copyable-value > a { color: #9bdaaf; }
+.channel-details { background: transparent; }
+.timeline [data-state='upcoming'] { opacity: .5; }
+.timeline [data-state='current'] b { border-color: var(--warning); color: var(--warning); }
+.timeline [data-state='complete'] b { color: var(--success); }
+.reserve-term { position: relative; border-bottom: 1px dotted currentColor; cursor: help; }
+.reserve-term [role='tooltip'] { display: none; position: absolute; bottom: calc(100% + 10px); left: 0; z-index: 10; width: min(260px, 65vw); border: 1px solid #535353; padding: 10px; background: #202020; color: #ddd; font: 500 12px/1.5 system-ui, sans-serif; }
+.reserve-term:hover [role='tooltip'], .reserve-term:focus [role='tooltip'] { display: block; }
+
+.reserve-title { display: block; margin-bottom: 8px; }
+.reserve-list { display: block; margin: 0; padding-left: 16px; }
+.reserve-list > span { display: list-item; list-style-type: disc; }
+.reserve-list > span + span { margin-top: 6px; }

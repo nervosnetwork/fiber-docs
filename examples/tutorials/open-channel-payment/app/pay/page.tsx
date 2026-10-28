@@ -12,6 +12,10 @@ import { openCkbChannel, watchChannelStates } from '../../lib/channel';
 import { connectToRouter, routerPubkey, startFiber } from '../../lib/fiber';
 import { sendKeysend } from '../../lib/payment';
 
+import { createBrowserNodeSession } from '../../lib/browser-node-session';
+import { CopyIconButton } from '../../lib/copy-icon-button';
+import { channelOpeningProgress, channelOpeningDescriptions, channelStateLabel, isMultiHopChannelReady as isChannelReady } from '../../lib/multi-hop-progress';
+
 const shannonsPerCkb = 100_000_000n;
 
 type Receipt = {
@@ -37,10 +41,6 @@ function friendlyState(state: BrowserNodeState) {
   return 'Ready to start';
 }
 
-function isChannelReady(state: string) {
-  return state.replace(/[^a-z0-9]/gi, '').toLowerCase() === 'channelready';
-}
-
 function shorten(value?: string) {
   if (!value) return '—';
   return value.length > 28 ? `${value.slice(0, 14)}…${value.slice(-10)}` : value;
@@ -55,6 +55,10 @@ function formatCkb(value: bigint | null) {
 
 export default function PayPage() {
   const node = useRef<FiberBrowserNode | null>(null);
+  const session = useRef<ReturnType<typeof createBrowserNodeSession> | null>(null);
+  const [channelId, setChannelId] = useState('');
+  const [fundingTxHash, setFundingTxHash] = useState('');
+  const fundingExplorerUrl = fundingTxHash ? `https://testnet.explorer.nervos.org/transaction/${fundingTxHash}` : '';
   const stopBalanceWatcher = useRef<(() => void) | null>(null);
   const stopChannelWatcher = useRef<(() => void) | null>(null);
   const [nodeState, setNodeState] = useState<BrowserNodeState>('idle');
@@ -75,7 +79,7 @@ export default function PayPage() {
   useEffect(() => () => {
     stopBalanceWatcher.current?.();
     stopChannelWatcher.current?.();
-    void node.current?.stop();
+    void session.current?.stop().catch(() => { /* Retain ownership if shutdown fails. */ });
   }, []);
 
   function addEvent(name: string, value: string) {
@@ -88,7 +92,9 @@ export default function PayPage() {
   function applyChannels(channels: Awaited<ReturnType<FiberBrowserNode['listChannels']>>['channels']) {
     const latest = channels.at(-1);
     if (!latest) return;
-    const nextState = latest.state.state_name;
+    const nextState = channelStateLabel(latest.state.state_name);
+    setChannelId(latest.channel_id);
+    setFundingTxHash(latest.channel_outpoint?.tx_hash ?? '');
     setChannelState(nextState);
     setChannelReady(isChannelReady(nextState));
     setChannelHistory((current) => current.at(-1) === nextState ? current : [...current, nextState].slice(-6));
@@ -100,7 +106,7 @@ export default function PayPage() {
     setBusy('prepare');
     setError('');
     try {
-      const fiber = node.current?.isRunning ? node.current : await startFiber(setNodeState);
+      const fiber = node.current?.isRunning ? node.current : await startFiber(setNodeState, session.current ??= createBrowserNodeSession());
       node.current = fiber;
       const info = await fiber.getNodeInfo();
       const fundingAddress = scriptToAddress(info.default_funding_lock_script, 'testnet');
@@ -225,22 +231,23 @@ export default function PayPage() {
             <button disabled={busy !== null || (nodeState === 'running' && connected)} onClick={prepare}>{busy === 'prepare' ? 'Preparing…' : nodeState === 'running' && connected ? 'Node running' : 'Prepare browser node'}</button>
           </div>
           <div className="flow-row">
-            <b>2</b><div><strong>Fund the address</strong><code title={address}>{shorten(address)}</code><span>Balance: {formatCkb(balance)} · auto-checks every 5s</span></div>
+            <b>2</b><div><strong>Fund the address</strong><code title={address}>{shorten(address)}</code><span>Balance: {formatCkb(balance)} · Faucet CKB may take up to 30s to confirm on-chain.</span></div>
             <div className="row-actions"><a className={!address ? 'disabled' : ''} href={address ? 'https://faucet.nervos.org' : undefined} rel="noreferrer" target="_blank">Get CKB ↗</a><button className="secondary" disabled={!node.current || busy !== null} onClick={refresh}>{busy === 'refresh' ? 'Refreshing…' : 'Refresh'}</button></div>
           </div>
           <div className="flow-row">
-            <b>3</b><div><strong>Open a 499 CKB channel</strong><label><input aria-label="Channel funding amount in CKB" inputMode="decimal" onChange={(event) => setChannelAmount(event.target.value)} value={channelAmount} /><span>CKB</span></label></div>
+            <b>3</b><div><strong>Open a <span className="reserve-term" tabIndex={0} aria-describedby="reserve-tooltip">499 CKB<span id="reserve-tooltip" role="tooltip"><span className="reserve-title">499 CKB breakdown:</span><span className="reserve-list" role="list"><span role="listitem">400 CKB initially available for payments</span><span role="listitem">98 CKB reserved for the commitment cell used in on-chain settlement</span><span role="listitem">1 CKB reserved for the transaction fee when closing the channel</span></span></span></span> channel</strong><label><input aria-label="Channel funding amount in CKB" inputMode="decimal" onChange={(event) => setChannelAmount(event.target.value)} value={channelAmount} /><span>CKB</span></label></div>
             <button disabled={busy !== null || !connected || !enoughBalance || channelState !== 'Not opened'} onClick={open}>{busy === 'channel' ? 'Opening…' : channelReady ? 'Channel ready' : 'Open channel'}</button>
           </div>
 
-          {channelHistory.length > 0 && <div className="timeline"><span>Observed channel lifecycle</span><div>{channelHistory.map((state, index) => <span key={`${state}-${index}`}>{index > 0 && <i>→</i>}<b>{state}</b></span>)}</div></div>}
+          {channelHistory.length > 0 && <div className="timeline"><span>Observed channel states (This may take up to 1 min)</span><div>{channelOpeningProgress(channelState).map(({ state, status }, index) => <span aria-current={status === 'current' ? 'step' : undefined} aria-label={`${state}: ${status}`} data-state={status} key={state}>{index > 0 && <i>→</i>}<b title={channelOpeningDescriptions[state]}>{status === 'complete' ? '✓ ' : ''}{state}</b></span>)}</div></div>}
+          {channelId && <section className="receipt channel-details"><span>Channel details</span><dl><div><dt>Channel ID</dt><dd className="copyable-value"><span title={channelId}>{shorten(channelId)}</span><CopyIconButton value={channelId} label="Copy full channel ID" /></dd></div><div><dt>Funding transaction</dt><dd className="copyable-value">{fundingExplorerUrl ? <><a href={fundingExplorerUrl} rel="noreferrer" target="_blank">View in explorer ↗</a><CopyIconButton value={fundingExplorerUrl} label="Copy funding transaction explorer link" /></> : <span>Waiting for funding transaction…</span>}</dd></div></dl></section>}
 
           <div className="flow-row">
             <b>4</b><div><strong>Send CKB to the peer</strong><label><input aria-label="Payment amount in CKB" inputMode="decimal" onChange={(event) => setPaymentAmount(event.target.value)} value={paymentAmount} /><span>CKB</span></label></div>
             <button disabled={busy !== null || !channelReady || !connected} onClick={pay}>{busy === 'payment' ? 'Sending…' : 'Send payment'}</button>
           </div>
 
-          {receipt && <section className="receipt"><span>Payment receipt</span><dl><div><dt>Status</dt><dd>{receipt.status}</dd></div><div><dt>Amount</dt><dd>{receipt.amount} CKB</dd></div><div><dt>Channel ID</dt><dd title={receipt.channelId}>{shorten(receipt.channelId)}</dd></div><div><dt>Payment hash</dt><dd title={receipt.hash}>{shorten(receipt.hash)}</dd></div><div><dt>Local balance</dt><dd>{formatCkb(receipt.localBalanceBefore)} → {formatCkb(receipt.localBalanceAfter)}</dd></div></dl></section>}
+          {receipt && <section className="receipt"><span>Payment receipt</span><dl><div><dt>Status</dt><dd>{receipt.status}</dd></div><div><dt>Amount</dt><dd>{receipt.amount} CKB</dd></div><div><dt>Channel ID</dt><dd className="copyable-value"><span title={receipt.channelId}>{shorten(receipt.channelId)}</span><CopyIconButton value={receipt.channelId} label="Copy full channel ID" /></dd></div><div><dt>Payment hash</dt><dd className="copyable-value"><span title={receipt.hash}>{shorten(receipt.hash)}</span><CopyIconButton value={receipt.hash} label="Copy full payment hash" /></dd></div><div><dt>Local balance</dt><dd>{formatCkb(receipt.localBalanceBefore)} → {formatCkb(receipt.localBalanceAfter)}</dd></div></dl></section>}
           {error && <p className="alert" role="alert">{error}</p>}
         </article>
 
