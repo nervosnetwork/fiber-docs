@@ -66,3 +66,34 @@ test('route hops survive submission, status checks and reload', async () => {
  f.payer.getPayment=async()=>({status:'Success'}); await flow.check();
  assert.deepEqual(f.make().current().route,['0xaa','0xbb','0xcc']);
 });
+
+test('actual fee comes from successful RPC results and survives reload', async () => {
+ const f=fixture(), flow=f.make();
+ f.payer.sendPayment=async()=>({status:'Success',fee:'0x7a120'});
+ flow.setInvoice(draft); await flow.send();
+ assert.equal(flow.current().fee,'0x7a120');
+ f.payer.getPayment=async()=>({status:'Success',fee:'0x0'});
+ f.payee.getInvoice=async()=>({status:'Paid'});
+ await flow.check();
+ assert.equal(f.make().current().fee,'0x0');
+});
+test('pending fee is not treated as charged and recovery reads the final fee', async () => {
+ const f=fixture(), flow=f.make();
+ f.payer.sendPayment=async()=>({status:'Inflight',fee:'0x5f5e100'});
+ flow.setInvoice(draft); await flow.send();
+ assert.equal(flow.current().fee,undefined);
+ const resumed=f.make();
+ f.payer.getPayment=async()=>({status:'Success',fee:'0x7a120'});
+ f.payee.getInvoice=async()=>({status:'Paid'});
+ await resumed.check();
+ assert.equal(f.make().current().fee,'0x7a120');
+});
+
+test('malformed saved fees block recovery before they reach the formatter', () => {
+ const f=fixture(); f.make().setInvoice(draft);
+ const saved=f.make().current();
+ for (const fee of ['invalid','-1',500000,null]) {
+  f.data.set('test',JSON.stringify({...saved,fee}));
+  assert.throws(()=>f.make(),/saved payment/i);
+ }
+});

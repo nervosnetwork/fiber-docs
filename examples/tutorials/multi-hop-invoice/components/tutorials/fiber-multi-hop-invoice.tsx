@@ -21,6 +21,7 @@ import { channelOpeningProgress, channelStateLabel, isMultiHopChannelReady as is
 import { participantStatusLabel } from '../../examples/tutorials/verified-result-payment/lib/job';
 import { ExplainedTerm } from './explained-term';
 import { createForwardPayment, type ForwardPayment } from './multi-hop-payment';
+import { CopyValue } from './multi-hop-copy-value';
 import { RestoreLiquidityPanel } from './multi-hop-restore-panel';
 import styles from './fiber-wasm-quickstart.module.css';
 import tutorialSource from './multi-hop-code.generated.json';
@@ -82,40 +83,6 @@ function ChannelLiquidity({ left, right, leftAmount, rightAmount, leftDirection,
   );
 }
 
-function CopyValue({ value, label = 'Copy', iconOnly = false }: { value: string; label?: string; iconOnly?: boolean }) {
-  const [feedback, setFeedback] = useState<'idle' | 'copied' | 'failed'>('idle');
-  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (resetTimer.current) clearTimeout(resetTimer.current);
-  }, []);
-  return (
-    <span className={styles.multiHopCopy} data-icon-only={iconOnly}>
-      <button
-        aria-label={label}
-        className={iconOnly ? `${styles.demoAction} ${styles.addressCopyButton}` : undefined}
-        data-copied={feedback === 'copied'}
-        disabled={!value}
-        onClick={async () => {
-          if (resetTimer.current) clearTimeout(resetTimer.current);
-          setFeedback('idle');
-          try {
-            await navigator.clipboard.writeText(value);
-            setFeedback('copied');
-            resetTimer.current = setTimeout(() => setFeedback('idle'), 3_000);
-          } catch {
-            setFeedback('failed');
-          }
-        }}
-        type="button"
-      >
-        {iconOnly ? <Image alt="" aria-hidden="true" height={15} src="/icon-copy.svg" width={15} /> : feedback === 'copied' ? '✓ Copied' : label}
-      </button>
-      <span className={styles.multiHopCopyFeedback} data-error={feedback === 'failed'} role="status">
-        {feedback === 'copied' ? `${label === 'Copy' ? 'Value' : label.slice(5)} copied to clipboard` : feedback === 'failed' ? 'Copy failed. Select the text and copy manually.' : ''}
-      </span>
-    </span>
-  );
-}
 
 function NodeSetup({
   number, title, profile, runtime, channelState, channelExists, progressStage,
@@ -238,6 +205,7 @@ export function FiberMultiHopInvoiceTutorial() {
   const [generatedInvoice, setGeneratedInvoice] = useState('');
   const [paymentHash, setPaymentHash] = useState<`0x${string}` | ''>('');
   const [invoiceStatus, setInvoiceStatus] = useState<CkbInvoiceStatus | 'None'>('None');
+  const [paymentFee, setPaymentFee] = useState<`0x${string}` | undefined>();
   const [paymentStatus, setPaymentStatus] = useState('Not sent');
   const [route, setRoute] = useState<string[]>([]);
   const [events, setEvents] = useState<string[]>([]);
@@ -491,6 +459,7 @@ export function FiberMultiHopInvoiceTutorial() {
       setGeneratedInvoice(record?.invoice ?? '');
       setPaymentHash(record?.hash ?? '');
       setInvoiceAmount(record?.amount ?? '1');
+      setPaymentFee(record?.fee);
       setPaymentStatus(record?.status ?? 'Not sent');
       setInvoiceStatus(record?.invoiceStatus ?? 'None');
       setPaymentSubmitted(record?.submitted ?? false);
@@ -542,6 +511,7 @@ export function FiberMultiHopInvoiceTutorial() {
     setGeneratedInvoice('');
     setPaymentHash('');
     setInvoiceStatus('None');
+    setPaymentFee(undefined);
     setPaymentStatus('Not sent');
     setPaymentSubmitted(false);
     setPaymentError('');
@@ -629,6 +599,7 @@ export function FiberMultiHopInvoiceTutorial() {
         </p>
         <div className={`${styles.note} ${styles.noteInfo}`}>
           <strong>Restoring liquidity moves existing funds</strong>
+          <p>The return amount defaults to 1 CKB for this campaign and can be changed.</p>
           <p>Returning funds incurs routing fees and redistributes liquidity between the existing channels. It does not add new funds.</p>
         </div>
         <small className={styles.fileReference}>{sourceReference('liquidity')}</small>
@@ -710,7 +681,7 @@ export function FiberMultiHopInvoiceTutorial() {
           <code>max_fee_amount: '0x5f5e100'</code> sets a routing-fee budget of
           1 CKB in addition to the invoice amount. Trampoline routing can use the
           full budget. The RPC result’s <code>fee</code> field reports the actual
-          charge, although this tutorial’s outcome screen does not display it.
+          charge shown beside the maximum fee after a successful payment.
         </p>
         <p className={styles.followupParagraph}>
           In A–Bottle, A’s liquidity decreases and Bottle’s increases. In Bottle–C,
@@ -949,17 +920,9 @@ npm run dev`}</code></pre>
                 </p>
                 <details className={styles.multiHopLiquidityExplanation}>
                   <summary>How is available liquidity calculated?</summary>
-                  <p>A new channel funded with 499 CKB normally reserves 99 CKB for on-chain settlement, leaving 400 CKB for payments before transfers and fees. The reserve is not a routing fee. Restored channels may have different funding and payment history.</p>
-                  <dl>
-                    <div><dt>A’s current channel liquidity</dt><dd>{hexToCkb(senderChannel?.local_balance)} CKB</dd></div>
-                    <div><dt>Pending outgoing from A</dt><dd>− {hexToCkb(senderChannel?.offered_tlc_balance)} CKB</dd></div>
-                    <div><dt>Routing-fee allowance</dt><dd>− 1 CKB</dd></div>
-                    <div><dt>Bottle’s current liquidity toward C</dt><dd>{hexToCkb(receiverChannel?.remote_balance)} CKB</dd></div>
-                    <div><dt>Pending incoming to C</dt><dd>− {hexToCkb(receiverChannel?.received_tlc_balance)} CKB</dd></div>
-                  </dl>
-                  <p>The maximum invoice is the smaller of A’s liquidity after pending transfers and the fee allowance, and Bottle’s liquidity toward C after pending transfers. These live amounts already exclude channel reserves; the 99 CKB is not subtracted again.</p>
+                  <p>A new channel funded with 499 CKB normally reserves 99 CKB for on-chain settlement, leaving 400 CKB for payments before transfers and fees. Another 1 CKB is reserved for the maximum routing fee.</p>
                 </details>
-                <button className={styles.verifiedPrimaryAction} disabled={!paymentRecoveryReady || Boolean(paymentRecoveryError) || restoreBlocked || !senderReady || !receiverReady || !amountValid || Boolean(receiver.busy)} onClick={() => void createInvoice()} type="button">{receiver.busy === 'create invoice' ? 'Creating invoice…' : 'Create invoice'}</button>
+                <button className={`${styles.verifiedPrimaryAction} ${styles.multiHopInvoiceAction}`} disabled={!paymentRecoveryReady || Boolean(paymentRecoveryError) || restoreBlocked || !senderReady || !receiverReady || !amountValid || Boolean(receiver.busy)} onClick={() => void createInvoice()} type="button">{receiver.busy === 'create invoice' ? 'Creating invoice…' : 'Create invoice'}</button>
                 {paymentRecoveryReady && !paymentRecoveryError && <RestoreLiquidityPanel sender={sender} receiver={receiver} onBlocked={setRestoreBlocked} onRestored={() => { setAmount('1'); addEvent('Receiving liquidity restored · C → Bottle B → A'); }} />}
               </>}
             </div>}
@@ -974,6 +937,7 @@ npm run dev`}</code></pre>
                   <dt>Max. routing fee</dt>
                   <dd>1 CKB</dd>
                 </div>
+                {paymentComplete && <div><dt>Actual routing fee</dt><dd>{paymentFee !== undefined ? `${hexToCkb(paymentFee)} CKB` : 'Unavailable'}</dd></div>}
                 <div>
                   <dt>Invoice generated by Receiver C</dt>
                   <dd className={styles.multiHopInvoiceText}><code title={generatedInvoice}>{generatedInvoice}</code></dd>
@@ -999,6 +963,7 @@ npm run dev`}</code></pre>
               {!paymentComplete && rawPaymentError && <p className={styles.multiHopError}><strong>Fiber error: </strong>{rawPaymentError}</p>}
               <dl className={styles.multiHopOutcomeFacts}>
                 <div className={styles.multiHopOutcomeAmount}><dt>{paymentComplete ? 'Amount received' : 'Payment amount'}</dt><dd>{invoiceAmount} <span>CKB</span></dd></div>
+                <div><dt>Routing fee</dt><dd>Actual: {paymentComplete ? paymentFee !== undefined ? `${hexToCkb(paymentFee)} CKB` : 'Unavailable' : paymentOutcome === 'failed' ? 'Unavailable' : 'Pending'} · Maximum: 1 CKB</dd></div>
                 <div><dt>Payment flow</dt><dd className={styles.multiHopOutcomeFlow}><span>Sender A</span><i aria-hidden="true">→</i><span>Bottle B</span><i aria-hidden="true">→</i><span>Receiver C</span></dd></div>
                 <div><dt>Invoice status</dt><dd className={styles.multiHopOutcomeInvoice}><i aria-hidden="true" className={`${styles.statusDot} ${invoiceStatusTone}`} />{invoiceStatus}</dd></div>
               </dl>
@@ -1025,7 +990,7 @@ npm run dev`}</code></pre>
             <span>Runtime events and results</span><span aria-hidden="true">{mobileEventsExpanded ? '−' : '+'}</span>
           </button>
           <div className={styles.multiHopEventBody} data-expanded={mobileEventsExpanded} id="multi-hop-event-body">
-          <div className={styles.multiHopRoute} aria-label="Payment route"><b>Node A</b><span>→</span><b>Bottle</b><span>→</span><b>Node C</b></div>
+          <div className={styles.multiHopRoute} aria-label="Channels connecting Node A to Bottle and Bottle to Node C"><b>Node A</b><span className={styles.multiHopChannelConnector} aria-hidden="true" /><b>Bottle</b><span className={styles.multiHopChannelConnector} aria-hidden="true" /><b>Node C</b></div>
           <div className={styles.eventList} aria-live="polite">
             <div className={sender.nodeInfo ? styles.eventConnected : undefined}><time>A</time><code>sender</code><span>{sender.nodeInfo ? sender.nodeState : 'Node not started'}</span></div>
             <div className={receiver.nodeInfo ? styles.eventConnected : undefined}><time>C</time><code>receiver</code><span>{receiver.nodeInfo ? receiver.nodeState : 'Node not started'}</span></div>
