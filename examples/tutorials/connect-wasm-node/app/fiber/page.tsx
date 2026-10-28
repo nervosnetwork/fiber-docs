@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { CopyIconButton } from '../../lib/copy-icon-button';
 import type { BrowserNodeState, FiberBrowserNode } from '@fiber-pay/sdk/browser';
 import { connectToRouter, startFiber } from '../../lib/fiber';
 
@@ -56,7 +57,7 @@ export default function FiberPage() {
         await new Promise((resolve) => window.setTimeout(resolve, 800));
         peerList = (await node.current.listPeers()).peers;
       }
-      if (peerList.length === 0) throw new Error('The public peer handshake timed out.');
+      if (peerList.length === 0) throw new Error('Peer handshake timed out: the node is running, but the public peer did not finish connecting. Check your network connection, then select Connect public peer to retry. If it keeps timing out, the public peer may be unavailable; try again later.');
       setPeers(peerList.length);
     } catch (connectError) {
       setError(connectError instanceof Error ? connectError.message : 'Unable to connect to the public peer.');
@@ -88,7 +89,7 @@ export default function FiberPage() {
             <div><span>Your browser node</span><strong>{friendlyState(status)}</strong></div>
             <em className={error ? 'dot error' : status === 'running' ? 'dot success' : 'dot waiting'} />
           </div>
-          <div className="identity"><span>Node pubkey</span><code title={pubkey}>{shorten(pubkey)}</code></div>
+          <div className="identity"><span>Node pubkey</span><div className="pubkey-value"><code title={pubkey}>{shorten(pubkey)}</code>{status === 'running' && pubkey && <CopyIconButton value={pubkey} label="Copy full node pubkey" />}</div></div>
           <dl className="stats">
             <div><dt>Runtime</dt><dd>Fiber WASM</dd></div>
             <div><dt>Storage</dt><dd>IndexedDB</dd></div>
@@ -109,7 +110,7 @@ export default function FiberPage() {
           <header><span>Node events</span><i className={error ? 'dot error' : peers > 0 ? 'dot success' : 'dot waiting'} /></header>
           <div><time>01</time><code>wasm_runtime</code><span>ready</span></div>
           <div><time>02</time><code>node_state</code><span>{friendlyState(status)}</span></div>
-          {pubkey && <div><time>03</time><code>node_started</code><span>{shorten(pubkey)}</span></div>}
+          {pubkey && <div><time>03</time><code>node_started</code><span className="pubkey-value"><span title={pubkey}>{shorten(pubkey)}</span>{status === 'running' && <CopyIconButton value={pubkey} label="Copy full node pubkey" />}</span></div>}
           {peers > 0 && <div><time>04</time><code>peer_connected</code><span>{peers} public peer</span></div>}
         </aside>
       </section>

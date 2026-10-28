@@ -30,6 +30,17 @@ The interface explains why an action is unavailable and changes its status
 from waiting to success or error as the flow progresses. Use Testnet funds
 only.
 
+### Recover a node connection
+
+**Node already in use** means the same saved node is running in another tutorial
+tab. Close that tab to stop its session, then select **Prepare browser node**
+here. Keep only one active tutorial tab for this saved node.
+
+**Peer handshake timed out** means the node is running but its connection to the
+public peer did not finish. Check your network connection, then select
+**Prepare browser node** again. If it keeps timing out, the public peer may be
+unavailable; try again later.
+
 ## Behind the scenes
 
 The code workspace follows the same sequence as the live demo. Each section
@@ -67,7 +78,13 @@ interface to unlock channel creation once the address can cover the requested
 funding amount. The demo also provides a manual refresh action.
 
 The selected public peer accepts CKB channels funded with at least 499 CKB.
-Keep extra Testnet CKB available for the on-chain transaction fee.
+Hover or focus **499 CKB** in the demo for the breakdown: **499 CKB funded −
+99 CKB reserved = 400 CKB initially available for payments**. The default reserve
+covers 98 CKB for the commitment cell and 1 CKB for the shutdown transaction
+fee. It is reserved for on-chain settlement, not a payment fee. Transfers and
+pending payments change the available balance afterward.
+
+Keep extra Testnet CKB in the wallet for the channel-funding transaction fee.
 
 ### Convert CKB amounts without losing precision
 
@@ -115,14 +132,26 @@ not mean the channel can carry a payment yet.
 transaction and peer handshake complete. It polls `listChannels()` and reports
 each new `state_name` as the channel moves through the following states:
 
-- `NegotiatingFunding` — agree on channel parameters.
-- `CollaboratingFundingTx` — build the funding transaction.
-- `AwaitingChannelReady` — wait for confirmation and both peers.
-- `ChannelReady` — allow payments.
+The demo uses the same six uppercase state labels as the multi-hop tutorial:
 
-Some transitions may happen between polls, so the interface shows every
-distinct state it observes rather than promising that every intermediate state
-will appear.
+- `NEGOTIATING_FUNDING` — the peers agree on channel parameters and funding contributions.
+- `COLLABORATING_FUNDING_TX` — the peers build the on-chain funding transaction.
+- `SIGNING_COMMITMENT` — the peers sign the initial commitment transactions that protect their balances.
+- `AWAITING_TX_SIGNATURES` — the peers exchange funding-transaction signatures before broadcast.
+- `AWAITING_CHANNEL_READY` — wait for funding confirmation and readiness messages from the peers. Payments remain disabled.
+- `CHANNEL_READY` — the channel can now carry off-chain payments.
+
+**Observed channel states (This may take up to 1 min).** Keep the node running
+while it progresses. If it stays in one state for more than a minute, refresh
+the live state, check the peer connection, and inspect the funding transaction
+in the explorer when available. A longer Testnet confirmation wait does not
+by itself mean the operation failed. Avoid opening another channel while this
+one is pending.
+
+The progress display lists all six stages and highlights the current state.
+Earlier stages are marked complete and later stages remain upcoming. Some
+transitions happen between polls; the event log records only states actually
+observed.
 
 ### Send and confirm the keysend payment
 
@@ -141,7 +170,10 @@ const submitted = await node.sendPayment({
 
 If the first response is not terminal, `waitForPayment()` waits for `Success`
 or `Failed`. The demo then shows the channel ID, payment hash, amount, status,
-and the local channel balance before and after the payment.
+and the local channel balance before and after the payment. Icon buttons copy
+the full channel ID, payment hash, and funding-transaction explorer link even
+when the displayed value is shortened. A tooltip confirms successful copying.
+The funding link appears once the node reports the transaction outpoint.
 
 ### Wire the complete flow into React
 

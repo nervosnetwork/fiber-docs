@@ -179,7 +179,7 @@
   gap: 8px;
   border: 1px solid #454b45;
   padding: 10px 13px;
-  background: #191c19;
+  background: #151515;
   color: #e5e9e4;
   font: 700 10px/1 var(--font-inter, sans-serif);
   letter-spacing: 0.035em;
@@ -581,6 +581,26 @@
   visibility: hidden;
 }
 
+.fundingReserveTitle {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.fundingReserveList {
+  display: block;
+  margin: 0;
+  padding-left: 16px;
+}
+
+.fundingReserveList > span {
+  display: list-item;
+  list-style-type: disc;
+}
+
+.fundingReserveList > span + span {
+  margin-top: 6px;
+}
+
 .peerConnectionInputs {
   display: grid;
   max-width: 620px;
@@ -869,6 +889,26 @@
   color: #dddddd;
   font: 500 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
   text-overflow: ellipsis;
+}
+
+.nodePubkeyValue {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.nodePubkeyValue > button { color: var(--tutorial-muted); }
+
+.nodeIdentity .nodePubkeyValue { margin-top: 6px; }
+.nodeIdentity .nodePubkeyValue code { margin-top: 0; }
+
+.nodePubkeyValue > code,
+.nodePubkeyValue > span:not([role='status']) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .nodeStats {
@@ -2125,6 +2165,23 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.paymentReceipt .copyableValue {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 4px;
+}
+
+.copyableValue > span:not([role='status']),
+.copyableValue > a {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.copyableValue > a { color: #9bdaaf; text-decoration: underline; }
+.channelDetails { background: transparent; }
 
 .channelLiveDemo .eventConnected {
   transition: background 140ms ease, color 140ms ease;
@@ -5159,6 +5216,9 @@
   padding: 0;
   background: #141514;
   color: #f4f4f4;
+  font: 400 16px/1.5 var(--font-inter, sans-serif);
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .mobileTutorialDialog[open] {

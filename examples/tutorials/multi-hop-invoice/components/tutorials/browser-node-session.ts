@@ -2,6 +2,20 @@
 type RunningNode = { readonly isRunning: boolean; stop(): Promise<unknown> };
 type LockProvider = Pick<LockManager, 'request'>;
 
+export class DuplicateNodeSessionError extends Error {
+  constructor() {
+    super('Node already in use: this saved node is running in another tutorial tab. Close that tab to stop its node session, then retry here. Keep only one active tutorial tab for this saved node.');
+    this.name = 'DuplicateNodeSessionError';
+  }
+}
+
+export class PeerHandshakeTimeoutError extends Error {
+  constructor(retryAction: string) {
+    super(`Peer handshake timed out: the node is running, but the public peer did not finish connecting. Check your network connection, then select ${retryAction} to retry. If it keeps timing out, the public peer may be unavailable; try again later.`);
+    this.name = 'PeerHandshakeTimeoutError';
+  }
+}
+
 export function createBrowserNodeSession(manager: LockProvider | null = navigator.locks ?? null) {
   let release: (() => Promise<void>) | undefined;
   let current: RunningNode | undefined;
@@ -15,7 +29,7 @@ export function createBrowserNodeSession(manager: LockProvider | null = navigato
     await new Promise<void>((resolve, reject) => {
       const request = manager.request(`fiber-docs:node:${profileKey}`, { ifAvailable: true }, async (lock) => {
         if (!lock) {
-          reject(new Error('This saved node is already running in another tutorial tab. Continue there, or close that tutorial tab and retry here. Use one active tutorial tab at a time when sharing a node.'));
+          reject(new DuplicateNodeSessionError());
           return;
         }
         await new Promise<void>((done) => {

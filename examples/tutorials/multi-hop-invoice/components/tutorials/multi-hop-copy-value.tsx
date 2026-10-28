@@ -38,4 +38,3 @@ export function CopyValue({ value, label = 'Copy', iconOnly = false }: { value: 
     </span>
   );
 }
-

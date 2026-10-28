@@ -132,3 +132,7 @@ button:disabled { border-color: #454545; background: transparent; color: #6d6d6d
   .stats div + div { border-top: 1px solid #333; border-left: 0; }
   .events > div { grid-template-columns: 42px minmax(94px, .75fr) minmax(0, 1fr); padding-inline: 14px; }
 }
+
+.pubkey-value { display: flex; min-width: 0; align-items: center; gap: 4px; }
+.pubkey-value > button { color: #9a9a9a; }
+.pubkey-value > code, .pubkey-value > span:not([role='status']) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

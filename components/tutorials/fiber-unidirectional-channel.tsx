@@ -458,7 +458,7 @@ export function FiberUnidirectionalChannelTutorial() {
 
           <div className={styles.paymentFlow}>
             <div className={styles.paymentFlowNumber}>1</div>
-            <div><strong>Start and fund the browser node</strong><span>Balance: {hexToCkb(runtime.balance)} CKB</span></div>
+            <div><strong>Start and fund the browser node</strong><span>Balance: {hexToCkb(runtime.balance)} CKB</span><span>Faucet CKB may take up to 30s to confirm on-chain.</span></div>
             <div className={styles.compactActions}>
               <button className={styles.startButton} disabled={Boolean(runtime.nodeInfo) || Boolean(runtime.busy)} onClick={runtime.start}>{runtime.busy === 'start' ? 'Starting…' : 'Start'}</button>
               <a className={styles.faucetButton} href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Faucet ↗</a>

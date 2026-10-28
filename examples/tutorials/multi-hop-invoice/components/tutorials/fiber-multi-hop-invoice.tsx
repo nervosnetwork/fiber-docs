@@ -164,7 +164,7 @@ function NodeSetup({
               <code title={runtime.address}>{shorten(runtime.address)}</code>
               <CopyValue value={runtime.address} label="Copy address" iconOnly />
             </div>
-            <span>On-chain balance: <b>{hexToCkb(runtime.balance)} CKB</b>. Allow more than 499 CKB for funding and fees.</span>
+            <span>On-chain balance: <b>{hexToCkb(runtime.balance)} CKB</b>. Allow more than 499 CKB for funding and fees.</span><span>Faucet CKB may take up to 30s to confirm on-chain.</span>
           </div>
           <div className={styles.fundingActions}>
             <a className={`${styles.faucetButton} ${styles.demoAction} ${!hasFunding ? styles.demoPrimaryAction : ''}`} href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Get CKB ↗</a>
