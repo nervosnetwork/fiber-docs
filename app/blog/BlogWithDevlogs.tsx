@@ -58,31 +58,12 @@ export default function BlogWithDevlogs({
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col justify-center items-center py-16">
-        <div className="relative">
-          <div className="w-10 h-10 border-2 border-fd-border rounded-full"></div>
-          <div className="absolute top-0 left-0 w-10 h-10 border-2 border-fd-primary border-t-transparent rounded-full animate-spin"></div>
-        </div>
-        <p className="mt-4 text-sm text-fd-muted-foreground">
-          Loading blog posts...
-        </p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-12">
-        <div className="text-yellow-600 mb-4">
-          ⚠️ Some blog posts may not be available
-        </div>
-        <p className="text-fd-muted-foreground text-sm mb-6">{error}</p>
-        <BlogClientFilter allPosts={documentPosts} />
-      </div>
-    );
-  }
-
-  return <BlogClientFilter allPosts={allPosts} />;
+  return (
+    <>
+      <p role="status" className="text-sm text-fd-muted-foreground mb-4">
+        {isLoading ? 'Loading additional devlogs…' : error ? 'Devlogs are temporarily unavailable. Articles and Pulse updates are available below.' : null}
+      </p>
+      <BlogClientFilter allPosts={allPosts} />
+    </>
+  );
 }
