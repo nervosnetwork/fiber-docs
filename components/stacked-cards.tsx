@@ -16,35 +16,35 @@ const cards: CardItem[] = [
     title: 'Scalability',
     description:
       'Through off-chain payment channels and multi-hop routing, Fiber Network can achieve high-throughput transaction processing, meeting the needs of large-scale users.',
-    image: '/scalability-animated.png',
+    image: '/scalability-animated.webp',
   },
   {
     label: '2/5',
     title: 'Low cost',
     description:
       'By reducing the frequency of on-chain transactions, Fiber Network lowers transaction fees, making micropayments feasible and efficient.',
-    image: '/low-cost-animated.png',
+    image: '/low-cost-animated.webp',
   },
   {
     label: '3/5',
     title: 'Fast',
     description:
       'The instant confirmation of off-chain transactions provides a split second payment confirmation experience suitable for various instant payment scenarios.',
-    image: '/fast-animated.png',
+    image: '/fast-animated.webp',
   },
   {
     label: '4/5',
     title: 'Multi-Asset Support',
     description:
       'Fiber Network supports payments in a variety of digital assets, offering users a broader range of payment options.',
-    image: '/multi-asset-animated.png',
+    image: '/multi-asset-animated.webp',
   },
   {
     label: '5/5',
     title: 'Interoperability',
     description:
       'Fiber Network supports interoperability with the Bitcoin Lightning Network, providing support for cross-chain payments and asset transfers.',
-    image: '/interoperability-animated.png',
+    image: '/interoperability-animated.webp',
   },
 ];
 
@@ -134,22 +134,22 @@ export default function StackedCards() {
     updateCardDimensions();
     onScroll();
 
-    window.addEventListener('resize', () => {
+    const onResize = () => {
       updateCardDimensions();
       onScroll();
-    });
-
-    window.addEventListener(
-      'scroll',
-      () => {
-        requestAnimationFrame(onScroll);
-      },
-      { passive: true }
-    );
+    };
+    let frame = 0;
+    const requestScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(onScroll);
+    };
+    window.addEventListener('resize', onResize);
+    window.addEventListener('scroll', requestScroll, { passive: true });
 
     return () => {
-      window.removeEventListener('resize', updateCardDimensions);
-      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('scroll', requestScroll);
+      cancelAnimationFrame(frame);
     };
   }, []);
 
@@ -161,6 +161,7 @@ export default function StackedCards() {
         }
 
         .scroll-track {
+          height: calc(100vh + 2400px);
           position: relative;
           width: 100%;
         }
@@ -398,7 +399,7 @@ export default function StackedCards() {
                     <p>{card.description}</p>
                   </div>
                   <div className="card-content-right">
-                    <img src={card.image} alt={card.title} />
+                    <img src={card.image} alt={card.title} width={320} height={320} loading="lazy" decoding="async" />
                   </div>
                 </div>
               </article>

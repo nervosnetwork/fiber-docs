@@ -28,7 +28,7 @@ export default function Section({
         <section className={`self-stretch flex flex-col lg:flex-row justify-start items-start gap-lg mb-xxl ${className}`}>
           {(title || titleDescription || description) && (
             <div className="w-full lg:flex-[3] mb-xl lg:mb-0">
-              {title && <h1 className="text-primary">{title}</h1>}
+              {title && <h2 className="text-h1 text-primary">{title}</h2>}
               {titleDescription && <div className="mt-md">{titleDescription}</div>}
               {description && <div className="mt-md">{description}</div>}
             </div>
@@ -48,7 +48,7 @@ export default function Section({
         <section className={`self-stretch flex justify-start items-start gap-lg mb-xxl ${className}`}>
           {(title || titleDescription || description) && (
             <div className="flex-[3]">
-              {title && <h1 className="text-primary">{title}</h1>}
+              {title && <h2 className="text-h1 text-primary">{title}</h2>}
               {titleDescription && <div className="mt-md">{titleDescription}</div>}
               {description && <div className="mt-md">{description}</div>}
             </div>
@@ -77,7 +77,7 @@ export default function Section({
               <>
                 {(title || titleDescription) && (
                   <div className="min-w-0 flex-1">
-                    {title && <h1 className="justify-center text-primary">{title}</h1>}
+                    {title && <h2 className="text-h1 justify-center text-primary">{title}</h2>}
                     {titleDescription && <div className="mt-md">{titleDescription}</div>}
                   </div>
                 )}
@@ -87,7 +87,7 @@ export default function Section({
               </>
             ) : (
               <>
-                {title && <h1 className="justify-center text-primary">{title}</h1>}
+                {title && <h2 className="text-h1 justify-center text-primary">{title}</h2>}
                 {titleDescription && <div className="mt-md">{titleDescription}</div>}
                 {description && <div className="mt-md">{description}</div>}
               </>

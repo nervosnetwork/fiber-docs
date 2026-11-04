@@ -39,7 +39,8 @@ export default async function Page(props: {
     headline: page.data.title,
     description,
     url: pageUrl,
-    datePublished: typeof page.data.date === "string" ? page.data.date : undefined,
+    datePublished: typeof page.data.date === "string" ? page.data.date : page.data.date.toISOString(),
+    dateModified: page.data.lastModified instanceof Date ? page.data.lastModified.toISOString() : page.data.lastModified,
     author: page.data.author
       ? { "@type": "Person", name: page.data.author, url: page.data.authorUrl }
       : { "@type": "Organization", name: "Fiber Network", url: "https://www.fiber.world" },
@@ -55,7 +56,7 @@ export default async function Page(props: {
       <>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
         />
         <FiberWasmQuickstart />
       </>
@@ -67,7 +68,7 @@ export default async function Page(props: {
       <>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
         />
         <FiberChannelPaymentTutorial />
       </>
@@ -79,7 +80,7 @@ export default async function Page(props: {
       <>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
         />
         <FiberMultiHopInvoiceTutorial />
       </>
@@ -91,7 +92,7 @@ export default async function Page(props: {
       <>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
         />
         <FiberUnidirectionalChannelTutorial />
       </>
@@ -99,23 +100,23 @@ export default async function Page(props: {
   }
 
   if (slug === "build/hold-invoice") {
-    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><FiberHoldInvoiceTutorial /></>;
+    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} /><FiberHoldInvoiceTutorial /></>;
   }
 
   if (slug === "build/encrypted-data-payment") {
-    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><FiberEncryptedDataPaymentTutorial /></>;
+    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} /><FiberEncryptedDataPaymentTutorial /></>;
   }
 
   if (slug === "build/verified-result-payment") {
-    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><FiberVerifiedResultPaymentTutorial /></>;
+    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} /><FiberVerifiedResultPaymentTutorial /></>;
   }
 
   if (slug === "build/rusd-payment") {
-    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><FiberRusdPaymentTutorial /></>;
+    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} /><FiberRusdPaymentTutorial /></>;
   }
 
   if (slug === "build/close-channel") {
-    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><FiberCloseChannelTutorial /></>;
+    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} /><FiberCloseChannelTutorial /></>;
   }
 
   return (
@@ -130,7 +131,7 @@ export default async function Page(props: {
     >
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
       <div className="mb-4">
         <DocsTitle className="mb-4">{page.data.title}</DocsTitle>

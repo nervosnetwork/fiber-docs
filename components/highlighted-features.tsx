@@ -8,31 +8,31 @@ export default function HighlightedFeatures() {
       title: 'Scalability',
       description:
         'Through off-chain payment channels and multi-hop routing, Fiber Network can achieve high-throughput transaction processing, meeting the needs of large-scale users.',
-      image: '/scalability-animated.png',
+      image: '/scalability-animated.webp',
     },
     {
       title: 'Low cost',
       description:
         'By reducing the frequency of on-chain transactions, Fiber Network lowers transaction fees, making micropayments feasible and efficient.',
-      image: '/low-cost-animated.png',
+      image: '/low-cost-animated.webp',
     },
     {
       title: 'Fast',
       description:
         'The instant confirmation of off-chain transactions provides a split second payment confirmation experience suitable for various instant payment scenarios.',
-      image: '/fast-animated.png',
+      image: '/fast-animated.webp',
     },
     {
       title: 'Multi-Asset Support',
       description:
         'Fiber Network supports payments in a variety of digital assets, offering users a broader range of payment options.',
-      image: '/multi-asset-animated.png',
+      image: '/multi-asset-animated.webp',
     },
     {
       title: 'Interoperability',
       description:
         'Fiber Network supports interoperability with the Bitcoin Lightning Network, providing support for cross-chain payments and asset transfers.',
-      image: '/interoperability-animated.png',
+      image: '/interoperability-animated.webp',
     },
   ];
 

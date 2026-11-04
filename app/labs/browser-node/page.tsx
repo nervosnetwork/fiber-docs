@@ -1,10 +1,7 @@
-import type { Metadata } from 'next';
+import { pageMetadata } from '@/lib/seo';
 import { BrowserNodeLab } from '@/components/labs/browser-node-lab';
 
-export const metadata: Metadata = {
-  title: 'Browser Node Lab | Fiber Network',
-  description: 'Start a real Fiber WASM node and connect it to a Router over WSS.',
-};
+export const metadata = pageMetadata('Browser Node Lab', 'Start a real Fiber WASM node and connect it to a Router over WSS.', '/labs/browser-node');
 
 export default function BrowserNodeLabPage() {
   const configuredAddress = process.env.NEXT_PUBLIC_FIBER_LAB_ROUTER_WS_ADDRESS;
