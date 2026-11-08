@@ -1,0 +1,89 @@
+name: Current production Lighthouse audit
+
+on:
+  push:
+    branches: [codex/live-performance-audit-20261109]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-performance-audit-20261109
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22.19.0
+          package-manager-cache: false
+      - name: Install pinned auditing tool and record Chrome
+        run: |
+          audit_tool_dir="$RUNNER_TEMP/live-lighthouse-tools"
+          npm install --prefix "$audit_tool_dir" --no-audit --no-fund lighthouse@13.0.1
+          printf 'AUDIT_TOOLS=%s\n' "$audit_tool_dir" >> "$GITHUB_ENV"
+          printf 'CHROME_PATH=%s\n' "$(command -v google-chrome)" >> "$GITHUB_ENV"
+          google-chrome --version
+          node --version
+      - name: Fiber - three cold-cache mobile audits
+        id: fiber
+        continue-on-error: true
+        run: node tools/live-performance/run.mjs fiber
+      - name: Save Fiber reports
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: lighthouse-fiber-current
+          path: audit-results/fiber/
+          retention-days: 30
+          if-no-files-found: warn
+      - name: Nervos Docs - three cold-cache mobile audits
+        id: nervos
+        continue-on-error: true
+        run: node tools/live-performance/run.mjs nervos
+      - name: Save Nervos Docs reports
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: lighthouse-nervos-current
+          path: audit-results/nervos/
+          retention-days: 30
+          if-no-files-found: warn
+      - name: CKBA - three cold-cache mobile audits
+        id: ckba
+        continue-on-error: true
+        run: node tools/live-performance/run.mjs ckba
+      - name: Save CKBA reports
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: lighthouse-ckba-current
+          path: audit-results/ckba/
+          retention-days: 30
+          if-no-files-found: warn
+      - name: Verify all nine audits completed
+        if: always()
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const rows = ['fiber', 'nervos', 'ckba'].map(site => {
+            const file = `audit-results/${site}/summary.json`;
+            return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {site, validRuns: 0};
+          });
+          fs.writeFileSync('audit-results/summary.json', JSON.stringify(rows, null, 2));
+          if (rows.some(row => row.validRuns !== 3)) process.exitCode = 1;
+          JS
+      - name: Save combined summary
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: lighthouse-current-summary
+          path: audit-results/summary.json
+          retention-days: 30
+          if-no-files-found: warn
