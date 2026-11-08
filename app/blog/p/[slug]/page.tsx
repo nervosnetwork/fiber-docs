@@ -1,3 +1,5 @@
+import { JsonLd } from '@/components/json-ld';
+import { articleSchema } from '@/lib/article-schema';
 import { pageMetadata } from '@/lib/seo';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -25,6 +27,7 @@ export default async function BlogPostPage({ params }: BlogPostProps) {
 
   return (
     <main className="flex flex-1 flex-col px-4 py-8">
+      <JsonLd data={articleSchema(page.data, page.url)} />
       <div className="max-w-4xl mx-auto w-full">
         {/* Back Navigation */}
         <div className="mb-8">

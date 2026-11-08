@@ -14,14 +14,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Documentation pages from Fumadocs source
   const docPages: MetadataRoute.Sitemap = source.getPages().map((page) => ({
     url: `${BASE_URL}${page.url}`,
-    lastModified: page.data.date,
+    lastModified: page.data.lastModified ?? page.data.date,
     changeFrequency: "weekly" as const,
     priority: 0.8,
   }));
 
   const posts: MetadataRoute.Sitemap = [...blog.getPages(), ...pulse.getPages()].map((page) => ({
     url: `${BASE_URL}${page.url}`,
-    lastModified: page.data.date,
+    lastModified: page.data.lastModified ?? page.data.date,
   }));
 
   return [...staticPages, ...docPages, ...posts];

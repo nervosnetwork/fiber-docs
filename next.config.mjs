@@ -60,6 +60,17 @@ const config = {
   },
   async redirects() {
     return [
+      { source: "/:path*", has: [{ type: "host", value: "fiber.world" }], destination: "https://www.fiber.world/:path*", permanent: true },
+      {"source": "/docs/api-reference/channel", "destination": "/docs/api-reference/channels/channel", "permanent": true},
+      {"source": "/docs/api-reference/payment", "destination": "/docs/api-reference/payments/payment", "permanent": true},
+      {"source": "/docs/api-reference/dev", "destination": "/docs/api-reference/dev-tooling/dev", "permanent": true},
+      {"source": "/docs/api-reference/watchtower", "destination": "/docs/api-reference/dev-tooling/watchtower", "permanent": true},
+      {"source": "/docs/api-reference/peer", "destination": "/docs/api-reference/node/peer", "permanent": true},
+      {"source": "/docs/api-reference/cch", "destination": "/docs/api-reference/cross-chain/cch", "permanent": true},
+      {"source": "/docs/build/ffi", "destination": "/docs/build/ffi/ffi-user-guide", "permanent": true},
+      {"source": "/docs/guide/node-operator/backup", "destination": "/docs/operate/backup", "permanent": true},
+      {"source": "/docs/guide/node-operator/config-reference", "destination": "/docs/operate/config-reference", "permanent": true},
+      {"source": "/docs/res/network-resources", "destination": "/docs/quick-start/network-resources", "permanent": true},
       {
         source: '/docs/build/verified-agent-job',
         destination: '/docs/build/verified-result-payment',

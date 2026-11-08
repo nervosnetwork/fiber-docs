@@ -136,7 +136,7 @@ Notice that:
 
 ---
 
-## Overview
+## Run a Fiber Node
 
 Source: https://www.fiber.world/docs/quick-start/run-a-node
 
@@ -1908,7 +1908,7 @@ Node.js environments are only suitable for testing or special integration scenar
 
 ---
 
-## Overview
+## Community SDK Overview
 
 Source: https://www.fiber.world/docs/build/community-sdk
 
@@ -2662,9 +2662,7 @@ The linked fiber-ffi reference provides a C ABI that lets non-Rust applications 
 
 Source: https://www.fiber.world/docs/build/ffi/android-native-integration
 
-# Fiber: Android Native Integration Guide
-
-  fiber-ffi currently lives in a personal repository. This page uses it as an exploratory reference for Android native integration, not as an official Fiber Android SDK or support commitment.
+fiber-ffi currently lives in a personal repository. This page uses it as an exploratory reference for Android native integration, not as an official Fiber Android SDK or support commitment.
 
 This document uses fiber-ffi as a reference example to explain how the existing Rust Fiber node can be integrated into an Android app through JNI and the native C ABI. The repository provides a runnable demo:
 
@@ -2852,9 +2850,7 @@ The demo requires running SetCKBKey first. The key is a 32-byte hex string, with
 
 Source: https://www.fiber.world/docs/build/ffi/ios-native-integration
 
-# Fiber: iOS Native Integration Guide
-
-  fiber-ffi currently lives in a personal repository. This page uses it as an exploratory reference for iOS native integration, not as an official Fiber iOS SDK or support commitment.
+fiber-ffi currently lives in a personal repository. This page uses it as an exploratory reference for iOS native integration, not as an official Fiber iOS SDK or support commitment.
 
 This document uses fiber-ffi as a reference example to explain how the existing Rust Fiber node can be integrated into an iOS app through Swift and an Objective-C bridging header. The repository provides a runnable demo:
 
@@ -6229,8 +6225,6 @@ standalonewatchtowertoken is only needed when the standalone watchtower RPC serv
 ## RPC Overview
 
 Source: https://www.fiber.world/docs/api-reference
-
-# RPC Overview
 
 The JSON-RPC interface is the primary way applications interact with a Fiber Network Node (FNN). Whether you are building a wallet, a payment processor, a network explorer, or automating channel management, you communicate with the node through this HTTP-based RPC layer.
 

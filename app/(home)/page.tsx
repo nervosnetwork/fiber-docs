@@ -52,9 +52,9 @@ export default function HomePage() {
         <section
           className={`self-stretch inline-flex flex-col justify-start items-start mb-[64px]`}
         >
-          <h1 className="self-stretch justify-center text-primary ">
+          <h2 className="text-h1 self-stretch justify-center text-primary ">
             <span className="text-tertiary">Highlighted</span> Features
-          </h1>
+          </h2>
         </section>
 
         <StackedCards />

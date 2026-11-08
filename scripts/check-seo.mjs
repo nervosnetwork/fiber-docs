@@ -17,9 +17,15 @@ for (const route of routes) {
     ['canonical', /<link rel="canonical" href="https:\/\/www\.fiber\.world/],
     ['social image', /property="og:image" content="https:\/\/www\.fiber\.world\/imgs\/fiber-og.png"/],
   ]) assert.match(html, pattern, `${route}: missing ${label}`);
+  assert.equal([...html.matchAll(/<h1(?:\s|>)/g)].length, 1, `${route}: expected one main heading`);
+  for (const match of html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)) JSON.parse(match[1]);
   if (route.startsWith('blog/')) {
     assert.ok(sitemap.includes(`https://www.fiber.world/${route.replace(/\.html$/, '')}`), `${route}: absent from sitemap`);
   }
+}
+const home = await readFile(`${root}/index.html`, 'utf8');
+for (const name of ['fast', 'low-cost', 'multi-asset', 'scalability', 'interoperability']) {
+  assert.ok(home.includes(`/${name}-animated.webp`));
 }
 const blog = await readFile(`${root}/blog.html`, 'utf8');
 for (const route of routes.filter((route) => route.startsWith('blog/'))) {
