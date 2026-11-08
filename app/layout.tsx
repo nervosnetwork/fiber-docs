@@ -23,6 +23,11 @@ const atkinsonHyperlegible = Atkinson_Hyperlegible({
 });
 
 export const metadata: Metadata = {
+  title: {
+    default: 'Fiber Network | Multi-Asset Payment Channels on CKB',
+    template: '%s | Fiber Network',
+  },
+  description: 'Build instant, low-cost multi-asset payments with Fiber Network, a peer-to-peer payment channel network on Nervos CKB interoperable with Bitcoin Lightning.',
   metadataBase: new URL('https://www.fiber.world'),
   icons: {
     icon: '/logo/favicon.svg',

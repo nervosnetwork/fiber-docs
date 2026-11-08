@@ -1,3 +1,4 @@
+import { pageMetadata } from '@/lib/seo';
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getFiberDevLogById } from "../../devlog";
@@ -229,10 +230,7 @@ export async function generateMetadata({ params }: DevlogPageProps) {
       };
     }
 
-    return {
-      title: `${devlog.title} | Fiber Devlog`,
-      description: devlog.excerpt,
-    };
+    return pageMetadata(devlog.title, devlog.excerpt, `/blog/d/${id}`, true);
   } catch (error) {
     return {
       title: "Devlog | Fiber",

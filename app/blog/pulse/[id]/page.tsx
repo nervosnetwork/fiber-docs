@@ -1,3 +1,4 @@
+import { pageMetadata } from '@/lib/seo';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { pulse } from '@/lib/source';
@@ -149,16 +150,12 @@ export async function generateMetadata({ params }: PulsePostProps) {
   const { id } = await params;
   const page = pulse.getPage([id]);
 
-  if (!page) {
-    return {
-      title: 'Blog Post | Fiber',
-      description: 'A blog post from the Fiber team',
-    };
-  }
+  if (!page) notFound();
 
-  return {
-    title: `${page.data.title} | Fiber Blog`,
-    description: page.data.description || `${page.data.title} - A blog post by ${page.data.author || 'Fiber Team'}`,
-  };
+  return pageMetadata(
+    page.data.title,
+    page.data.description || `${page.data.title} - A Pulse update by ${page.data.author || 'Fiber Team'}`,
+    page.url,
+    true,
+  );
 }
-

@@ -1,3 +1,4 @@
+import { pageMetadata, SOCIAL_IMAGE, SITE_URL } from '@/lib/seo';
 import { source } from "@/lib/source";
 import {
   DocsPage,
@@ -174,23 +175,24 @@ export async function generateMetadata(props: {
     page.data.description ||
     (author ? `${page.data.title} - By ${author}` : page.data.title);
   const slug = params.slug ? params.slug.join("/") : "";
-  const url = `https://www.fiber.world/docs/${slug}`;
+  const url = new URL(page.url, SITE_URL).href;
 
   return {
-    title: page.data.title,
-    description,
+    ...pageMetadata(page.data.title, description, page.url, true),
     authors: author ? [{ name: author, url: page.data.authorUrl }] : undefined,
     openGraph: {
       title: page.data.title,
       description,
       url,
       siteName: "Fiber Network",
+      images: [{ url: SOCIAL_IMAGE, width: 1200, height: 630 }],
       type: "article",
       publishedTime: typeof page.data.date === "string" ? page.data.date : undefined,
       authors: author ? [author] : undefined,
     },
     twitter: {
       card: "summary_large_image",
+      images: [SOCIAL_IMAGE],
       title: page.data.title,
       description,
     },
