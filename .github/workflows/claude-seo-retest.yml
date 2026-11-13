@@ -1,0 +1,64 @@
+name: Claude SEO public production reassessment
+
+on:
+  push:
+    branches: [codex/seo-retest-crawl-20261113]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: claude-seo-retest-20261113
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NO_PROXY: '*'
+      no_proxy: '*'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0, from pinned tool CI
+        with:
+          python-version: '3.14'
+      - name: Prepare exact tool version and isolated runtime
+        run: |
+          set -euo pipefail
+          seo_task_dir="$RUNNER_TEMP/claude-seo-retest"
+          mkdir -p "$seo_task_dir" "$GITHUB_WORKSPACE/seo-retest-evidence"
+          git clone --quiet https://github.com/AgriciDaniel/claude-seo.git "$seo_task_dir/tool"
+          git -C "$seo_task_dir/tool" checkout --quiet cca7e4a267991aca880efade1fd12e8498caf2ce
+          cp tools/seo-retest/collect_evidence.py "$seo_task_dir/collect_evidence.py"
+          cp tools/seo-retest/*-specialist.py "$seo_task_dir/"
+          printf 'SEO_TASK_ROOT=%s\n' "$seo_task_dir" >> "$GITHUB_ENV"
+          printf 'SEO_OUTPUT_ROOT=%s\n' "$GITHUB_WORKSPACE/seo-retest-evidence" >> "$GITHUB_ENV"
+          printf 'CLAUDE_SEO_DATA_DIR=%s\n' "$seo_task_dir/runtime" >> "$GITHUB_ENV"
+          export CLAUDE_SEO_DATA_DIR="$seo_task_dir/runtime"
+          "$seo_task_dir/tool/scripts/claude-seo" setup 2>&1 | tee "$GITHUB_WORKSPACE/seo-retest-evidence/setup.log"
+          "$seo_task_dir/tool/scripts/claude-seo" doctor --json > "$GITHUB_WORKSPACE/seo-retest-evidence/doctor.json"
+          git -C "$seo_task_dir/tool" rev-parse HEAD > "$GITHUB_WORKSPACE/seo-retest-evidence/tool-commit.txt"
+          python --version > "$GITHUB_WORKSPACE/seo-retest-evidence/python-version.txt"
+      - name: Nervos Docs full public crawl
+        continue-on-error: true
+        run: python "$SEO_TASK_ROOT/collect_evidence.py" nervos --concurrency 1
+      - name: Fiber rendered and specialist evidence
+        continue-on-error: true
+        run: python "$SEO_TASK_ROOT/fiber-specialist.py"
+      - name: Nervos Docs rendered and specialist evidence
+        continue-on-error: true
+        run: python "$SEO_TASK_ROOT/nervos-specialist.py"
+      - name: CKBA rendered and specialist evidence
+        continue-on-error: true
+        run: python "$SEO_TASK_ROOT/ckba-specialist.py"
+      - name: Retain all evidence and diagnostics
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: claude-seo-live-retest-evidence
+          path: seo-retest-evidence/
+          retention-days: 30
+          if-no-files-found: error
