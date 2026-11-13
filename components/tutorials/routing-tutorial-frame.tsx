@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   type ReactNode,
+  type Ref,
   useCallback,
   useEffect,
   useRef,
@@ -68,12 +69,12 @@ function highlightLine(line: string): ReactNode[] {
   return parts;
 }
 
-function CodeBlock({
+export function RoutingCodeBlock({
   file,
-  focus,
+  focus = null,
 }: {
   file: RoutingCodeFile;
-  focus: RoutingCodeFocus | null;
+  focus?: RoutingCodeFocus | null;
 }) {
   const codeRef = useRef<HTMLPreElement | null>(null);
 
@@ -120,6 +121,145 @@ function CodeBlock({
   );
 }
 
+export function TutorialToolbar({
+  currentTutorialIndex,
+  downloadHref,
+  articleProgress,
+  onDemoAction,
+  demoActionLabel,
+  demoActionArrow = '↓',
+  headerRef,
+}: {
+  currentTutorialIndex: number;
+  downloadHref?: string;
+  articleProgress: number;
+  onDemoAction?: () => void;
+  demoActionLabel?: string;
+  demoActionArrow?: string;
+  headerRef?: Ref<HTMLElement>;
+}) {
+  const tutorialMenuRef = useRef<HTMLDivElement>(null);
+  const [tutorialMenuOpen, setTutorialMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!tutorialMenuOpen) return;
+    const closeOnPointerDown = (event: PointerEvent) => {
+      if (
+        tutorialMenuRef.current &&
+        !tutorialMenuRef.current.contains(event.target as Node)
+      ) {
+        setTutorialMenuOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setTutorialMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', closeOnPointerDown);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnPointerDown);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [tutorialMenuOpen]);
+
+  return (
+    <header ref={headerRef} className={`${styles.tutorialToolbar} ${styles.routingToolbar}${onDemoAction ? '' : ` ${styles.toolbarWithoutDemo}`}`}>
+      <MobileTutorialPicker currentTutorialIndex={currentTutorialIndex} />
+      <div className={styles.tutorialSelect} ref={tutorialMenuRef}>
+        <button
+          aria-expanded={tutorialMenuOpen}
+          aria-haspopup="menu"
+          className={styles.tutorialSelectButton}
+          onClick={() => setTutorialMenuOpen((open) => !open)}
+          type="button"
+        >
+          <span>Tutorial: {tutorials[currentTutorialIndex].shortTitle}</span>
+          <Image
+            alt=""
+            aria-hidden="true"
+            className={styles.selectChevron}
+            height={18}
+            src="/icon-chevron-down.svg"
+            width={18}
+          />
+        </button>
+        {tutorialMenuOpen && (
+          <div className={styles.tutorialMenu} role="menu">
+            {tutorials.map((tutorial, index) => (
+              <Link
+                aria-current={
+                  index === currentTutorialIndex ? 'page' : undefined
+                }
+                className={
+                  index === currentTutorialIndex
+                    ? styles.tutorialMenuCurrent
+                    : undefined
+                }
+                href={tutorial.href}
+                key={tutorial.href}
+                onClick={() => setTutorialMenuOpen(false)}
+                role="menuitem"
+              >
+                <span>{tutorial.shortTitle}</span>
+                {index === currentTutorialIndex && (
+                  <Image
+                    alt=""
+                    aria-hidden="true"
+                    height={18}
+                    src="/icon-checkmark.svg"
+                    width={18}
+                  />
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+      {onDemoAction && (
+        <button className={styles.runDemoAction} onClick={onDemoAction} type="button">
+          {demoActionLabel} <span aria-hidden="true">{demoActionArrow}</span>
+        </button>
+      )}
+      {downloadHref && <div className={styles.toolbarActions}>
+        <a download href={downloadHref}>
+          <Image
+            alt=""
+            aria-hidden="true"
+            height={18}
+            src="/icon-download.svg"
+            width={18}
+          />
+          Download project
+        </a>
+      </div>}
+      <div className={styles.horizontalProgress} aria-hidden="true">
+        <span
+          className={styles.progressFill}
+          style={{ transform: `scaleX(${articleProgress})` }}
+        />
+      </div>
+    </header>
+  );
+}
+
+export function TutorialFooter({ previousHref, nextHref }: { previousHref: string; nextHref?: string }) {
+  const router = useRouter();
+  return (
+    <nav className={styles.tutorialFooter} aria-label="Tutorial navigation">
+      <button onClick={() => router.push(previousHref)} type="button">
+        <span aria-hidden="true">←</span> Previous
+      </button>
+      <button
+        disabled={!nextHref}
+        onClick={() => nextHref && router.push(nextHref)}
+        type="button"
+      >
+        Next <span aria-hidden="true">→</span>
+      </button>
+    </nav>
+  );
+}
+
 export function RoutingTutorialFrame({
   article,
   currentTutorialIndex,
@@ -149,15 +289,12 @@ export function RoutingTutorialFrame({
   demoFirst?: boolean;
   walkthroughDescription?: string;
 }) {
-  const router = useRouter();
   const topRef = useRef<HTMLDivElement | null>(null);
   const demoRef = useRef<HTMLElement | null>(null);
   const walkthroughRef = useRef<HTMLElement | null>(null);
   const articleRef = useRef<HTMLDivElement | null>(null);
-  const tutorialMenuRef = useRef<HTMLDivElement | null>(null);
   const [activeSection, setActiveSection] = useState('intro');
   const [articleProgress, setArticleProgress] = useState(0);
-  const [tutorialMenuOpen, setTutorialMenuOpen] = useState(false);
   const [liveDemoActive, setLiveDemoActive] = useState(false);
   const [activeFile, setActiveFile] = useState(defaultFile);
   const [codeFocus, setCodeFocus] = useState<RoutingCodeFocus | null>(null);
@@ -220,27 +357,6 @@ export function RoutingTutorialFrame({
         );
       });
   }, [activeSection]);
-
-  useEffect(() => {
-    if (!tutorialMenuOpen) return;
-    const closeOnPointerDown = (event: PointerEvent) => {
-      if (
-        tutorialMenuRef.current &&
-        !tutorialMenuRef.current.contains(event.target as Node)
-      ) {
-        setTutorialMenuOpen(false);
-      }
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setTutorialMenuOpen(false);
-    };
-    document.addEventListener('pointerdown', closeOnPointerDown);
-    document.addEventListener('keydown', closeOnEscape);
-    return () => {
-      document.removeEventListener('pointerdown', closeOnPointerDown);
-      document.removeEventListener('keydown', closeOnEscape);
-    };
-  }, [tutorialMenuOpen]);
 
   useEffect(() => {
     const demo = demoRef.current;
@@ -307,7 +423,7 @@ export function RoutingTutorialFrame({
           </button>
         ))}
       </div>
-      <CodeBlock file={currentFile} focus={codeFocus} />
+      <RoutingCodeBlock file={currentFile} focus={codeFocus} />
       <div className={styles.codeMeta}>
         <span>
           {currentFile.label} <i>{currentFile.language}</i>
@@ -333,107 +449,23 @@ export function RoutingTutorialFrame({
     </section>
   );
 
-  const footer = (
-    <nav className={styles.tutorialFooter} aria-label="Tutorial navigation">
-      <button onClick={() => router.push(previousHref)} type="button">
-        <span aria-hidden="true">←</span> Previous
-      </button>
-      <button
-        disabled={!nextHref}
-        onClick={() => nextHref && router.push(nextHref)}
-        type="button"
-      >
-        Next <span aria-hidden="true">→</span>
-      </button>
-    </nav>
-  );
+  const footer = <TutorialFooter previousHref={previousHref} nextHref={nextHref} />;
 
   return (
     <div
       className={`${styles.shell} ${demoFirst ? '' : styles.paymentShell}`}
       ref={topRef}
     >
-      <header className={`${styles.tutorialToolbar} ${styles.routingToolbar}`}>
-        <MobileTutorialPicker currentTutorialIndex={currentTutorialIndex} />
-        <div className={styles.tutorialSelect} ref={tutorialMenuRef}>
-          <button
-            aria-expanded={tutorialMenuOpen}
-            aria-haspopup="menu"
-            className={styles.tutorialSelectButton}
-            onClick={() => setTutorialMenuOpen((open) => !open)}
-            type="button"
-          >
-            <span>Tutorial: {tutorials[currentTutorialIndex].shortTitle}</span>
-            <Image
-              alt=""
-              aria-hidden="true"
-              className={styles.selectChevron}
-              height={18}
-              src="/icon-chevron-down.svg"
-              width={18}
-            />
-          </button>
-          {tutorialMenuOpen && (
-            <div className={styles.tutorialMenu} role="menu">
-              {tutorials.map((tutorial, index) => (
-                <Link
-                  aria-current={
-                    index === currentTutorialIndex ? 'page' : undefined
-                  }
-                  className={
-                    index === currentTutorialIndex
-                      ? styles.tutorialMenuCurrent
-                      : undefined
-                  }
-                  href={tutorial.href}
-                  key={tutorial.href}
-                  onClick={() => setTutorialMenuOpen(false)}
-                  role="menuitem"
-                >
-                  <span>{tutorial.shortTitle}</span>
-                  {index === currentTutorialIndex && (
-                    <Image
-                      alt=""
-                      aria-hidden="true"
-                      height={18}
-                      src="/icon-checkmark.svg"
-                      width={18}
-                    />
-                  )}
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-        <button className={styles.runDemoAction} onClick={toggleDemo} type="button">
-          {demoFirst
-            ? liveDemoActive
-              ? 'View code walkthrough'
-              : 'Try live demo'
-            : liveDemoActive
-              ? 'Back to tutorial'
-              : 'Run live demo'}{' '}
-          <span aria-hidden="true">{liveDemoActive ? (demoFirst ? '↓' : '↑') : demoFirst ? '↑' : '↓'}</span>
-        </button>
-        <div className={styles.toolbarActions}>
-          <a download href={downloadHref}>
-            <Image
-              alt=""
-              aria-hidden="true"
-              height={18}
-              src="/icon-download.svg"
-              width={18}
-            />
-            Download project
-          </a>
-        </div>
-        <div className={styles.horizontalProgress} aria-hidden="true">
-          <span
-            className={styles.progressFill}
-            style={{ transform: `scaleX(${articleProgress})` }}
-          />
-        </div>
-      </header>
+      <TutorialToolbar
+        currentTutorialIndex={currentTutorialIndex}
+        downloadHref={downloadHref}
+        articleProgress={articleProgress}
+        onDemoAction={toggleDemo}
+        demoActionLabel={demoFirst
+          ? liveDemoActive ? 'View code walkthrough' : 'Try live demo'
+          : liveDemoActive ? 'Back to tutorial' : 'Run live demo'}
+        demoActionArrow={liveDemoActive ? (demoFirst ? '↓' : '↑') : demoFirst ? '↑' : '↓'}
+      />
 
       {demoFirst ? (
         <>

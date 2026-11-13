@@ -117,7 +117,7 @@ export const liveTutorials: Tutorial[] = [
     id: 'encrypted-data-payment',
     level: 'Hard',
     mode: 'Testnet',
-    duration: '~25 min',
+    duration: '~30 min',
     title: 'Unlock Encrypted Data with a Fiber Payment',
     shortTitle: 'Unlock encrypted data with a payment',
     description:
