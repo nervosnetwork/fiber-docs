@@ -2,13 +2,13 @@ name: Current production Lighthouse audit
 
 on:
   push:
-    branches: [codex/live-performance-audit-20261109]
+    branches: [codex/live-performance-audit-20261113]
 
 permissions:
   contents: read
 
 concurrency:
-  group: live-performance-audit-20261109
+  group: live-performance-audit-20261113
   cancel-in-progress: false
 
 jobs:
