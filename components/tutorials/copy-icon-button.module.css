@@ -30,11 +30,13 @@
   border-radius: 5px;
   padding: 8px 10px;
   background: #202020;
-  color: #ffb3b3;
+  color: #eeeeee;
   box-shadow: 0 4px 16px #0005;
   font: 500 12px/1.4 system-ui, sans-serif;
   pointer-events: none;
 }
+
+.tooltip[data-error='true'] { color: #ffb3b3; }
 
 .tooltip[data-success='true'] { color: #9bdaaf; }
 

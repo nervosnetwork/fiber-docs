@@ -60,6 +60,10 @@
   text-transform: uppercase;
 }
 
+.tutorialToolbar.toolbarWithoutDemo {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 .tutorialSelect {
   position: relative;
   width: min(100%, 296px);
@@ -3697,10 +3701,11 @@
   font: 500 20px/1 var(--font-inter, sans-serif);
 }
 
-.multiHopOutcome[data-outcome='paid'] .multiHopOutcomeMark {
+.multiHopOutcome[data-outcome='paid'] .multiHopOutcomeMark,
+.multiHopOutcomeMark[data-tone='success'] {
   border-color: #405730;
   background: #141b10;
-  color: var(--status-success);
+  color: var(--outcome-success, var(--status-success));
 }
 
 .multiHopOutcome[data-outcome='failed'] .multiHopOutcomeMark {
@@ -5331,6 +5336,10 @@
   .routingToolbar .tutorialSelect,
   .routingToolbar .toolbarActions {
     display: none;
+  }
+
+  .routingToolbar.toolbarWithoutDemo .toolbarActions {
+    display: flex;
   }
 
   .mobileChapterButton {

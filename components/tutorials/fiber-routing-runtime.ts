@@ -145,6 +145,7 @@ export function findReusableChannel(channels: Channel[], pubkey: string) {
 async function queryCkbBalance(script: NodeInfoResult['default_funding_lock_script']) {
   const response = await fetch('https://testnet.ckbapp.dev/', {
     method: 'POST',
+    signal: AbortSignal.timeout(10_000),
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       jsonrpc: '2.0',
@@ -183,19 +184,29 @@ export function useFiberRoutingNode(
   const [error, setError] = useState('');
   const [isolationReady, setIsolationReady] = useState<boolean | null>(null);
 
+  const refreshChannels = useCallback(async () => {
+    const node = nodeRef.current;
+    if (!node) return;
+    const { channels } = await node.listChannels();
+    if (nodeRef.current === node) setChannels(channels);
+  }, []);
+
   const refresh = useCallback(async () => {
     const node = nodeRef.current;
     if (!node) return;
-    const [info, peerResult, channelResult] = await Promise.all([
-      node.nodeInfo(),
-      node.listPeers(),
-      node.listChannels(),
+    await Promise.all([
+      refreshChannels(),
+      node.listPeers().then(({ peers }) => {
+        if (nodeRef.current === node) setPeers(peers.map((peer) => peer.pubkey));
+      }),
+      node.nodeInfo().then(async (info) => {
+        if (nodeRef.current !== node) return;
+        setNodeInfo(info);
+        const capacity = await queryCkbBalance(info.default_funding_lock_script);
+        if (nodeRef.current === node) setBalance(capacity);
+      }),
     ]);
-    setNodeInfo(info);
-    setPeers(peerResult.peers.map((peer) => peer.pubkey));
-    setChannels(channelResult.channels);
-    setBalance(await queryCkbBalance(info.default_funding_lock_script));
-  }, []);
+  }, [refreshChannels]);
 
   const start = useCallback(async () => {
     if (Boolean(nodeRef.current) || busy) return;
@@ -355,8 +366,9 @@ export function useFiberRoutingNode(
     };
   }, []);
 
+  const nodeStarted = Boolean(nodeInfo);
   useEffect(() => {
-    if (!nodeInfo) return;
+    if (!nodeStarted) return;
     let checking = false;
     const check = async () => {
       if (checking || document.visibilityState !== 'visible') return;
@@ -378,7 +390,7 @@ export function useFiberRoutingNode(
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [nodeInfo, refresh]);
+  }, [nodeStarted, refresh]);
 
   return {
     nodeRef,
@@ -395,6 +407,7 @@ export function useFiberRoutingNode(
     start,
     connect,
     refresh,
+    refreshChannels,
     run,
   };
 }
