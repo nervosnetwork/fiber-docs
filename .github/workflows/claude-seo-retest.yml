@@ -17,7 +17,6 @@ jobs:
     timeout-minutes: 45
     env:
       NO_PROXY: '*'
-      no_proxy: '*'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
