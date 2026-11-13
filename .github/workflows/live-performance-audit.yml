@@ -2,7 +2,7 @@ name: Current production Lighthouse audit
 
 on:
   push:
-    branches: [codex/live-performance-audit-20261113]
+    branches: [codex/seo-retest-performance-20261113]
 
 permissions:
   contents: read
