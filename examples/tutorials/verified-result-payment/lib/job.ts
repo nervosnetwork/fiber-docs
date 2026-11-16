@@ -181,7 +181,7 @@ export function setupChannelActionRequirement({
   if (!nodePrepared) return 'Prepare both browser nodes before opening a channel.';
   if (!fundingReady) {
     const participant = role === 'customer' ? 'Customer A' : 'Solver C';
-    return `Fund ${participant}'s on-chain address with at least 499 CKB, then select Refresh.`;
+    return `Fund ${participant}'s on-chain address with more than 500 Testnet CKB to cover the separate funding transaction fee, then select Refresh.`;
   }
   return null;
 }
@@ -282,7 +282,7 @@ export function participantStatusLabel({
 }
 
 export function channelFundingReady(balance: bigint | null) {
-  return balance !== null && balance >= 49_900_000_000n;
+  return balance !== null && balance > 50_000_000_000n;
 }
 
 export function roleReadySummary(

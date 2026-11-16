@@ -1825,6 +1825,7 @@
   background: #181818;
 }
 
+.tutorialFooter a,
 .tutorialFooter button {
   display: inline-flex;
   min-width: 98px;
@@ -1838,10 +1839,11 @@
   font: 800 10px/1 var(--font-inter, sans-serif);
   letter-spacing: 0.035em;
   text-transform: uppercase;
+  text-decoration: none;
 }
 
-.tutorialFooter button:hover:not(:disabled),
-.tutorialFooter button:focus-visible:not(:disabled) {
+.tutorialFooter a:hover,
+.tutorialFooter a:focus-visible {
   background: #f2f2f2;
   color: #111111;
 }

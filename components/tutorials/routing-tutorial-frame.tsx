@@ -2,7 +2,6 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   type ReactNode,
   type Ref,
@@ -242,27 +241,35 @@ export function TutorialToolbar({
   );
 }
 
-export function TutorialFooter({ previousHref, nextHref }: { previousHref: string; nextHref?: string }) {
-  const router = useRouter();
+export function TutorialFooter({
+  currentTutorialIndex,
+  className,
+}: {
+  currentTutorialIndex: number;
+  className?: string;
+}) {
+  const previousHref = tutorials[currentTutorialIndex - 1]?.href ?? '/docs/build/interactive-tutorials';
+  const nextHref = tutorials[currentTutorialIndex + 1]?.href;
+
   return (
-    <nav className={styles.tutorialFooter} aria-label="Tutorial navigation">
-      <button onClick={() => router.push(previousHref)} type="button">
+    <nav className={className ? `${styles.tutorialFooter} ${className}` : styles.tutorialFooter} aria-label="Tutorial navigation">
+      <Link href={previousHref}>
         <span aria-hidden="true">←</span> Previous
-      </button>
-      <button
-        disabled={!nextHref}
-        onClick={() => nextHref && router.push(nextHref)}
-        type="button"
-      >
-        Next <span aria-hidden="true">→</span>
-      </button>
+      </Link>
+      {nextHref ? (
+        <Link href={nextHref}>
+          Next <span aria-hidden="true">→</span>
+        </Link>
+      ) : (
+        <button disabled type="button">Next <span aria-hidden="true">→</span></button>
+      )}
     </nav>
   );
 }
 
 export function RoutingTutorialFrame({
   article,
-  currentTutorialIndex,
+  tutorialId,
   codeFiles,
   sectionCode,
   defaultFile,
@@ -270,13 +277,11 @@ export function RoutingTutorialFrame({
   demoTitle,
   demoDescription,
   liveDemo,
-  previousHref,
-  nextHref,
   demoFirst = false,
   walkthroughDescription = 'See how the result rules, Hold Invoice, and payment decision map to the Fiber SDK calls used by the demo.',
 }: {
   article: ReactNode;
-  currentTutorialIndex: number;
+  tutorialId: string;
   codeFiles: RoutingCodeFile[];
   sectionCode: Record<string, RoutingCodeFocus>;
   defaultFile: string;
@@ -284,11 +289,10 @@ export function RoutingTutorialFrame({
   demoTitle: string;
   demoDescription: string;
   liveDemo: ReactNode;
-  previousHref: string;
-  nextHref?: string;
   demoFirst?: boolean;
   walkthroughDescription?: string;
 }) {
+  const currentTutorialIndex = tutorials.findIndex((tutorial) => tutorial.id === tutorialId);
   const topRef = useRef<HTMLDivElement | null>(null);
   const demoRef = useRef<HTMLElement | null>(null);
   const walkthroughRef = useRef<HTMLElement | null>(null);
@@ -449,7 +453,7 @@ export function RoutingTutorialFrame({
     </section>
   );
 
-  const footer = <TutorialFooter previousHref={previousHref} nextHref={nextHref} />;
+  const footer = <TutorialFooter currentTutorialIndex={currentTutorialIndex} />;
 
   return (
     <div

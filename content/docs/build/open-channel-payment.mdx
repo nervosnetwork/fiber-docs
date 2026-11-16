@@ -19,9 +19,10 @@ it to the public peer without moving funds.
 Complete the four stages in order:
 
 1. **Prepare browser node.** Start and connect the node.
-2. **Fund the address.** Copy the generated Testnet address, request CKB from
-   the faucet, and wait for the balance to update.
-3. **Open a 499 CKB channel.** This submits a real CKB Testnet funding
+2. **Fund the address.** Copy the generated Testnet address and request more than
+   500 Testnet CKB from the faucet. Wait for the balance to update. The funding
+   transaction has a separate on-chain fee.
+3. **Open a 500 CKB channel.** This submits a real CKB Testnet funding
    transaction. Keep additional Testnet CKB available for its fee.
 4. **Send 1 CKB to the peer.** Wait for `ChannelReady`, then send the payment and
    inspect its receipt.
@@ -77,12 +78,10 @@ repeats the check every five seconds while the page is visible, allowing the
 interface to unlock channel creation once the address can cover the requested
 funding amount. The demo also provides a manual refresh action.
 
-The selected public peer accepts CKB channels funded with at least 499 CKB.
-Hover or focus **499 CKB** in the demo for the breakdown: **499 CKB funded −
-99 CKB reserved = 400 CKB initially available for payments**. The default reserve
-covers 98 CKB for the commitment cell and 1 CKB for the shutdown transaction
-fee. It is reserved for on-chain settlement, not a payment fee. Transfers and
-pending payments change the available balance afterward.
+Open the tutorial channel with 500 CKB on [Fiber v0.10.0](https://github.com/nervosnetwork/fiber/releases/tag/v0.10.0).
+Hover or focus **500 CKB** in the demo for the breakdown: **500 CKB funded −
+100 CKB reserved = 400 CKB initially available for payments**. The 100 CKB is reserved for on-chain settlement when the channel closes.
+Transfers and pending payments change the available balance afterward.
 
 Keep extra Testnet CKB in the wallet for the channel-funding transaction fee.
 
@@ -105,9 +104,9 @@ return `0x${shannons.toString(16)}`;
 
 The same amount appears in three forms:
 
-- `499 CKB` — the human-readable amount.
-- `49,900,000,000 shannons` — the amount in CKB's smallest unit.
-- `0xb9e0ab300` — the same shannon amount written in hexadecimal for Fiber RPC.
+- `500 CKB` — the human-readable amount.
+- `50,000,000,000 shannons` — the amount in CKB's smallest unit.
+- `0xba43b7400` — the same shannon amount written in hexadecimal for Fiber RPC.
 
 ### Open the channel
 
@@ -118,7 +117,7 @@ It calls `node.openChannel()` with the peer pubkey, exact funding amount, and
 ```ts
 const result = await node.openChannel({
   pubkey: routerPubkey,
-  funding_amount: ckbToHex('499'),
+  funding_amount: ckbToHex('500'),
   public: true,
 });
 ```

@@ -1,5 +1,6 @@
 'use client';
 
+import { channelFundingGuidance } from '../lib/channel-funding';
 import { useEffect, useRef, useState } from 'react';
 import type { Channel, FiberBrowserNode } from '@fiber-pay/sdk/browser';
 import { scriptToAddress } from '@fiber-pay/sdk/browser';
@@ -38,7 +39,12 @@ export default function Page() {
       (await node.current.listChannels()).channels,
       bottle.pubkey,
     );
-    if (!existing) await openOneWayChannel(node.current, bottle.pubkey);
+    try {
+      if (!existing) await openOneWayChannel(node.current, bottle.pubkey);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Could not open the channel.');
+      return;
+    }
     setStatus('Opening — wait for ChannelReady');
     await refresh();
   }
@@ -66,11 +72,12 @@ export default function Page() {
     <button disabled={Boolean(node.current)} onClick={start}>Start browser node</button>
     <section className="card">
       <span>Funding address</span>
+      <p>{channelFundingGuidance}</p>
       <code>{address || 'Start the node to create an address'}</code>
       <a href="https://faucet.nervos.org" target="_blank">Open Testnet faucet ↗</a><small>Faucet CKB may take up to 30s to confirm on-chain.</small>
     </section>
     <button disabled={!node.current || Boolean(channel)} onClick={connectAndOpen}>
-      {channel ? channel.state.state_name : 'Connect and open 499 CKB one-way channel'}
+      {channel ? channel.state.state_name : 'Connect and open 500 CKB one-way channel'}
     </button>
     <div className="grid">
       <section className="card"><span>is_one_way</span><strong>{channel ? String(channel.is_one_way) : '—'}</strong></section>

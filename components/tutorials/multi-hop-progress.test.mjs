@@ -102,7 +102,7 @@ test('explains outbound liquidity in CKB without treating channel funding as spe
   const message = paymentFailureMessage(error);
   assert.match(message, /398\.995 CKB/);
   assert.match(message, /routing fees/);
-  assert.doesNotMatch(message, /499 CKB|WASM|ServerError/);
+  assert.doesNotMatch(message, /500 CKB|WASM|ServerError/);
   assert.match(paymentFailureMessage('Insufficient route liquidity'), /liquidity/);
   assert.match(paymentFailureMessage('Failed to build route'), /route/);
   assert.doesNotMatch(paymentFailureMessage('WASM RPC error: ErrorObject { code: ServerError(-32000) }'), /WASM|ServerError/);

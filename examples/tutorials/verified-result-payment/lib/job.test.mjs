@@ -186,7 +186,7 @@ test('explains only the unmet prerequisites for disabled setup actions', () => {
       actionPending: false,
       channelReady: false,
     }),
-    "Fund Solver C's on-chain address with at least 499 CKB, then select Refresh.",
+    "Fund Solver C's on-chain address with more than 500 Testnet CKB to cover the separate funding transaction fee, then select Refresh.",
   );
   assert.equal(
     job.setupChannelActionRequirement?.({
@@ -463,7 +463,9 @@ test('maps a final Invoice status to one clear payment receipt', () => {
 test('requires enough on-chain CKB before opening a channel', () => {
   assert.equal(job.channelFundingReady?.(null), false);
   assert.equal(job.channelFundingReady?.(49_899_999_999n), false);
-  assert.equal(job.channelFundingReady?.(49_900_000_000n), true);
+  assert.equal(job.channelFundingReady?.(49_900_000_000n), false);
+  assert.equal(job.channelFundingReady?.(50_000_000_000n), false);
+  assert.equal(job.channelFundingReady?.(50_000_000_001n), true);
 });
 
 test('describes readiness using the capacity each role needs', () => {

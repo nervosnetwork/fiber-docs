@@ -173,7 +173,7 @@ fee = ⌈(amount × tlc_fee_proportional_millionths) / 1,000,000⌉
 
 | Parameter | Purpose | Default / Typical Value |
 |-----------|---------|------------------------|
-| **Reserved CKB** | Channel reserve for lock and fees | 99 CKB (98 commitment + 1 shutdown fee) |
+| **Reserved CKB** | Channel reserve for lock and fees | 100 CKB for new Fiber v0.10.0 channels |
 | `tlc_fee_proportional_millionths` | Forwarding fee rate | 1000 (= 0.1%) |
 | `tlc_min_value` | Minimum TLC value to forward | 0 (any amount) |
 | `tlc_expiry_delta` | TLC expiry window (milliseconds) | 14400000 (4 hours) |
@@ -190,13 +190,13 @@ fee = ⌈(amount × tlc_fee_proportional_millionths) / 1,000,000⌉
 For CKB channels, each side must reserve CKB for on-chain operations:
 
 ```
-Available Balance = Funded Amount − 99 CKB
+Available Balance = Funded Amount − Settlement Reserve
 ```
 
-**Example**: Fund 499 CKB → 499 − 99 = **400 CKB** available for off-chain payments.
+**Example**: Fund 500 CKB on Fiber v0.10.0 → 500 − 100 = **400 CKB** available for off-chain payments.
 
 <Callout type="warning">
-  The 99 CKB reserve is **per side**. In a two-party CKB channel, both sides must reserve this amount. This reserve is not available for CKB payments — it covers the commitment transaction lock and the shutdown transaction fee. For UDT channels, the channel balance is in token base units, but the funding transaction still needs enough CKB capacity and fees.
+  The settlement reserve is **per side**. In a two-party CKB channel, both sides must reserve this amount. This reserve is not available for CKB payments — it covers the commitment transaction lock and the shutdown transaction fee. For UDT channels, the channel balance is in token base units, but the funding transaction still needs enough CKB capacity and fees.
 </Callout>
 
 ## Testnet Resources

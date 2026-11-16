@@ -59,7 +59,7 @@ export async function connectAndOpenChannel(node: FiberBrowserNode) {
       !['CLOSED', 'SHUTTING_DOWN'].includes(channel.state.state_name),
   );
   if (!current) {
-    await node.openChannel({ pubkey: bottle.pubkey, funding_amount: ckbToHex('499'), public: true });
+    await node.openChannel({ pubkey: bottle.pubkey, funding_amount: ckbToHex('500'), public: true });
   }
   for (let attempt = 0; attempt < 120; attempt += 1) {
     const channel = (await node.listChannels()).channels.find(

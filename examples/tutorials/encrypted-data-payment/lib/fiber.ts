@@ -1,3 +1,4 @@
+import { requireNewChannelFunding } from './channel-funding';
 import type { Channel, FiberBrowserNode } from '@fiber-pay/sdk/browser';
 
 export const bottle = {
@@ -58,9 +59,10 @@ export async function connectAndOpenChannel(node: FiberBrowserNode) {
     (channel) => channel.pubkey.toLowerCase() === bottle.pubkey.toLowerCase(),
   );
   if (!existing) {
+    await requireNewChannelFunding(node);
     await node.openChannel({
       pubkey: bottle.pubkey,
-      funding_amount: '0xb9e0ab300', // 499 CKB
+      funding_amount: '0xba43b7400', // 500 CKB
       public: true,
     });
   }

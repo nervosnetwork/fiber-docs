@@ -7,6 +7,7 @@ source = root / 'example/encrypted-data-payment'
 shared = {
     'lib/progress.ts': root / 'components/tutorials/encrypted-data-session.ts',
     'lib/node-session.ts': root / 'components/tutorials/browser-node-session.ts',
+    'lib/payment-submission.ts': root / 'components/tutorials/encrypted-payment-submission.ts',
 }
 output = root / 'public/downloads/fiber-encrypted-data-payment.zip'
 with ZipFile(output, 'w', compression=ZIP_DEFLATED) as archive:

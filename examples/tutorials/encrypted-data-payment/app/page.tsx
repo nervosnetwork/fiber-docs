@@ -1,5 +1,6 @@
 'use client';
 
+import { channelFundingGuidance } from '../lib/channel-funding';
 import { useRef, useState } from 'react';
 import { scriptToAddress, type Channel, type FiberBrowserNode } from '@fiber-pay/sdk/browser';
 import { decryptResult } from '../lib/crypto';
@@ -42,10 +43,14 @@ export default function Page() {
     const node = role === 'buyer' ? buyer.current : seller.current;
     if (!node) return;
     setStatus(`${role} connecting to Bottle and opening a channel…`);
-    const channel = await connectAndOpenChannel(node);
-    if (role === 'buyer') buyerChannel.current = channel;
-    else sellerChannel.current = channel;
-    setStatus(`${role} channel ready.`);
+    try {
+      const channel = await connectAndOpenChannel(node);
+      if (role === 'buyer') buyerChannel.current = channel;
+      else sellerChannel.current = channel;
+      setStatus(`${role} channel ready.`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Could not open the channel.');
+    }
   }
 
   async function prepareInbound() {
@@ -106,15 +111,15 @@ export default function Page() {
           <strong>Buyer Node A</strong>
           <button onClick={() => void start('buyer')}>Start Buyer</button>
           <code>{buyerAddress || 'Funding address appears here'}</code>
-          <a href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Open Testnet faucet ↗</a><small>Faucet CKB may take up to 30s to confirm on-chain.</small>
-          <button onClick={() => void open('buyer')}>Connect & open 499 CKB channel</button>
+          <a href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Open Testnet faucet ↗</a><small>{channelFundingGuidance}</small><small>Faucet CKB may take up to 30s to confirm on-chain.</small>
+          <button onClick={() => void open('buyer')}>Connect & open 500 CKB channel</button>
         </section>
         <section className="card">
           <strong>Seller Node C</strong>
           <button onClick={() => void start('seller')}>Start Seller</button>
           <code>{sellerAddress || 'Funding address appears here'}</code>
-          <a href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Open Testnet faucet ↗</a><small>Faucet CKB may take up to 30s to confirm on-chain.</small>
-          <button onClick={() => void open('seller')}>Connect & open 499 CKB channel</button>
+          <a href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Open Testnet faucet ↗</a><small>{channelFundingGuidance}</small><small>Faucet CKB may take up to 30s to confirm on-chain.</small>
+          <button onClick={() => void open('seller')}>Connect & open 500 CKB channel</button>
           <button onClick={() => void prepareInbound()}>Prepare 5 CKB inbound</button>
         </section>
       </div>

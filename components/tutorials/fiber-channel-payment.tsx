@@ -4,7 +4,6 @@ import { createBrowserNodeSession, PeerHandshakeTimeoutError } from './browser-n
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   type ReactNode,
   useCallback,
@@ -19,6 +18,8 @@ import type {
 } from '@fiber-pay/sdk/browser';
 import { ExplainedTerm } from './explained-term';
 import { MobileTutorialPicker } from './mobile-tutorial-picker';
+import { TutorialFooter } from './routing-tutorial-frame';
+import { liveTutorials as tutorials } from './tutorial-registry';
 import { CopyIconButton } from './copy-icon-button';
 import { channelOpeningStates, channelOpeningProgress, channelOpeningDescriptions, channelStateLabel, isMultiHopChannelReady as isChannelReady } from './multi-hop-progress';
 import styles from './fiber-wasm-quickstart.module.css';
@@ -31,30 +32,7 @@ const profileKey = 'fiber-docs:wasm-quickstart-profile-v1';
 const isolationReloadKey = 'fiber-docs:wasm-isolation-reload-v1';
 const shannonsPerCkb = 100_000_000n;
 
-const tutorials = [
-  {
-    shortTitle: 'Connect a WASM node',
-    href: '/docs/build/connect-wasm-node',
-  },
-  {
-    shortTitle: 'Open a channel and send a payment',
-    href: '/docs/build/open-channel-payment',
-  },
-  {
-    shortTitle: 'Send a multi-hop invoice payment',
-    href: '/docs/build/multi-hop-invoice',
-  },
-  {
-    shortTitle: 'Open a unidirectional channel',
-    href: '/docs/build/unidirectional-channel',
-  },
-  { shortTitle: 'Build a Hold Invoice payment', href: '/docs/build/hold-invoice' },
-  { shortTitle: 'Unlock encrypted data with a payment', href: '/docs/build/encrypted-data-payment' },
-  { shortTitle: 'Pay for a verified result', href: '/docs/build/verified-result-payment' },
-  { shortTitle: 'Pay with RUSD', href: '/docs/build/rusd-payment' },
-  { shortTitle: 'Close a channel and recover funds', href: '/docs/build/close-channel' },
-] as const;
-const currentTutorialIndex = 1;
+const currentTutorialIndex = tutorials.findIndex((tutorial) => tutorial.id === 'open-channel-payment');
 
 type CodeFile = {
   id: 'fiber' | 'balance' | 'amounts' | 'channel' | 'payment' | 'app';
@@ -340,7 +318,7 @@ export default function PayPage() {
 
   async function openChannel() {
     if (!node.current || !connected) return;
-    await openCkbChannel(node.current, routerPubkey, '499');
+    await openCkbChannel(node.current, routerPubkey, '500');
     // Opening only starts negotiation; wait for CHANNEL_READY.
   }
 
@@ -365,7 +343,7 @@ export default function PayPage() {
       </button>
       <code>{fundingAddress}</code>
       <button disabled={!connected} onClick={openChannel}>
-        Open 499 CKB channel
+        Open 500 CKB channel
       </button>
       <button disabled={!channelReady} onClick={pay}>
         Send 1 CKB
@@ -659,7 +637,6 @@ type ChannelList = Awaited<
 >['channels'];
 
 export function FiberChannelPaymentTutorial() {
-  const router = useRouter();
   const nodeRef = useRef<FiberBrowserNode | null>(null);
   const nodeSessionRef = useRef<ReturnType<typeof createBrowserNodeSession> | null>(null);
   const topRef = useRef<HTMLDivElement | null>(null);
@@ -678,7 +655,7 @@ export function FiberChannelPaymentTutorial() {
   const [peerCount, setPeerCount] = useState(0);
   const [ckbAddress, setCkbAddress] = useState('');
   const [ckbBalance, setCkbBalance] = useState<bigint | null>(null);
-  const [channelAmount, setChannelAmount] = useState('499');
+  const [channelAmount, setChannelAmount] = useState('500');
   const [channelState, setChannelState] = useState('Not opened');
   const [channelCount, setChannelCount] = useState(0);
   const [channelHistory, setChannelHistory] = useState<string[]>([]);
@@ -744,7 +721,7 @@ export function FiberChannelPaymentTutorial() {
   const channelFundingReady = (() => {
     if (ckbBalance === null) return false;
     try {
-      return ckbBalance >= BigInt(ckbToHex(channelAmount));
+      return ckbBalance > BigInt(ckbToHex(channelAmount));
     } catch {
       return false;
     }
@@ -1077,7 +1054,7 @@ export function FiberChannelPaymentTutorial() {
 
   const openChannel = useCallback(async () => {
     const node = nodeRef.current;
-    if (!node || peerCount === 0 || busyAction) return;
+    if (!node || peerCount === 0 || busyAction || !channelFundingReady) return;
     setBusyAction('channel');
     setError('');
     setChannelState('Opening');
@@ -1101,7 +1078,7 @@ export function FiberChannelPaymentTutorial() {
     } finally {
       setBusyAction(null);
     }
-  }, [applyChannelSnapshot, busyAction, channelAmount, peerCount]);
+  }, [applyChannelSnapshot, busyAction, channelAmount, channelFundingReady, peerCount]);
 
   const sendPayment = useCallback(async () => {
     const node = nodeRef.current;
@@ -1215,7 +1192,7 @@ export function FiberChannelPaymentTutorial() {
     : !ckbAddress
       ? 'Wait for the funding address.'
       : !channelFundingReady
-        ? 'Not enough Testnet CKB to open this channel.'
+        ? 'Add Testnet CKB for the channel amount and the separate funding transaction fee.'
         : channelOpening
           ? 'Wait for ChannelReady before paying.'
           : null;
@@ -1427,6 +1404,7 @@ export function FiberChannelPaymentTutorial() {
                 <div className={styles.paymentFlowNumber}>2</div>
                 <div className={styles.paymentFlowBody}>
                   <strong>Fund the address</strong>
+                  <span>Keep more spendable Testnet CKB in this address than the channel amount. The funding transaction has a separate on-chain fee.</span>
                   <div className={styles.addressLine}>
                     <code title={ckbAddress}>{shorten(ckbAddress)}</code>
                     <button
@@ -1480,17 +1458,16 @@ export function FiberChannelPaymentTutorial() {
                     <ExplainedTerm
                       explanation={
                         <>
-                          <span className={styles.fundingReserveTitle}>499 CKB breakdown:</span>
+                          <span className={styles.fundingReserveTitle}>500 CKB breakdown:</span>
                           <span className={styles.fundingReserveList} role="list">
                             <span role="listitem">400 CKB initially available for payments</span>
-                            <span role="listitem">98 CKB reserved for the commitment cell used in on-chain settlement</span>
-                            <span role="listitem">1 CKB reserved for the transaction fee when closing the channel</span>
+                            <span role="listitem">100 CKB reserved for on-chain settlement</span>
                           </span>
                         </>
                       }
                       id="channel-minimum-funding"
                     >
-                      499 CKB
+                      500 CKB
                     </ExplainedTerm>{' '}
                     channel
                   </strong>
@@ -1688,7 +1665,7 @@ export function FiberChannelPaymentTutorial() {
               <div className={styles.stepLabel}><span>2</span> Watch funding</div>
               <h2>Detect sufficient Testnet funding</h2>
               <p><code>queryCkbBalance()</code> calls CKB RPC <code>get_cells_capacity</code> to measure the address&apos;s available capacity. <code>watchCkbBalance()</code> repeats the check every five seconds while the page is visible, allowing the interface to unlock channel creation once the address can cover the funding amount.</p>
-              <div className={`${styles.note} ${styles.noteWarning}`}><strong>Use Testnet funds only</strong><p>The public peer accepts CKB channels at or above 499 CKB. Keep extra Testnet CKB available for the transaction fee.</p></div>
+              <div className={`${styles.note} ${styles.noteWarning}`}><strong>Use Testnet funds only</strong><p>Use 500 CKB to open the tutorial channel, including 100 CKB for settlement. Keep extra Testnet CKB available for the transaction fee.</p></div>
               <small className={styles.fileReference}>lib/balance.ts · lines 7–45</small>
             </section>
 
@@ -1696,12 +1673,12 @@ export function FiberChannelPaymentTutorial() {
               <div className={styles.stepLabel}><span>3</span> Format the amount</div>
               <h2>Convert CKB amounts without losing precision</h2>
               <p><code>ckbToHex()</code> converts the entered CKB amount into the exact hexadecimal shannon value expected by Fiber RPC. It uses <code>BigInt</code> to avoid floating-point rounding across CKB&apos;s eight decimal places.</p>
-              <div className={styles.amountConversion} aria-label="499 CKB represented as shannons and hexadecimal">
-                <div><span>CKB amount</span><code>499 CKB</code></div>
+              <div className={styles.amountConversion} aria-label="500 CKB represented as shannons and hexadecimal">
+                <div><span>CKB amount</span><code>500 CKB</code></div>
                 <i aria-hidden="true">→</i>
-                <div><span>Smallest unit</span><code>49,900,000,000 shannons</code></div>
+                <div><span>Smallest unit</span><code>50,000,000,000 shannons</code></div>
                 <i aria-hidden="true">→</i>
-                <div><span>Hexadecimal RPC value</span><code>0xb9e0ab300</code></div>
+                <div><span>Hexadecimal RPC value</span><code>0xba43b7400</code></div>
               </div>
               <small className={styles.fileReference}>lib/amounts.ts · lines 1–18</small>
             </section>
@@ -1796,10 +1773,7 @@ export function FiberChannelPaymentTutorial() {
         </div>
 
         {articleAtBottom && (
-          <nav aria-label="Tutorial navigation" className={`${styles.tutorialFooter} ${styles.walkthroughFooter}`}>
-            <button onClick={() => router.push('/docs/build/connect-wasm-node')} type="button"><span aria-hidden="true">←</span> Previous</button>
-            <button onClick={() => router.push('/docs/build/multi-hop-invoice')} type="button">Next <span aria-hidden="true">→</span></button>
-          </nav>
+          <TutorialFooter currentTutorialIndex={currentTutorialIndex} className={styles.walkthroughFooter} />
         )}
       </section>
     </div>

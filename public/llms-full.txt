@@ -649,7 +649,7 @@ The examples below use npm. If your project already uses pnpm, use the equivalen
 
 [bash code block]
 
-Download the v0.9.1 Testnet config (the same template included in the native release archives) and serve it from your app:
+Download the v0.10.0 Testnet config (the same template included in the native release archives) and serve it from your app:
 
 [bash code block]
 
@@ -667,7 +667,7 @@ new Fiber() creates SharedArrayBuffer objects immediately. Only create a Fiber i
 
 [ts code block]
 
-> Expected Output: The node initializes, connects to a configured /ws/ or /wss/ peer, and starts syncing. nodeInfo() returns your node's pubkey, version: "0.9.1", and chain info; listPeers() should report at least one peer when the selected public node is reachable.
+> Expected Output: The node initializes, connects to a configured /ws/ or /wss/ peer, and starts syncing. nodeInfo() returns your node's pubkey, version: "0.10.0", and chain info; listPeers() should report at least one peer when the selected public node is reachable.
 
 ## Common Workflows
 
@@ -1085,7 +1085,7 @@ Source: https://www.fiber.world/docs/quick-start/multi-hop-transfer
 
 ## TL;DR
 
-Run two local v0.9.1 nodes, connect each one to a different public Testnet relay, open two public channels, and pay an invoice from Node A to Node B. Neither local node needs a public IP.
+Run two local v0.10.0 nodes, connect each one to a different public Testnet relay, open two public channels, and pay an invoice from Node A to Node B. Neither local node needs a public IP.
 
 ~~~text
 ┌────────┐       ┌────────┐       ┌────────┐       ┌────────┐
@@ -1103,8 +1103,8 @@ Fiber supports two routing modes:
 ## Prerequisites
 
 - Complete Basic Transfer first.
-- Use the v0.9.1 fnn, fnn-cli, and config/testnet/config.yml files from the same release package.
-- Fund each local node with at least 561 Testnet CKB: 499 CKB for the channel, about 61 CKB for a change cell, and a small transaction-fee margin.
+- Use the v0.10.0 fnn, fnn-cli, and config/testnet/config.yml files from the same release package.
+- Fund each local node with at least 562 Testnet CKB: 500 CKB for the channel, about 61 CKB for a change cell, and a small transaction-fee margin.
 
 Testnet CKB has no real-world value, but opening a channel still creates an on-chain transaction and temporarily locks the funds. Use throwaway Testnet accounts and close both channels when the test is complete.
 
@@ -1224,20 +1224,20 @@ Run peer listpeers on both local RPC endpoints and confirm that the expected rel
 
 ## 3. Open Both Public Channels
 
-The documented public relays auto-accept a channel funded with at least 499 CKB. In shannons, 499 CKB is 49900000000; its RPC hex quantity is 0xb9e459300.
+Fund each channel with 500 CKB, including 100 CKB for on-chain settlement. In shannons, 500 CKB is 50000000000; its RPC hex quantity is 0xba43b7400.
 
   
 ~~~sh
 # Node A ↔ bottle
 ./fnn-cli --url http://127.0.0.1:8227 channel openchannel \
   --pubkey 02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71 \
-  --funding-amount 49900000000 \
+  --funding-amount 50000000000 \
   --public true
 
 # Node B ↔ bracer
 ./fnn-cli --url http://127.0.0.1:8237 channel openchannel \
   --pubkey 0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc \
-  --funding-amount 49900000000 \
+  --funding-amount 50000000000 \
   --public true
 ~~~
   
@@ -1250,7 +1250,7 @@ curl -s http://127.0.0.1:8227 \
     "id": 2, "jsonrpc": "2.0", "method": "openchannel",
     "params": [{
       "pubkey": "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
-      "fundingamount": "0xb9e459300",
+      "fundingamount": "0xba43b7400",
       "public": true
     }]
   }'
@@ -1262,7 +1262,7 @@ curl -s http://127.0.0.1:8237 \
     "id": 2, "jsonrpc": "2.0", "method": "openchannel",
     "params": [{
       "pubkey": "0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc",
-      "fundingamount": "0xb9e459300",
+      "fundingamount": "0xba43b7400",
       "public": true
     }]
   }'
@@ -1272,13 +1272,13 @@ curl -s http://127.0.0.1:8237 \
 ~~~typescript
 await nodeA.openChannel({
   pubkey: "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
-  fundingAmount: "0xb9e459300",
+  fundingAmount: "0xba43b7400",
   public: true,
 });
 
 await nodeB.openChannel({
   pubkey: "0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc",
-  fundingAmount: "0xb9e459300",
+  fundingAmount: "0xba43b7400",
   public: true,
 });
 ~~~
@@ -1451,11 +1451,11 @@ Local nodes (nodeA, nodeB) do not need to expose a public address — they conne
 
 ## Channel Capacity
 
-When opening a channel, each side must reserve 99 CKB (98 CKB for commitment lock + 1 CKB for shutdown transaction fee). This reserved amount is not available for off-chain payments.
+Each side of a new Fiber v0.10.0 channel reserves 100 CKB. This reserved amount is not available for off-chain payments.
 
-Example: If you fund 499 CKB and the public node contributes 250 CKB:
-- Your available balance: 499 - 99 = 400 CKB
-- Public node available: 250 - 99 = 151 CKB
+Example: For a Fiber v0.10.0 channel, if you fund 500 CKB and the public node contributes 250 CKB:
+- Your available balance: 500 - 100 = 400 CKB
+- Public node available: 250 - 100 = 150 CKB
 
 ## Node Downloads
 
@@ -1754,7 +1754,7 @@ Before using it, make sure your project environment meets these requirements:
 - Serve WASM files with the correct application/wasm MIME type in deployment.
 - Configure CORS, SSL/TLS, and browser isolation appropriately, as described later in this document.
 
-The install commands above intentionally use the package's default npm dist-tag. When connecting to public nodes or self-hosted peers, keep fiber-js, fnn, and the peer node release line aligned, since small RPC or protocol differences can otherwise surface during peer, channel, or payment flows.
+When connecting to public nodes or self-hosted peers, keep fiber-js, fnn, and the peer node release line aligned, since small RPC or protocol differences can otherwise surface during peer, channel, or payment flows.
 
 ### Basic Usage
 
@@ -4276,7 +4276,7 @@ The direction restriction is enforced at the routing level. The node will never 
 | Routing for others | Cannot route third-party payments | Can route payments if public |
 | Channel rebalancing | Not applicable | Supported via circular payments |
 | Typical use case | Streaming, merchant receiving | General P2P payments |
-| Channel reserve | ≥99 CKB (initiator side, default) | ≥99 CKB per side (default) |
+| Channel reserve | ≥100 CKB (initiator side, default) | ≥100 CKB per side (default) |
 
 ## Use Cases and Trade-offs
 
@@ -4310,7 +4310,7 @@ Set oneway: true when calling openchannel. The parameter is optional and default
 
 [json code block]
 
-  The funding_amount is in shannons (1 CKB = 10⁸ shannons). By default, 99 CKB is reserved for the channel reserve (98 CKB minimum cell capacity + 1 CKB default shutdown fee), so the available balance for payments is fundingamount - 9900000000 shannons. The FIBERAUTOACCEPTCHANNELCKBFUNDINGAMOUNT environment variable controls the auto-accept funding contribution (the amount the acceptor automatically contributes when accepting a channel open request), not the channel reserve itself.
+  The funding_amount is in shannons (1 CKB = 10⁸ shannons). For a new Fiber v0.10.0 channel, 100 CKB is reserved for on-chain settlement, so the available balance for payments is fundingamount - 10000000000 shannons. The FIBERAUTOACCEPTCHANNELCKBFUNDINGAMOUNT environment variable controls the auto-accept funding contribution (the amount the acceptor automatically contributes when accepting a channel open request), not the channel reserve itself.
 
 ## Sending Payments
 
@@ -4330,11 +4330,11 @@ This is an important point that often causes confusion. A one-way channel restri
 
 - Initiator's remaining balance goes back to the initiator's CKB address
 - Acceptor's received balance goes to the acceptor's CKB address
-- The channel reserve (99 CKB by default) is released back to the initiator
+- The channel reserve (100 CKB for Fiber v0.10.0) is released back to the initiator
 
-For example, if you open a one-way channel with 499 CKB and send 120 CKB worth of payments before closing:
+For example, if you open a one-way channel with 500 CKB and send 120 CKB worth of payments before closing:
 
-- You (initiator) receive back: 499 - 120 - fees = ~379 CKB (minus transaction fees)
+- You (initiator) receive back: 500 - 120 - fees = ~380 CKB (minus transaction fees)
 - The acceptor receives: 120 CKB
 
 Either party can initiate the close:
@@ -5486,7 +5486,7 @@ Relay nodes are the backbone of multi-hop routing. If you operate a well-connect
 
 A relay node needs a server with a publicly reachable IP address, sufficient CKB to fund channels, stable uptime (payments can only route through online nodes), and balanced liquidity on both sides of each channel.
 
-Each channel side must reserve 99 CKB (98 CKB for the commitment lock's on-chain occupied capacity + 1 CKB for the shutdown transaction fee) — this amount is locked for on-chain settlement and cannot be used for off-chain payments. The actual minimum funding amount depends on your openchannelautoacceptminckbfundingamount setting (code default: 100 CKB). For example, the public Fiber relay nodes require at least 499 CKB (99 CKB reserve + 400 CKB usable).
+Each side of a new Fiber v0.10.0 channel reserves 100 CKB for on-chain settlement. This amount cannot be used for off-chain payments. The actual minimum funding amount depends on your openchannelautoacceptminckbfundingamount setting (code default: 100 CKB). For example, funding a channel with 500 CKB leaves 400 CKB available for payments.
 
 ### Configuration
 
@@ -8432,7 +8432,7 @@ Example: With tlcfeeproportional_millionths = 1000 (0.1%), forwarding 1,000 CKB 
 
 | Parameter | Purpose | Default / Typical Value |
 |-----------|---------|------------------------|
-| Reserved CKB | Channel reserve for lock and fees | 99 CKB (98 commitment + 1 shutdown fee) |
+| Reserved CKB | Channel reserve for lock and fees | 100 CKB for new Fiber v0.10.0 channels |
 | tlcfeeproportionalmillionths | Forwarding fee rate | 1000 (= 0.1%) |
 | tlcminvalue | Minimum TLC value to forward | 0 (any amount) |
 | tlcexpirydelta | TLC expiry window (milliseconds) | 14400000 (4 hours) |
@@ -8450,9 +8450,9 @@ For CKB channels, each side must reserve CKB for on-chain operations:
 
 [code block]
 
-Example: Fund 499 CKB → 499 − 99 = 400 CKB available for off-chain payments.
+Example: Fund 500 CKB on Fiber v0.10.0 → 500 − 100 = 400 CKB available for off-chain payments.
 
-  The 99 CKB reserve is per side. In a two-party CKB channel, both sides must reserve this amount. This reserve is not available for CKB payments — it covers the commitment transaction lock and the shutdown transaction fee. For UDT channels, the channel balance is in token base units, but the funding transaction still needs enough CKB capacity and fees.
+  The settlement reserve is per side. In a two-party CKB channel, both sides must reserve this amount. This reserve is not available for CKB payments — it covers the commitment transaction lock and the shutdown transaction fee. For UDT channels, the channel balance is in token base units, but the funding transaction still needs enough CKB capacity and fees.
 
 ## Testnet Resources
 

@@ -1,13 +1,15 @@
 'use client';
 
+import { channelFundingGuidance } from '../lib/channel-funding';
 import { useEffect, useRef, useState } from 'react';
-import type { BuildRouterResult, Channel, CkbInvoiceStatus, FiberBrowserNode } from '@fiber-pay/sdk/browser';
+import { scriptToAddress, type BuildRouterResult, type Channel, type CkbInvoiceStatus, type FiberBrowserNode } from '@fiber-pay/sdk/browser';
 import { bottle, prepareChannel, startFiber } from '../lib/fiber';
 import { buildHoldRoute, createHoldInvoice, payHoldInvoice, prepareReceiverInbound } from '../lib/hold';
 
 export default function Page() {
   const sender = useRef<FiberBrowserNode | null>(null);
   const receiver = useRef<FiberBrowserNode | null>(null);
+  const [addresses, setAddresses] = useState({ sender: '', receiver: '' });
   const [status, setStatus] = useState('Start both nodes');
   const [invoice, setInvoice] = useState('');
   const [pasted, setPasted] = useState('');
@@ -24,6 +26,8 @@ export default function Page() {
     const node = await startFiber(`hold-${role}-v1`);
     if (role === 'sender') sender.current = node;
     else receiver.current = node;
+    const info = await node.nodeInfo();
+    setAddresses(current => ({ ...current, [role]: scriptToAddress(info.default_funding_lock_script, 'testnet') }));
     setStatus(`${role === 'sender' ? 'Payer A' : 'Receiver C'} is running`);
   }
 
@@ -31,7 +35,12 @@ export default function Page() {
     const node = role === 'sender' ? sender.current : receiver.current;
     if (!node) return;
     setStatus(`${role === 'sender' ? 'Payer A' : 'Receiver C'} is connecting and opening a channel`);
-    await prepareChannel(node);
+    try {
+      await prepareChannel(node);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Could not open the channel.');
+      return;
+    }
     setStatus('Wait for both channels to become CHANNEL_READY');
   }
 
@@ -194,9 +203,14 @@ export default function Page() {
       {(['sender', 'receiver'] as const).map((role) => <section className="card" key={role}>
         <span className="eyebrow">{role === 'sender' ? 'Payer A' : 'Receiver C'}</span>
         <h2>{role === 'sender' ? 'Prepare the payer' : 'Prepare the receiver'}</h2>
+        {addresses[role] && <>
+          <code>{addresses[role]}</code>
+          <p>{channelFundingGuidance}</p>
+          <a href="https://faucet.nervos.org" target="_blank" rel="noreferrer">Get Testnet CKB ↗</a>
+        </>}
         <div className="row">
           <button onClick={() => void start(role)}>Start local node</button>
-          <button onClick={() => void prepare(role)}>Connect &amp; open 499 CKB</button>
+          <button onClick={() => void prepare(role)}>Connect &amp; open 500 CKB</button>
         </div>
         {role === 'sender' && senderChannel && <p className="liquidity">Outbound: {Number(BigInt(senderChannel.local_balance)) / 100_000_000} CKB</p>}
         {role === 'receiver' && receiverChannel && <div className="liquidity"><span>Inbound: {Number(receiverInbound) / 100_000_000} CKB</span>{receiverInbound >= BigInt('500000000') ? <strong className="liquidity-ready">✓ Inbound ready</strong> : <button disabled={!receiverChannelReady} onClick={() => void prepareInbound()}>Prepare 5 CKB inbound</button>}</div>}

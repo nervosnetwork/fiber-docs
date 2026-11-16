@@ -18,7 +18,7 @@ import {
 } from './fiber-routing-runtime';
 import styles from './fiber-wasm-quickstart.module.css';
 
-const channelAmount = '499';
+const channelAmount = '500';
 
 type ChannelProgressStage =
   | 'idle'
@@ -57,7 +57,7 @@ export async function openOneWayChannel(
 ) {
   return node.openChannel({
     pubkey: acceptorPubkey,
-    funding_amount: ckbToHex('499'),
+    funding_amount: ckbToHex('500'),
     public: false,
     one_way: true,
   });
@@ -241,7 +241,7 @@ export function FiberUnidirectionalChannelTutorial() {
   const peerConnected = runtime.peers.some((pubkey) =>
     samePubkey(pubkey, bottlePeer.pubkey),
   );
-  const enoughToOpen = (runtime.balance ?? 0n) >= BigInt(ckbToHex(channelAmount));
+  const enoughToOpen = (runtime.balance ?? 0n) > BigInt(ckbToHex(channelAmount));
 
   useEffect(() => {
     if (channel) setChannelProgress(progressFromChannel(channel));
@@ -274,6 +274,12 @@ export function FiberUnidirectionalChannelTutorial() {
       return;
     }
 
+    if (!enoughToOpen) {
+      runtime.setError('Add more Testnet CKB to cover the separate channel funding transaction fee.');
+      setChannelProgress('idle');
+      return;
+    }
+
     setChannelProgress('submitting');
     const opened = await runtime.run('open one-way channel', (current) =>
       current.openChannel({
@@ -291,7 +297,7 @@ export function FiberUnidirectionalChannelTutorial() {
     setChannelProgress('confirming');
     addEvent(`Private one-way channel submitted · ${shorten(opened.temporary_channel_id)}`);
     await runtime.refresh();
-  }, [addEvent, peerConnected, runtime]);
+  }, [addEvent, enoughToOpen, peerConnected, runtime]);
 
   const sendPayment = useCallback(async () => {
     if (!runtime.nodeRef.current || !channel) return;
@@ -381,7 +387,7 @@ export function FiberUnidirectionalChannelTutorial() {
         <div className={styles.stepLabel}><span>2</span> Open and inspect</div>
         <h2>Set one_way when funding the channel</h2>
         <p>
-          Submit 499 Testnet CKB with <code>one_way: true</code> and wait for
+          Submit 500 Testnet CKB with <code>one_way: true</code> and wait for
           <code> ChannelReady</code>. The returned channel confirms
           <code> is_one_way: true</code>, <code>is_public: false</code>, and
           <code> is_acceptor: false</code> for this browser node.
@@ -458,7 +464,7 @@ export function FiberUnidirectionalChannelTutorial() {
 
           <div className={styles.paymentFlow}>
             <div className={styles.paymentFlowNumber}>1</div>
-            <div><strong>Start and fund the browser node</strong><span>Balance: {hexToCkb(runtime.balance)} CKB</span><span>Faucet CKB may take up to 30s to confirm on-chain.</span></div>
+            <div><strong>Start and fund the browser node</strong><span>Balance: {hexToCkb(runtime.balance)} CKB</span><span>Fund this address with more than 500 Testnet CKB. Opening the channel uses 500 CKB plus a separate on-chain transaction fee.</span><span>Faucet CKB may take up to 30s to confirm on-chain.</span></div>
             <div className={styles.compactActions}>
               <button className={styles.startButton} disabled={Boolean(runtime.nodeInfo) || Boolean(runtime.busy)} onClick={runtime.start}>{runtime.busy === 'start' ? 'Starting…' : 'Start'}</button>
               <a className={styles.faucetButton} href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Faucet ↗</a>
@@ -474,7 +480,7 @@ export function FiberUnidirectionalChannelTutorial() {
 
           <div className={styles.paymentFlow}>
             <div className={styles.paymentFlowNumber}>2</div>
-            <div><strong>Connect and open a one-way channel</strong><span>499 CKB · private · initiator → acceptor</span></div>
+            <div><strong>Connect and open a one-way channel</strong><span>500 CKB · private · initiator → acceptor</span></div>
             <button
               className={styles.paymentButton}
               disabled={!runtime.nodeInfo || !enoughToOpen || Boolean(channel) || Boolean(runtime.busy)}
@@ -538,14 +544,12 @@ export function FiberUnidirectionalChannelTutorial() {
     <RoutingTutorialFrame
       article={article}
       codeFiles={codeFiles}
-      currentTutorialIndex={3}
+      tutorialId="unidirectional-channel"
       defaultFile="channel"
       demoDescription="Open a private one-way channel to Bottle, inspect its roles, and send a real Testnet payment forward."
       demoTitle="Run the Unidirectional Channel Demo"
       downloadHref="/downloads/fiber-unidirectional-channel.zip"
       liveDemo={liveDemo}
-      nextHref="/docs/build/hold-invoice"
-      previousHref="/docs/build/multi-hop-invoice"
       sectionCode={sectionCode}
     />
   );

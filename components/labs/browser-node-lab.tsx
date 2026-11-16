@@ -100,7 +100,7 @@ export function BrowserNodeLab({
   const [channelCount, setChannelCount] = useState(0);
   const [readyChannelCount, setReadyChannelCount] = useState(0);
   const [channelState, setChannelState] = useState('Not opened');
-  const [channelAmount, setChannelAmount] = useState('499');
+  const [channelAmount, setChannelAmount] = useState('500');
   const [busy, setBusy] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('1');
   const [paymentResult, setPaymentResult] = useState('');
@@ -238,8 +238,16 @@ export function BrowserNodeLab({
     }
   };
 
+  const hasFundingAndFeeHeadroom = (() => {
+    try {
+      return ckbBalance !== null && ckbBalance > BigInt(ckbToHex(channelAmount));
+    } catch {
+      return false;
+    }
+  })();
+
   const openChannel = async () => {
-    if (!nodeRef.current || peerCount === 0 || busy) return;
+    if (!nodeRef.current || peerCount === 0 || busy || !hasFundingAndFeeHeadroom) return;
     setBusy(true);
     try {
       const fundingAmount = ckbToHex(channelAmount);
@@ -347,7 +355,7 @@ export function BrowserNodeLab({
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 font-mono text-sm">2</span>
               <div className="min-w-0 flex-1">
                 <h2 className="text-xl">Fund and open a channel</h2>
-                <p className="mt-2 text-sm leading-6 text-neutral-400">Send Testnet CKB to this browser's funding address first. The public node currently auto-accepts channels from 499 CKB; keep extra CKB for the funding transaction fee.</p>
+                <p className="mt-2 text-sm leading-6 text-neutral-400">Keep more spendable Testnet CKB in this address than the channel amount. The funding transaction has a separate on-chain fee.</p>
                 <div className="mt-5 rounded-xl border border-white/10 bg-black p-4">
                   <div className="text-xs uppercase tracking-wider text-neutral-600">This browser's CKB address</div>
                   <div className="mt-2 break-all font-mono text-sm text-emerald-300">{ckbAddress || 'Start the node to derive its address.'}</div>
@@ -360,7 +368,7 @@ export function BrowserNodeLab({
                 <label className="mt-5 block text-xs uppercase tracking-wider text-neutral-500" htmlFor="channel-amount">Channel funding amount (CKB)</label>
                 <input id="channel-amount" inputMode="decimal" value={channelAmount} onChange={(event) => setChannelAmount(event.target.value)} disabled={!isRunning || busy} className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 font-mono text-sm outline-none transition focus:border-white/30 disabled:opacity-50" />
                 <div className="mt-3 text-sm text-neutral-500">Latest channel state: <span className="font-mono text-neutral-300">{channelState}</span> · Total channels: {channelCount}</div>
-                <button onClick={openChannel} disabled={!isRunning || peerCount === 0 || busy || !ckbAddress} className="mt-4 rounded-full border border-white/15 px-5 py-3 text-sm transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-30">Open real Testnet channel</button>
+                <button onClick={openChannel} disabled={!isRunning || peerCount === 0 || busy || !ckbAddress || !hasFundingAndFeeHeadroom} className="mt-4 rounded-full border border-white/15 px-5 py-3 text-sm transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-30">Open real Testnet channel</button>
               </div>
             </div>
           </div>

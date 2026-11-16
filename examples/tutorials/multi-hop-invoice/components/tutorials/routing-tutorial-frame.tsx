@@ -121,7 +121,7 @@ function CodeBlock({
 
 export function RoutingTutorialFrame({
   article,
-  currentTutorialIndex,
+  tutorialId,
   codeFiles,
   sectionCode,
   defaultFile,
@@ -129,13 +129,11 @@ export function RoutingTutorialFrame({
   demoTitle,
   demoDescription,
   liveDemo,
-  previousHref,
-  nextHref,
   demoFirst = false,
   walkthroughDescription = 'See how the result rules, Hold Invoice, and payment decision map to the Fiber SDK calls used by the demo.',
 }: {
   article: ReactNode;
-  currentTutorialIndex: number;
+  tutorialId: string;
   codeFiles: RoutingCodeFile[];
   sectionCode: Record<string, RoutingCodeFocus>;
   defaultFile: string;
@@ -143,12 +141,13 @@ export function RoutingTutorialFrame({
   demoTitle: string;
   demoDescription: string;
   liveDemo: ReactNode;
-  previousHref: string;
-  nextHref?: string;
   demoFirst?: boolean;
   walkthroughDescription?: string;
 }) {
   const router = useRouter();
+  const currentTutorialIndex = tutorials.findIndex((tutorial) => tutorial.id === tutorialId);
+  const previousHref = tutorials[currentTutorialIndex - 1]?.href ?? '/docs/build/interactive-tutorials';
+  const nextHref = tutorials[currentTutorialIndex + 1]?.href;
   const topRef = useRef<HTMLDivElement | null>(null);
   const demoRef = useRef<HTMLElement | null>(null);
   const walkthroughRef = useRef<HTMLElement | null>(null);

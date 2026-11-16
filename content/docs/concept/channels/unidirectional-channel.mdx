@@ -11,7 +11,7 @@ import { Callout } from 'fumadocs-ui/components/callout';
 Set `one_way: true` when opening a channel to restrict payment flow to one direction: from initiator to acceptor. One-way channels are always private and cannot route third-party payments. When the channel closes, any unspent funds are returned to the initiator.
 
 ```bash
-fnn-cli channel open_channel --pubkey <peer_pubkey> --funding-amount 49900000000 --one-way
+fnn-cli channel open_channel --pubkey <peer_pubkey> --funding-amount 50000000000 --one-way
 ```
 
 ## What Is a Unidirectional Channel
@@ -48,7 +48,7 @@ The direction restriction is enforced at the routing level. The node will never 
 | Routing for others | Cannot route third-party payments | Can route payments if public |
 | Channel rebalancing | Not applicable | Supported via circular payments |
 | Typical use case | Streaming, merchant receiving | General P2P payments |
-| Channel reserve | ≥99 CKB (initiator side, default) | ≥99 CKB per side (default) |
+| Channel reserve | ≥100 CKB (initiator side, default) | ≥100 CKB per side (default) |
 
 ## Use Cases and Trade-offs
 
@@ -77,7 +77,7 @@ Set `one_way: true` when calling `open_channel`. The parameter is optional and d
 ### Using fnn-cli
 
 ```bash
-fnn-cli channel open_channel --pubkey <acceptor_pubkey> --funding-amount 49900000000 --one-way
+fnn-cli channel open_channel --pubkey <acceptor_pubkey> --funding-amount 50000000000 --one-way
 ```
 
 ### Using JSON-RPC
@@ -89,7 +89,7 @@ fnn-cli channel open_channel --pubkey <acceptor_pubkey> --funding-amount 4990000
   "params": [
     {
       "pubkey": "02abc...",
-      "funding_amount": "0xb9e459300",
+      "funding_amount": "0xba43b7400",
       "one_way": true
     }
   ],
@@ -98,7 +98,7 @@ fnn-cli channel open_channel --pubkey <acceptor_pubkey> --funding-amount 4990000
 ```
 
 <Callout>
-  The `funding_amount` is in **shannons** (1 CKB = 10⁸ shannons). By default, 99 CKB is reserved for the channel reserve (98 CKB minimum cell capacity + 1 CKB default shutdown fee), so the available balance for payments is `funding_amount - 99_00000000` shannons. The `FIBER_AUTO_ACCEPT_CHANNEL_CKB_FUNDING_AMOUNT` environment variable controls the auto-accept funding contribution (the amount the acceptor automatically contributes when accepting a channel open request), not the channel reserve itself.
+  The `funding_amount` is in **shannons** (1 CKB = 10⁸ shannons). For a new Fiber v0.10.0 channel, 100 CKB is reserved for on-chain settlement, so the available balance for payments is `funding_amount - 10_000_000_000` shannons. The `FIBER_AUTO_ACCEPT_CHANNEL_CKB_FUNDING_AMOUNT` environment variable controls the auto-accept funding contribution (the amount the acceptor automatically contributes when accepting a channel open request), not the channel reserve itself.
 </Callout>
 
 ## Sending Payments
@@ -136,11 +136,11 @@ This is an important point that often causes confusion. A one-way channel restri
 
 - **Initiator's remaining balance** goes back to the initiator's CKB address
 - **Acceptor's received balance** goes to the acceptor's CKB address
-- The channel reserve (99 CKB by default) is released back to the initiator
+- The channel reserve (100 CKB for Fiber v0.10.0) is released back to the initiator
 
-For example, if you open a one-way channel with 499 CKB and send 120 CKB worth of payments before closing:
+For example, if you open a one-way channel with 500 CKB and send 120 CKB worth of payments before closing:
 
-- You (initiator) receive back: 499 - 120 - fees = **~379 CKB** (minus transaction fees)
+- You (initiator) receive back: 500 - 120 - fees = **~380 CKB** (minus transaction fees)
 - The acceptor receives: **120 CKB**
 
 Either party can initiate the close:

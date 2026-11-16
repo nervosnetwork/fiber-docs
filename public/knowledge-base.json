@@ -1837,49 +1837,49 @@
     {
       "id": "chunk-262",
       "title": "Tutorial: Run a Fiber WASM Node in Your Browser",
-      "content": "`@fiber-pay/sdk` provides the browser-facing APIs used here to create the node,\nmanage its identity, observe its state, and connect it to peers. Install it in\nan existing TypeScript or JavaScript project with:\n\n```bash\nnpm install @fiber-pay/sdk\n```\n\nOn the interactive page, hover or focus the dotted-underlined terms—Web Worker,\nSharedArrayBuffer, WSS (WebSocket Secure), and IndexedDB—for a short definition\nwithout leaving the walkthrough.\n\n## Why the page needs COOP and COEP\n\nBrowsers restrict shared memory to pages that opt into cross-origin isolation.\nThis example enables it with two response headers.\n\nOn the interactive page, COOP and COEP use the same dotted-underlined tooltips.\nCOOP expands to `Cross-Origin-Opener-Policy`; COEP expands to\n`Cross-Origin-Embedder-Policy`.",
+      "content": "`@fiber-pay/sdk` provides the browser-facing APIs used here to create the node,\nmanage its identity, observe its state, and connect it to peers. The tutorial uses\nFiber JS 0.10.0. To use this setup in an existing npm project, set the SDK override\nand install both packages:\n\n```bash\nnpm pkg set 'overrides.@fiber-pay/sdk.@nervosnetwork/fiber-js=0.10.0'\nnpm install --save-exact @fiber-pay/sdk@0.3.1 @nervosnetwork/fiber-js@0.10.0\n```\n\nOn the interactive page, hover or focus the dotted-underlined terms—Web Worker,\nSharedArrayBuffer, WSS (WebSocket Secure), and IndexedDB—for a short definition\nwithout leaving the walkthrough.\n\n## Why the page needs COOP and COEP\n\nBrowsers restrict shared memory to pages that opt into cross-origin isolation.\nThis example enables it with two response headers.",
       "url": "/docs/build/connect-wasm-node",
       "source": "docs/build/connect-wasm-node.mdx"
     },
     {
       "id": "chunk-263",
       "title": "Tutorial: Run a Fiber WASM Node in Your Browser",
-      "content": "Together, these headers make `window.crossOriginIsolated` return `true`,\nallowing Fiber WASM to use `SharedArrayBuffer`:\n\n```js\n/** @type {import('next').NextConfig} */\nconst nextConfig = {\n  transpilePackages: [\n    '@fiber-pay/sdk',\n    '@nervosnetwork/fiber-js',\n  ],\n  async headers() {\n    return [{\n      source: '/fiber',\n      headers: [\n        {\n          key: 'Cross-Origin-Opener-Policy',\n          value: 'same-origin',\n        },\n        {\n          key: 'Cross-Origin-Embedder-Policy',\n          value: 'require-corp',\n        },\n      ],\n    }];\n  },\n};\n\nexport default nextConfig;\n```\n\nThe live demo is already configured. You only need to add these headers when\nrunning the project on your own server.\n\n## 1. Start the node without connecting",
+      "content": "On the interactive page, COOP and COEP use the same dotted-underlined tooltips.\nCOOP expands to `Cross-Origin-Opener-Policy`; COEP expands to\n`Cross-Origin-Embedder-Policy`.\n\nTogether, these headers make `window.crossOriginIsolated` return `true`,\nallowing Fiber WASM to use `SharedArrayBuffer`:\n\n```js\n/** @type {import('next').NextConfig} */\nconst nextConfig = {\n  transpilePackages: [\n    '@fiber-pay/sdk',\n    '@nervosnetwork/fiber-js',\n  ],\n  async headers() {\n    return [{\n      source: '/fiber',\n      headers: [\n        {\n          key: 'Cross-Origin-Opener-Policy',\n          value: 'same-origin',\n        },\n        {\n          key: 'Cross-Origin-Embedder-Policy',\n          value: 'require-corp',\n        },\n      ],\n    }];\n  },\n};\n\nexport default nextConfig;\n```",
       "url": "/docs/build/connect-wasm-node",
       "source": "docs/build/connect-wasm-node.mdx"
     },
     {
       "id": "chunk-264",
       "title": "Tutorial: Run a Fiber WASM Node in Your Browser",
-      "content": "Before creating the node, verify that `crossOriginIsolated` is enabled. Then\ncreate a credential and initialize a Fiber Testnet node with an empty\n`bootnodes` list so it starts without connecting to a peer. Register the\n`stateChange` listener before calling `node.start()` to receive startup updates.\n\n```ts\nconst {\n  FiberBrowserNode,\n  RawKeyCredentialProvider,\n} = await import('@fiber-pay/sdk/browser');\n\nconst credential = new RawKeyCredentialProvider(\n  crypto.getRandomValues(new Uint8Array(32)),\n  crypto.getRandomValues(new Uint8Array(32)),\n  crypto.randomUUID(),\n);\n\nconst node = new FiberBrowserNode({\n  network: 'testnet',\n  credential,\n  nodeConfig: {\n    bootnodes: [],\n    logLevel: 'info',\n  },\n});\n\nawait node.start();\n```",
+      "content": "The live demo is already configured. You only need to add these headers when\nrunning the project on your own server.\n\n## 1. Start the node without connecting\n\nBefore creating the node, verify that `crossOriginIsolated` is enabled. Then\ncreate a credential and initialize a Fiber Testnet node with an empty\n`bootnodes` list so it starts without connecting to a peer. Register the\n`stateChange` listener before calling `node.start()` to receive startup updates.\n\n```ts\nconst {\n  FiberBrowserNode,\n  RawKeyCredentialProvider,\n} = await import('@fiber-pay/sdk/browser');\n\nconst credential = new RawKeyCredentialProvider(\n  crypto.getRandomValues(new Uint8Array(32)),\n  crypto.getRandomValues(new Uint8Array(32)),\n  crypto.randomUUID(),\n);",
       "url": "/docs/build/connect-wasm-node",
       "source": "docs/build/connect-wasm-node.mdx"
     },
     {
       "id": "chunk-265",
       "title": "Tutorial: Run a Fiber WASM Node in Your Browser",
-      "content": "**Testnet only:** The generated credentials are intended for Testnet development\nonly. Production applications must store private keys in encrypted storage and\nprovide backup, account-switching, and recovery mechanisms.\n\n## 2. Connect the node to a public peer\n\nTo make its first connection, the browser node needs both an `address` and a\n`pubkey`. The address tells it how to reach the public Fiber Testnet peer over\nWSS. The pubkey identifies the Fiber node it expects to reach.\n\n```text\naddress // Browser route\n/dns4/bottle.fiber.channel/tcp/443/wss/p2p/Qm...\n\n/dns4/bottle.fiber.channel // DNS host\n/tcp/443                   // TCP port\n/wss                       // encrypted WebSocket\n/p2p/Qm...                 // libp2p peer ID",
+      "content": "const node = new FiberBrowserNode({\n  network: 'testnet',\n  credential,\n  nodeConfig: {\n    bootnodes: [],\n    logLevel: 'info',\n  },\n});\n\nawait node.start();\n```\n\n**Testnet only:** The generated credentials are intended for Testnet development\nonly. Production applications must store private keys in encrypted storage and\nprovide backup, account-switching, and recovery mechanisms.\n\n## 2. Connect the node to a public peer\n\nTo make its first connection, the browser node needs both an `address` and a\n`pubkey`. The address tells it how to reach the public Fiber Testnet peer over\nWSS. The pubkey identifies the Fiber node it expects to reach.\n\n```text\naddress // Browser route\n/dns4/bottle.fiber.channel/tcp/443/wss/p2p/Qm...",
       "url": "/docs/build/connect-wasm-node",
       "source": "docs/build/connect-wasm-node.mdx"
     },
     {
       "id": "chunk-266",
       "title": "Tutorial: Run a Fiber WASM Node in Your Browser",
-      "content": "pubkey // Fiber identity\n0x02b6d4e3...d20302be71\n// Hex-encoded secp256k1 Fiber node public key\n```\n\n`connectToRouter(node)` passes both values to `connectPeer()`:\n\n```ts\nawait node.connectPeer({\n  address: routerAddress,\n  pubkey: routerPubkey,\n});\n```\n\nPassing both allows the first connection to use the explicit WSS route without\ndepending on graph synchronization.\n\n## 3. Wire it into React\n\n### 3.1 Keep the node between renders\n\n`useRef()` keeps one node instance available across React renders without\ntriggering extra renders. React state stores the status, public key, and peer\ncount displayed by the interface.\n\n### 3.2 Start the WASM node",
+      "content": "/dns4/bottle.fiber.channel // DNS host\n/tcp/443                   // TCP port\n/wss                       // encrypted WebSocket\n/p2p/Qm...                 // libp2p peer ID\n\npubkey // Fiber identity\n0x02b6d4e3...d20302be71\n// Hex-encoded secp256k1 Fiber node public key\n```\n\n`connectToRouter(node)` passes both values to `connectPeer()`:\n\n```ts\nawait node.connectPeer({\n  address: routerAddress,\n  pubkey: routerPubkey,\n});\n```\n\nPassing both allows the first connection to use the explicit WSS route without\ndepending on graph synchronization.\n\n## 3. Wire it into React\n\n### 3.1 Keep the node between renders\n\n`useRef()` keeps one node instance available across React renders without\ntriggering extra renders. React state stores the status, public key, and peer\ncount displayed by the interface.",
       "url": "/docs/build/connect-wasm-node",
       "source": "docs/build/connect-wasm-node.mdx"
     },
     {
       "id": "chunk-267",
       "title": "Tutorial: Run a Fiber WASM Node in Your Browser",
-      "content": "`start()` calls `startFiber()`, saves the returned node in a React ref, then\ncalls `getNodeInfo()` and stores the public key in React state. It does not\nconnect to a peer.\n\n### 3.3 Connect the running node to Testnet\n\n`connect()` calls `connectToRouter()`, then calls `listPeers()` and stores the\nconnected-peer count in React state so the interface can confirm the\nconnection:\n\n```ts\nawait node.connectPeer({ address: routerAddress, pubkey: routerPubkey });\nconst peerList = await node.listPeers();\nsetPeers(peerList.peers.length);\n```\n\n### 3.4 Show the result\n\n`FiberPage()` gives users visible confirmation of each operation. It binds the\nhandlers to separate buttons and displays the node status, public key, and peer\ncount.\n\n## Optional: Run the complete project locally",
+      "content": "### 3.2 Start the WASM node\n\n`start()` calls `startFiber()`, saves the returned node in a React ref, then\ncalls `getNodeInfo()` and stores the public key in React state. It does not\nconnect to a peer.\n\n### 3.3 Connect the running node to Testnet\n\n`connect()` calls `connectToRouter()`, then calls `listPeers()` and stores the\nconnected-peer count in React state so the interface can confirm the\nconnection:\n\n```ts\nawait node.connectPeer({ address: routerAddress, pubkey: routerPubkey });\nconst peerList = await node.listPeers();\nsetPeers(peerList.peers.length);\n```\n\n### 3.4 Show the result\n\n`FiberPage()` gives users visible confirmation of each operation. It binds the\nhandlers to separate buttons and displays the node status, public key, and peer\ncount.",
       "url": "/docs/build/connect-wasm-node",
       "source": "docs/build/connect-wasm-node.mdx"
     },
     {
       "id": "chunk-268",
       "title": "Tutorial: Run a Fiber WASM Node in Your Browser",
-      "content": "Select **Download project** in the top-right corner, or\n[**download here**](/downloads/fiber-connect-wasm-node.zip). The archive already\ncontains the Next.js application, Fiber integration, browser headers, and\ninterface shown here. After extracting it, open the project directory and run:\n\n```bash\nnpm install\nnpm run dev\n```\n\nThen open `http://localhost:3000/fiber` in your browser.\n\n## Next steps\n\nThis tutorial ends after a real peer connection. Continue to the next\ninteractive tutorial to open a channel and send a Testnet payment.",
+      "content": "## Optional: Run the complete project locally\n\nSelect **Download project** in the top-right corner, or\n[**download here**](/downloads/fiber-connect-wasm-node.zip). The archive already\ncontains the Next.js application, Fiber integration, browser headers, and\ninterface shown here. After extracting it, open the project directory and run:\n\n```bash\nnpm install\nnpm run dev\n```\n\nThen open `http://localhost:3000/fiber` in your browser.\n\n## Next steps\n\nThis tutorial ends after a real peer connection. Continue to the next\ninteractive tutorial to open a channel and send a Testnet payment.",
       "url": "/docs/build/connect-wasm-node",
       "source": "docs/build/connect-wasm-node.mdx"
     },
@@ -2775,63 +2775,91 @@
     {
       "id": "chunk-396",
       "title": "Tutorial: Open a Fiber Channel and Send a Payment",
-      "content": "1. **Prepare browser node.** Start and connect the node.\n2. **Fund the address.** Copy the generated Testnet address, request CKB from\n   the faucet, and wait for the balance to update.\n3. **Open a 499 CKB channel.** This submits a real CKB Testnet funding\n   transaction. Keep additional Testnet CKB available for its fee.\n4. **Send 1 CKB to the peer.** Wait for `ChannelReady`, then send the payment and\n   inspect its receipt.\n\nThe interface explains why an action is unavailable and changes its status\nfrom waiting to success or error as the flow progresses. Use Testnet funds\nonly.\n\n## Behind the scenes\n\nThe code workspace follows the same sequence as the live demo. Each section\nstarts with the function doing the work, then identifies the Fiber SDK or CKB\nRPC call underneath it.",
+      "content": "1. **Prepare browser node.** Start and connect the node.\n2. **Fund the address.** Copy the generated Testnet address and request more than\n   500 Testnet CKB from the faucet. Wait for the balance to update. The funding\n   transaction has a separate on-chain fee.\n3. **Open a 500 CKB channel.** This submits a real CKB Testnet funding\n   transaction. Keep additional Testnet CKB available for its fee.\n4. **Send 1 CKB to the peer.** Wait for `ChannelReady`, then send the payment and\n   inspect its receipt.\n\nThe interface explains why an action is unavailable and changes its status\nfrom waiting to success or error as the flow progresses. Use Testnet funds\nonly.\n\n### Recover a node connection",
       "url": "/docs/build/open-channel-payment",
       "source": "docs/build/open-channel-payment.mdx"
     },
     {
       "id": "chunk-397",
       "title": "Tutorial: Open a Fiber Channel and Send a Payment",
-      "content": "### Understand the channel payment flow\n\n`openChannel()` locks a chosen amount of Testnet CKB on-chain. Once the channel\nis ready, `pay()` can make multiple off-chain payments without creating a new\nCKB transaction for every small amount.\n\nPreparing the browser node starts it locally and connects it to the public peer.\nOpening the channel and sending payments are separate actions.\n\n### Start the node and derive its funding address",
+      "content": "**Node already in use** means the same saved node is running in another tutorial\ntab. Close that tab to stop its session, then select **Prepare browser node**\nhere. Keep only one active tutorial tab for this saved node.\n\n**Peer handshake timed out** means the node is running but its connection to the\npublic peer did not finish. Check your network connection, then select\n**Prepare browser node** again. If it keeps timing out, the public peer may be\nunavailable; try again later.\n\n## Behind the scenes\n\nThe code workspace follows the same sequence as the live demo. Each section\nstarts with the function doing the work, then identifies the Fiber SDK or CKB\nRPC call underneath it.\n\n### Understand the channel payment flow",
       "url": "/docs/build/open-channel-payment",
       "source": "docs/build/open-channel-payment.mdx"
     },
     {
       "id": "chunk-398",
       "title": "Tutorial: Open a Fiber Channel and Send a Payment",
-      "content": "`start()` starts the browser node and reveals the Testnet address that must be\nfunded. It calls `startFiber()`, reads the node information, and uses the SDK's\n`scriptToAddress()` helper to convert\n`default_funding_lock_script` into a CKB Testnet address. The demo then calls\n`connectToRouter()` as part of the same **Prepare browser node** action to keep\nthe recovery path short.\n\nThe demo combines startup and `connectToRouter()` into one preparation action.\nThe downloaded source keeps these helpers separate so applications can expose\nmore control when they need it.\n\n### Detect sufficient Testnet funding",
+      "content": "`openChannel()` locks a chosen amount of Testnet CKB on-chain. Once the channel\nis ready, `pay()` can make multiple off-chain payments without creating a new\nCKB transaction for every small amount.\n\nPreparing the browser node starts it locally and connects it to the public peer.\nOpening the channel and sending payments are separate actions.\n\n### Start the node and derive its funding address\n\n`start()` starts the browser node and reveals the Testnet address that must be\nfunded. It calls `startFiber()`, reads the node information, and uses the SDK's\n`scriptToAddress()` helper to convert\n`default_funding_lock_script` into a CKB Testnet address. The demo then calls\n`connectToRouter()` as part of the same **Prepare browser node** action to keep\nthe recovery path short.",
       "url": "/docs/build/open-channel-payment",
       "source": "docs/build/open-channel-payment.mdx"
     },
     {
       "id": "chunk-399",
       "title": "Tutorial: Open a Fiber Channel and Send a Payment",
-      "content": "`queryCkbBalance()` calls CKB RPC `get_cells_capacity` with the node's default\nfunding lock script to measure its available capacity. `watchCkbBalance()`\nrepeats the check every five seconds while the page is visible, allowing the\ninterface to unlock channel creation once the address can cover the requested\nfunding amount. The demo also provides a manual refresh action.\n\nThe selected public peer accepts CKB channels funded with at least 499 CKB.\nKeep extra Testnet CKB available for the on-chain transaction fee.\n\n### Convert CKB amounts without losing precision",
+      "content": "The demo combines startup and `connectToRouter()` into one preparation action.\nThe downloaded source keeps these helpers separate so applications can expose\nmore control when they need it.\n\n### Detect sufficient Testnet funding\n\n`queryCkbBalance()` calls CKB RPC `get_cells_capacity` with the node's default\nfunding lock script to measure its available capacity. `watchCkbBalance()`\nrepeats the check every five seconds while the page is visible, allowing the\ninterface to unlock channel creation once the address can cover the requested\nfunding amount. The demo also provides a manual refresh action.",
       "url": "/docs/build/open-channel-payment",
       "source": "docs/build/open-channel-payment.mdx"
     },
     {
       "id": "chunk-400",
       "title": "Tutorial: Open a Fiber Channel and Send a Payment",
-      "content": "`ckbToHex()` converts the entered CKB amount into the exact hexadecimal shannon\nvalue expected by Fiber RPC. It parses the decimal string with `BigInt`,\npreserves all eight decimal places, and converts the result to hex. One CKB is\n100,000,000 shannons:\n\n```ts\nconst SHANNONS_PER_CKB = 100_000_000n;\n\nconst shannons =\n  BigInt(whole) * SHANNONS_PER_CKB +\n  BigInt(fraction.padEnd(8, '0'));\n\nreturn `0x${shannons.toString(16)}`;\n```\n\nThe same amount appears in three forms:\n\n- `499 CKB` — the human-readable amount.\n- `49,900,000,000 shannons` — the amount in CKB's smallest unit.\n- `0xb9e0ab300` — the same shannon amount written in hexadecimal for Fiber RPC.\n\n### Open the channel",
+      "content": "Open the tutorial channel with 500 CKB on [Fiber v0.10.0](https://github.com/nervosnetwork/fiber/releases/tag/v0.10.0).\nHover or focus **500 CKB** in the demo for the breakdown: **500 CKB funded −\n100 CKB reserved = 400 CKB initially available for payments**. The 100 CKB is reserved for on-chain settlement when the channel closes.\nTransfers and pending payments change the available balance afterward.\n\nKeep extra Testnet CKB in the wallet for the channel-funding transaction fee.\n\n### Convert CKB amounts without losing precision\n\n`ckbToHex()` converts the entered CKB amount into the exact hexadecimal shannon\nvalue expected by Fiber RPC. It parses the decimal string with `BigInt`,\npreserves all eight decimal places, and converts the result to hex. One CKB is\n100,000,000 shannons:",
       "url": "/docs/build/open-channel-payment",
       "source": "docs/build/open-channel-payment.mdx"
     },
     {
       "id": "chunk-401",
       "title": "Tutorial: Open a Fiber Channel and Send a Payment",
-      "content": "`openCkbChannel()` begins channel negotiation with the connected public peer.\nIt calls `node.openChannel()` with the peer pubkey, exact funding amount, and\n`public: true`:\n\n```ts\nconst result = await node.openChannel({\n  pubkey: routerPubkey,\n  funding_amount: ckbToHex('499'),\n  public: true,\n});\n```\n\nThe returned temporary channel ID confirms that negotiation started. It does\nnot mean the channel can carry a payment yet.\n\n### Wait for ChannelReady\n\n`watchChannelStates()` keeps payment controls locked until the funding\ntransaction and peer handshake complete. It polls `listChannels()` and reports\neach new `state_name` as the channel moves through the following states:",
+      "content": "```ts\nconst SHANNONS_PER_CKB = 100_000_000n;\n\nconst shannons =\n  BigInt(whole) * SHANNONS_PER_CKB +\n  BigInt(fraction.padEnd(8, '0'));\n\nreturn `0x${shannons.toString(16)}`;\n```\n\nThe same amount appears in three forms:\n\n- `500 CKB` — the human-readable amount.\n- `50,000,000,000 shannons` — the amount in CKB's smallest unit.\n- `0xba43b7400` — the same shannon amount written in hexadecimal for Fiber RPC.\n\n### Open the channel\n\n`openCkbChannel()` begins channel negotiation with the connected public peer.\nIt calls `node.openChannel()` with the peer pubkey, exact funding amount, and\n`public: true`:\n\n```ts\nconst result = await node.openChannel({\n  pubkey: routerPubkey,\n  funding_amount: ckbToHex('500'),\n  public: true,\n});\n```",
       "url": "/docs/build/open-channel-payment",
       "source": "docs/build/open-channel-payment.mdx"
     },
     {
       "id": "chunk-402",
       "title": "Tutorial: Open a Fiber Channel and Send a Payment",
-      "content": "- `NegotiatingFunding` — agree on channel parameters.\n- `CollaboratingFundingTx` — build the funding transaction.\n- `AwaitingChannelReady` — wait for confirmation and both peers.\n- `ChannelReady` — allow payments.\n\nSome transitions may happen between polls, so the interface shows every\ndistinct state it observes rather than promising that every intermediate state\nwill appear.\n\n### Send and confirm the keysend payment\n\n`sendKeysend()` sends a direct payment without first requesting an invoice.\nFiber calls this a keysend payment because it does not require the receiving\npeer to create an invoice. The function calls `sendPayment()` with the recipient\npubkey, hexadecimal amount, and `keysend: true`:",
+      "content": "The returned temporary channel ID confirms that negotiation started. It does\nnot mean the channel can carry a payment yet.\n\n### Wait for ChannelReady\n\n`watchChannelStates()` keeps payment controls locked until the funding\ntransaction and peer handshake complete. It polls `listChannels()` and reports\neach new `state_name` as the channel moves through the following states:\n\nThe demo uses the same six uppercase state labels as the multi-hop tutorial:",
       "url": "/docs/build/open-channel-payment",
       "source": "docs/build/open-channel-payment.mdx"
     },
     {
       "id": "chunk-403",
       "title": "Tutorial: Open a Fiber Channel and Send a Payment",
-      "content": "```ts\nconst submitted = await node.sendPayment({\n  target_pubkey: routerPubkey,\n  amount: ckbToHex('1'),\n  keysend: true,\n});\n```\n\nIf the first response is not terminal, `waitForPayment()` waits for `Success`\nor `Failed`. The demo then shows the channel ID, payment hash, amount, status,\nand the local channel balance before and after the payment.\n\n### Wire the complete flow into React\n\n`PayPage()` turns SDK state into a guided interface that prevents actions from\nrunning before their prerequisites are ready. It keeps the Fiber node in a\nReact ref, renders funding and channel data from state, and gates channel\ncreation on peer connection and sufficient funding. It gates payment on\n`ChannelReady`.",
+      "content": "- `NEGOTIATING_FUNDING` — the peers agree on channel parameters and funding contributions.\n- `COLLABORATING_FUNDING_TX` — the peers build the on-chain funding transaction.\n- `SIGNING_COMMITMENT` — the peers sign the initial commitment transactions that protect their balances.\n- `AWAITING_TX_SIGNATURES` — the peers exchange funding-transaction signatures before broadcast.\n- `AWAITING_CHANNEL_READY` — wait for funding confirmation and readiness messages from the peers. Payments remain disabled.\n- `CHANNEL_READY` — the channel can now carry off-chain payments.",
       "url": "/docs/build/open-channel-payment",
       "source": "docs/build/open-channel-payment.mdx"
     },
     {
       "id": "chunk-404",
       "title": "Tutorial: Open a Fiber Channel and Send a Payment",
-      "content": "> **Production requirements:** A production product should encrypt keys,\n> support backup and recovery, surface fees and timeouts, and use server-side\n> verification when payments unlock orders or access.\n\n### Run the complete project locally\n\nSelect **Download project** in the top-right corner, or\n[download here](/downloads/fiber-channel-payment.zip). The archive contains the\nNext.js application, Fiber integration, required browser headers, and the\ninterface shown in this tutorial.\n\nAfter extracting it, run:\n\n```bash\nnpm install\nnpm run dev\n```\n\nThen open `http://localhost:3000/pay` in your browser.",
+      "content": "**Observed channel states (This may take up to 1 min).** Keep the node running\nwhile it progresses. If it stays in one state for more than a minute, refresh\nthe live state, check the peer connection, and inspect the funding transaction\nin the explorer when available. A longer Testnet confirmation wait does not\nby itself mean the operation failed. Avoid opening another channel while this\none is pending.\n\nThe progress display lists all six stages and highlights the current state.\nEarlier stages are marked complete and later stages remain upcoming. Some\ntransitions happen between polls; the event log records only states actually\nobserved.\n\n### Send and confirm the keysend payment",
+      "url": "/docs/build/open-channel-payment",
+      "source": "docs/build/open-channel-payment.mdx"
+    },
+    {
+      "id": "chunk-1461",
+      "title": "Tutorial: Open a Fiber Channel and Send a Payment",
+      "content": "`sendKeysend()` sends a direct payment without first requesting an invoice.\nFiber calls this a keysend payment because it does not require the receiving\npeer to create an invoice. The function calls `sendPayment()` with the recipient\npubkey, hexadecimal amount, and `keysend: true`:\n\n```ts\nconst submitted = await node.sendPayment({\n  target_pubkey: routerPubkey,\n  amount: ckbToHex('1'),\n  keysend: true,\n});\n```",
+      "url": "/docs/build/open-channel-payment",
+      "source": "docs/build/open-channel-payment.mdx"
+    },
+    {
+      "id": "chunk-1462",
+      "title": "Tutorial: Open a Fiber Channel and Send a Payment",
+      "content": "If the first response is not terminal, `waitForPayment()` waits for `Success`\nor `Failed`. The demo then shows the channel ID, payment hash, amount, status,\nand the local channel balance before and after the payment. Icon buttons copy\nthe full channel ID, payment hash, and funding-transaction explorer link even\nwhen the displayed value is shortened. A tooltip confirms successful copying.\nThe funding link appears once the node reports the transaction outpoint.\n\n### Wire the complete flow into React",
+      "url": "/docs/build/open-channel-payment",
+      "source": "docs/build/open-channel-payment.mdx"
+    },
+    {
+      "id": "chunk-1463",
+      "title": "Tutorial: Open a Fiber Channel and Send a Payment",
+      "content": "`PayPage()` turns SDK state into a guided interface that prevents actions from\nrunning before their prerequisites are ready. It keeps the Fiber node in a\nReact ref, renders funding and channel data from state, and gates channel\ncreation on peer connection and sufficient funding. It gates payment on\n`ChannelReady`.\n\n> **Production requirements:** A production product should encrypt keys,\n> support backup and recovery, surface fees and timeouts, and use server-side\n> verification when payments unlock orders or access.\n\n### Run the complete project locally",
+      "url": "/docs/build/open-channel-payment",
+      "source": "docs/build/open-channel-payment.mdx"
+    },
+    {
+      "id": "chunk-1464",
+      "title": "Tutorial: Open a Fiber Channel and Send a Payment",
+      "content": "Select **Download project** in the top-right corner, or\n[download here](/downloads/fiber-channel-payment.zip). The archive contains the\nNext.js application, Fiber integration, required browser headers, and the\ninterface shown in this tutorial.\n\nAfter extracting it, run:\n\n```bash\nnpm install\nnpm run dev\n```\n\nThen open `http://localhost:3000/pay` in your browser.",
       "url": "/docs/build/open-channel-payment",
       "source": "docs/build/open-channel-payment.mdx"
     },
@@ -2985,42 +3013,42 @@
     {
       "id": "chunk-426",
       "title": "WASM Node",
-      "content": "Install the npm package:\n\n```sh\nnpm install @nervosnetwork/fiber-js\n# or\npnpm add @nervosnetwork/fiber-js\n```\n\nThen import from `@nervosnetwork/fiber-js`:\n\n```ts\nimport { Fiber, randomSecretKey } from \"@nervosnetwork/fiber-js\";\n```\n\n`@nervosnetwork/fiber-js` is a browser wrapper over `fiber-wasm`. It starts two Web Workers: one runs the Fiber WASM node, and the other handles IndexedDB storage. It also creates `SharedArrayBuffer` instances and passes them to the workers so that WASM and the storage layer can exchange data. Therefore, do not create a `Fiber` instance on a non-isolated page, because `new Fiber()` creates `SharedArrayBuffer` immediately.\n\nBefore using it, make sure your project environment meets these requirements:",
+      "content": "Install the npm package:\n\n```sh\nnpm install @nervosnetwork/fiber-js@0.10.0\n# or\npnpm add @nervosnetwork/fiber-js@0.10.0\n```\n\nThen import from `@nervosnetwork/fiber-js`:\n\n```ts\nimport { Fiber, randomSecretKey } from \"@nervosnetwork/fiber-js\";\n```\n\n`@nervosnetwork/fiber-js` is a browser wrapper over `fiber-wasm`. It starts two Web Workers: one runs the Fiber WASM node, and the other handles IndexedDB storage. It also creates `SharedArrayBuffer` instances and passes them to the workers so that WASM and the storage layer can exchange data. Therefore, do not create a `Fiber` instance on a non-isolated page, because `new Fiber()` creates `SharedArrayBuffer` immediately.\n\nBefore using it, make sure your project environment meets these requirements:",
       "url": "/docs/build/sdk/wasm-node",
       "source": "docs/build/sdk/wasm-node.mdx"
     },
     {
       "id": "chunk-427",
       "title": "WASM Node",
-      "content": "- Use an ESM build pipeline, such as Vite, Next.js, Webpack 5, or an equivalent tool.\n- Serve WASM files with the correct `application/wasm` MIME type in deployment.\n- Configure CORS, SSL/TLS, and browser isolation appropriately, as described later in this document.\n\nThe install commands above intentionally use the package's default npm dist-tag. When connecting to public nodes or self-hosted peers, keep `fiber-js`, `fnn`, and the peer node release line aligned, since small RPC or protocol differences can otherwise surface during peer, channel, or payment flows.\n\n### Basic Usage\n\nThe minimum startup flow is: create a `Fiber` instance, prepare a YAML config, provide the Fiber node key and optional CKB secret key, call `start()`, and then verify node state with `nodeInfo()` or `listPeers()`.",
+      "content": "- Use an ESM build pipeline, such as Vite, Next.js, Webpack 5, or an equivalent tool.\n- Serve WASM files with the correct `application/wasm` MIME type in deployment.\n- Configure CORS, SSL/TLS, and browser isolation appropriately, as described later in this document.\n\nWhen connecting to public nodes or self-hosted peers, keep `fiber-js`, `fnn`, and the peer node release line aligned, since small RPC or protocol differences can otherwise surface during peer, channel, or payment flows.\n\n### Basic Usage\n\nThe minimum startup flow is: create a `Fiber` instance, prepare a YAML config, provide the Fiber node key and optional CKB secret key, call `start()`, and then verify node state with `nodeInfo()` or `listPeers()`.",
       "url": "/docs/build/sdk/wasm-node",
       "source": "docs/build/sdk/wasm-node.mdx"
     },
     {
       "id": "chunk-428",
       "title": "WASM Node",
-      "content": "The example below is adapted from the upstream [`fiber-js/README.md`](https://github.com/nervosnetwork/fiber/blob/v0.9.1/fiber-js/README.md) and [`fiber-js/src/index.ts`](https://github.com/nervosnetwork/fiber/blob/v0.9.1/fiber-js/src/index.ts). `Fiber`, `randomSecretKey()`, `start()`, `nodeInfo()`, and `listPeers()` are all public exports from the current `@nervosnetwork/fiber-js` package. This is not a complete demo that runs out of the box on this site. Before running it, publish the YAML config for the target network at `/fiber-config/testnet.yml`, or change `configPath` to your own static asset path, and satisfy the browser isolation, CORS, CSP, and WSS peer requirements described later.\n\n```ts\nimport { Fiber, randomSecretKey } from \"@nervosnetwork/fiber-js\";\n\nconst fiber = new Fiber();",
+      "content": "The example below is adapted from the upstream [`fiber-js/README.md`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/fiber-js/README.md) and [`fiber-js/src/index.ts`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/fiber-js/src/index.ts). `Fiber`, `randomSecretKey()`, `start()`, `nodeInfo()`, and `listPeers()` are all public exports from the current `@nervosnetwork/fiber-js` package. This is not a complete demo that runs out of the box on this site. Before running it, publish the YAML config for the target network at `/fiber-config/testnet.yml`, or change `configPath` to your own static asset path, and satisfy the browser isolation, CORS, CSP, and WSS peer requirements described later.\n\n```ts\nimport { Fiber, randomSecretKey } from \"@nervosnetwork/fiber-js\";",
       "url": "/docs/build/sdk/wasm-node",
       "source": "docs/build/sdk/wasm-node.mdx"
     },
     {
       "id": "chunk-429",
       "title": "WASM Node",
-      "content": "const network = \"testnet\";\nconst configPath = `/fiber-config/${network}.yml`;\nconst databasePrefix = `${network}-demo`;\nconst config = await fetch(configPath).then((response) => {\n  if (!response.ok) {\n    throw new Error(`Failed to load Fiber config: ${configPath}`);\n  }\n\n  return response.text();\n});\n\nconst fiberKeyPair = randomSecretKey();\nconst ckbSecretKey = randomSecretKey();\n\nawait fiber.start(\n  config,\n  fiberKeyPair,\n  ckbSecretKey,\n  undefined,\n  \"info\",\n  databasePrefix,\n);\n\nconsole.log(await fiber.nodeInfo());\nconsole.log(await fiber.listPeers());\n```\n\n<Callout type=\"warning\" title=\"Key management\">\nThis example uses a plaintext CKB key. Make sure it is handled securely and never exposed in production code, logs, or client-side bundles.\n</Callout>\n\n### Configuration",
+      "content": "const fiber = new Fiber();\n\nconst network = \"testnet\";\nconst configPath = `/fiber-config/${network}.yml`;\nconst databasePrefix = `${network}-demo`;\nconst config = await fetch(configPath).then((response) => {\n  if (!response.ok) {\n    throw new Error(`Failed to load Fiber config: ${configPath}`);\n  }\n\n  return response.text();\n});\n\nconst fiberKeyPair = randomSecretKey();\nconst ckbSecretKey = randomSecretKey();\n\nawait fiber.start(\n  config,\n  fiberKeyPair,\n  ckbSecretKey,\n  undefined,\n  \"info\",\n  databasePrefix,\n);\n\nconsole.log(await fiber.nodeInfo());\nconsole.log(await fiber.listPeers());\n```\n\n<Callout type=\"warning\" title=\"Key management\">\nThis example uses a plaintext CKB key. Make sure it is handled securely and never exposed in production code, logs, or client-side bundles.\n</Callout>",
       "url": "/docs/build/sdk/wasm-node",
       "source": "docs/build/sdk/wasm-node.mdx"
     },
     {
       "id": "chunk-430",
       "title": "WASM Node",
-      "content": "The `config` argument of `start(config, ...)` uses a YAML configuration close to `fnn`. The default config files can be obtained from the [`config`](https://github.com/nervosnetwork/fiber/tree/v0.9.1/config) directory in the Fiber source code and selected for the target network:\n\n- testnet: [`config/testnet/config.yml`](https://github.com/nervosnetwork/fiber/blob/v0.9.1/config/testnet/config.yml)\n- mainnet: [`config/mainnet/config.yml`](https://github.com/nervosnetwork/fiber/blob/v0.9.1/config/mainnet/config.yml)\n\nUse `fnn --help` to get detailed config argument information. The fiber config file and CLI arguments mostly come from the same config definitions.",
+      "content": "### Configuration\n\nThe `config` argument of `start(config, ...)` uses a YAML configuration close to `fnn`. The default config files can be obtained from the [`config`](https://github.com/nervosnetwork/fiber/tree/v0.10.0/config) directory in the Fiber source code and selected for the target network:\n\n- testnet: [`config/testnet/config.yml`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/config/testnet/config.yml)\n- mainnet: [`config/mainnet/config.yml`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/config/mainnet/config.yml)\n\nUse `fnn --help` to get detailed config argument information. The fiber config file and CLI arguments mostly come from the same config definitions.",
       "url": "/docs/build/sdk/wasm-node",
       "source": "docs/build/sdk/wasm-node.mdx"
     },
     {
       "id": "chunk-431",
       "title": "WASM Node",
-      "content": "<p className=\"text-sm text-fd-muted-foreground\">\nFor deeper logic or implementation details behind a config option, see the config definitions in the Fiber source code: <a href=\"https://github.com/nervosnetwork/fiber/blob/v0.9.1/crates/fiber-lib/src/config.rs\">config.rs</a> aggregates the <code>fiber</code>, <code>rpc</code>, <code>ckb</code>, and other config sections, while concrete fields are defined in <a href=\"https://github.com/nervosnetwork/fiber/blob/v0.9.1/crates/fiber-lib/src/fiber/config.rs\">fiber/config.rs</a>, <a href=\"https://github.com/nervosnetwork/fiber/blob/v0.9.1/crates/fiber-lib/src/rpc/config.rs\">rpc/config.rs</a>, and <a href=\"https://github.com/nervosnetwork/fiber/blob/v0.9.1/crates/fiber-lib/src/ckb/config.rs\">ckb/config.rs</a>.\n</p>",
+      "content": "<p className=\"text-sm text-fd-muted-foreground\">\nFor deeper logic or implementation details behind a config option, see the config definitions in the Fiber source code: <a href=\"https://github.com/nervosnetwork/fiber/blob/v0.10.0/crates/fiber-lib/src/config.rs\">config.rs</a> aggregates the <code>fiber</code>, <code>rpc</code>, <code>ckb</code>, and other config sections, while concrete fields are defined in <a href=\"https://github.com/nervosnetwork/fiber/blob/v0.10.0/crates/fiber-lib/src/fiber/config.rs\">fiber/config.rs</a>, <a href=\"https://github.com/nervosnetwork/fiber/blob/v0.10.0/crates/fiber-lib/src/rpc/config.rs\">rpc/config.rs</a>, and <a href=\"https://github.com/nervosnetwork/fiber/blob/v0.10.0/crates/fiber-lib/src/ckb/config.rs\">ckb/config.rs</a>.\n</p>",
       "url": "/docs/build/sdk/wasm-node",
       "source": "docs/build/sdk/wasm-node.mdx"
     },
@@ -3062,7 +3090,7 @@
     {
       "id": "chunk-437",
       "title": "WASM Node",
-      "content": "const result = await fiber.openChannelWithExternalFunding({\n  pubkey: peerPubkey,\n  funding_amount: ckb(499n),\n  public: true,\n  shutdown_script: walletLockScript,\n  funding_lock_script: walletLockScript,\n  funding_lock_script_cell_deps: walletLockCellDeps,\n});\n\nconst signedFundingTx = await wallet.signTransaction(result.unsigned_funding_tx);\n\nawait fiber.submitSignedFundingTx({\n  channel_id: result.channel_id,\n  signed_funding_tx: signedFundingTx,\n});\n```",
+      "content": "const result = await fiber.openChannelWithExternalFunding({\n  pubkey: peerPubkey,\n  funding_amount: ckb(500n),\n  public: true,\n  shutdown_script: walletLockScript,\n  funding_lock_script: walletLockScript,\n  funding_lock_script_cell_deps: walletLockCellDeps,\n});\n\nconst signedFundingTx = await wallet.signTransaction(result.unsigned_funding_tx);\n\nawait fiber.submitSignedFundingTx({\n  channel_id: result.channel_id,\n  signed_funding_tx: signedFundingTx,\n});\n```",
       "url": "/docs/build/sdk/wasm-node",
       "source": "docs/build/sdk/wasm-node.mdx"
     },
@@ -3167,7 +3195,7 @@
     {
       "id": "chunk-452",
       "title": "WASM Node",
-      "content": "- API shape: [`fiber-js/src/index.ts`](https://github.com/nervosnetwork/fiber/blob/v0.9.1/fiber-js/src/index.ts) and [`fiber-js/src/types`](https://github.com/nervosnetwork/fiber/tree/v0.9.1/fiber-js/src/types) are the direct sources for `fiber-js` methods and parameter types.\n- Runtime details: [`crates/fiber-wasm/src/lib.rs`](https://github.com/nervosnetwork/fiber/blob/v0.9.1/crates/fiber-wasm/src/lib.rs) shows how WASM starts the Fiber actor, loads config, and initializes the store.\n- Browser WSS examples: [`fiber-js/README.md`](https://github.com/nervosnetwork/fiber/blob/v0.9.1/fiber-js/README.md) shows WSS bootnode config for browser use, and [`docs/network-nodes.md`](https://github.com/nervosnetwork/fiber/blob/v0.9.1/docs/network-nodes.md) lists public node pubkeys.\n- External funding: [External Funding](/docs/concept/channels/external-funding) explains the flow semantics. [`fiber-js/README.md`](https://github.com/nervosnetwork/fiber/blob/v0.9.1/fiber-js/README.md) records the current constraints of `openChannelWithExternalFunding()` and `submitSignedFundingTx()`.\n- RPC details: [API Reference](/docs/api-reference) can be used to verify field names, state names, and error meanings.",
+      "content": "- API shape: [`fiber-js/src/index.ts`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/fiber-js/src/index.ts) and [`fiber-js/src/types`](https://github.com/nervosnetwork/fiber/tree/v0.10.0/fiber-js/src/types) are the direct sources for `fiber-js` methods and parameter types.\n- Runtime details: [`crates/fiber-wasm/src/lib.rs`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/crates/fiber-wasm/src/lib.rs) shows how WASM starts the Fiber actor, loads config, and initializes the store.\n- Browser WSS examples: [`fiber-js/README.md`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/fiber-js/README.md) shows WSS bootnode config for browser use, and [`docs/network-nodes.md`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/docs/network-nodes.md) lists public node pubkeys.\n- External funding: [External Funding](/docs/concept/channels/external-funding) explains the flow semantics. [`fiber-js/README.md`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/fiber-js/README.md) records the current constraints of `openChannelWithExternalFunding()` and `submitSignedFundingTx()`.\n- RPC details: [API Reference](/docs/api-reference) can be used to verify field names, state names, and error meanings.",
       "url": "/docs/build/sdk/wasm-node",
       "source": "docs/build/sdk/wasm-node.mdx"
     },
@@ -3440,7 +3468,7 @@
     {
       "id": "chunk-491",
       "title": "Unidirectional Channel",
-      "content": "import { Callout } from 'fumadocs-ui/components/callout';\n\n## TL;DR\n\nSet `one_way: true` when opening a channel to restrict payment flow to one direction: from initiator to acceptor. One-way channels are always private and cannot route third-party payments. When the channel closes, any unspent funds are returned to the initiator.\n\n```bash\nfnn-cli channel open_channel --pubkey <peer_pubkey> --funding-amount 49900000000 --one-way\n```\n\n## What Is a Unidirectional Channel\n\nA **unidirectional channel** (also called a **one-way channel**) is a payment channel where funds can only flow in a single direction — from the channel initiator to the acceptor. Unlike a standard bidirectional channel, the acceptor cannot send payments back through the same channel.",
+      "content": "import { Callout } from 'fumadocs-ui/components/callout';\n\n## TL;DR\n\nSet `one_way: true` when opening a channel to restrict payment flow to one direction: from initiator to acceptor. One-way channels are always private and cannot route third-party payments. When the channel closes, any unspent funds are returned to the initiator.\n\n```bash\nfnn-cli channel open_channel --pubkey <peer_pubkey> --funding-amount 50000000000 --one-way\n```\n\n## What Is a Unidirectional Channel\n\nA **unidirectional channel** (also called a **one-way channel**) is a payment channel where funds can only flow in a single direction — from the channel initiator to the acceptor. Unlike a standard bidirectional channel, the acceptor cannot send payments back through the same channel.",
       "url": "/docs/concept/channels/unidirectional-channel",
       "source": "docs/concept/channels/unidirectional-channel.mdx"
     },
@@ -3468,7 +3496,7 @@
     {
       "id": "chunk-495",
       "title": "Unidirectional Channel",
-      "content": "| Property | Unidirectional | Bidirectional |\n|---|---|---|\n| Funding | Only initiator funds | Both parties can fund |\n| Payment direction | Initiator → Acceptor only | Both directions |\n| Public visibility | Always private | Can be public or private |\n| Routing for others | Cannot route third-party payments | Can route payments if public |\n| Channel rebalancing | Not applicable | Supported via circular payments |\n| Typical use case | Streaming, merchant receiving | General P2P payments |\n| Channel reserve | ≥99 CKB (initiator side, default) | ≥99 CKB per side (default) |\n\n## Use Cases and Trade-offs\n\n### Good Fit",
+      "content": "| Property | Unidirectional | Bidirectional |\n|---|---|---|\n| Funding | Only initiator funds | Both parties can fund |\n| Payment direction | Initiator → Acceptor only | Both directions |\n| Public visibility | Always private | Can be public or private |\n| Routing for others | Cannot route third-party payments | Can route payments if public |\n| Channel rebalancing | Not applicable | Supported via circular payments |\n| Typical use case | Streaming, merchant receiving | General P2P payments |\n| Channel reserve | ≥100 CKB (initiator side, default) | ≥100 CKB per side (default) |\n\n## Use Cases and Trade-offs\n\n### Good Fit",
       "url": "/docs/concept/channels/unidirectional-channel",
       "source": "docs/concept/channels/unidirectional-channel.mdx"
     },
@@ -3489,14 +3517,14 @@
     {
       "id": "chunk-498",
       "title": "Unidirectional Channel",
-      "content": "- **No reverse payments.** If the acceptor needs to pay the initiator, they must open a separate channel.\n- **No routing participation.** One-way channels are invisible to the network graph, so they cannot earn routing fees or help relay payments for others.\n- **No rebalancing.** Since only one side holds funds, there is no liquidity rebalancing to manage.\n\n## Opening a Unidirectional Channel\n\nSet `one_way: true` when calling `open_channel`. The parameter is optional and defaults to `false`.\n\n### Using fnn-cli\n\n```bash\nfnn-cli channel open_channel --pubkey <acceptor_pubkey> --funding-amount 49900000000 --one-way\n```\n\n### Using JSON-RPC",
+      "content": "- **No reverse payments.** If the acceptor needs to pay the initiator, they must open a separate channel.\n- **No routing participation.** One-way channels are invisible to the network graph, so they cannot earn routing fees or help relay payments for others.\n- **No rebalancing.** Since only one side holds funds, there is no liquidity rebalancing to manage.\n\n## Opening a Unidirectional Channel\n\nSet `one_way: true` when calling `open_channel`. The parameter is optional and defaults to `false`.\n\n### Using fnn-cli\n\n```bash\nfnn-cli channel open_channel --pubkey <acceptor_pubkey> --funding-amount 50000000000 --one-way\n```\n\n### Using JSON-RPC",
       "url": "/docs/concept/channels/unidirectional-channel",
       "source": "docs/concept/channels/unidirectional-channel.mdx"
     },
     {
       "id": "chunk-499",
       "title": "Unidirectional Channel",
-      "content": "```json\n{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"open_channel\",\n  \"params\": [\n    {\n      \"pubkey\": \"02abc...\",\n      \"funding_amount\": \"0xb9e459300\",\n      \"one_way\": true\n    }\n  ],\n  \"id\": 1\n}\n```\n\n<Callout>\n  The `funding_amount` is in **shannons** (1 CKB = 10⁸ shannons). By default, 99 CKB is reserved for the channel reserve (98 CKB minimum cell capacity + 1 CKB default shutdown fee), so the available balance for payments is `funding_amount - 99_00000000` shannons. The `FIBER_AUTO_ACCEPT_CHANNEL_CKB_FUNDING_AMOUNT` environment variable controls the auto-accept funding contribution (the amount the acceptor automatically contributes when accepting a channel open request), not the channel reserve itself.\n</Callout>\n\n## Sending Payments",
+      "content": "```json\n{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"open_channel\",\n  \"params\": [\n    {\n      \"pubkey\": \"02abc...\",\n      \"funding_amount\": \"0xba43b7400\",\n      \"one_way\": true\n    }\n  ],\n  \"id\": 1\n}\n```\n\n<Callout>\n  The `funding_amount` is in **shannons** (1 CKB = 10⁸ shannons). For a new Fiber v0.10.0 channel, 100 CKB is reserved for on-chain settlement, so the available balance for payments is `funding_amount - 10_000_000_000` shannons. The `FIBER_AUTO_ACCEPT_CHANNEL_CKB_FUNDING_AMOUNT` environment variable controls the auto-accept funding contribution (the amount the acceptor automatically contributes when accepting a channel open request), not the channel reserve itself.\n</Callout>\n\n## Sending Payments",
       "url": "/docs/concept/channels/unidirectional-channel",
       "source": "docs/concept/channels/unidirectional-channel.mdx"
     },
@@ -3517,7 +3545,7 @@
     {
       "id": "chunk-502",
       "title": "Unidirectional Channel",
-      "content": "- **Initiator's remaining balance** goes back to the initiator's CKB address\n- **Acceptor's received balance** goes to the acceptor's CKB address\n- The channel reserve (99 CKB by default) is released back to the initiator\n\nFor example, if you open a one-way channel with 499 CKB and send 120 CKB worth of payments before closing:\n\n- You (initiator) receive back: 499 - 120 - fees = **~379 CKB** (minus transaction fees)\n- The acceptor receives: **120 CKB**\n\nEither party can initiate the close:\n\n```bash\nfnn-cli channel shutdown_channel --channel-id <channel_id>\n```\n\nOr via JSON-RPC:\n\n```json\n{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"shutdown_channel\",\n  \"params\": [\n    {\n      \"channel_id\": \"0x...\"\n    }\n  ],\n  \"id\": 1\n}\n```",
+      "content": "- **Initiator's remaining balance** goes back to the initiator's CKB address\n- **Acceptor's received balance** goes to the acceptor's CKB address\n- The channel reserve (100 CKB for Fiber v0.10.0) is released back to the initiator\n\nFor example, if you open a one-way channel with 500 CKB and send 120 CKB worth of payments before closing:\n\n- You (initiator) receive back: 500 - 120 - fees = **~380 CKB** (minus transaction fees)\n- The acceptor receives: **120 CKB**\n\nEither party can initiate the close:\n\n```bash\nfnn-cli channel shutdown_channel --channel-id <channel_id>\n```\n\nOr via JSON-RPC:\n\n```json\n{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"shutdown_channel\",\n  \"params\": [\n    {\n      \"channel_id\": \"0x...\"\n    }\n  ],\n  \"id\": 1\n}\n```",
       "url": "/docs/concept/channels/unidirectional-channel",
       "source": "docs/concept/channels/unidirectional-channel.mdx"
     },
@@ -4476,35 +4504,35 @@
     {
       "id": "chunk-639",
       "title": "Multi-Hop Payments",
-      "content": "A relay node needs a server with a publicly reachable IP address, sufficient CKB to fund channels, stable uptime (payments can only route through online nodes), and balanced liquidity on both sides of each channel.\n\nEach channel side must reserve 99 CKB (98 CKB for the commitment lock's on-chain [occupied capacity](https://github.com/nervosnetwork/fiber-scripts) + 1 CKB for the shutdown transaction fee) — this amount is locked for on-chain settlement and cannot be used for off-chain payments. The actual minimum funding amount depends on your `open_channel_auto_accept_min_ckb_funding_amount` setting (code default: 100 CKB). For example, the public Fiber relay nodes require at least 499 CKB (99 CKB reserve + 400 CKB usable).\n\n### Configuration",
+      "content": "A relay node needs a server with a publicly reachable IP address, sufficient CKB to fund channels, stable uptime (payments can only route through online nodes), and balanced liquidity on both sides of each channel.\n\nEach side of a new Fiber v0.10.0 channel reserves 100 CKB for on-chain settlement. This amount cannot be used for off-chain payments. The actual minimum funding amount depends on your `open_channel_auto_accept_min_ckb_funding_amount` setting (code default: 100 CKB). For example, funding a channel with 500 CKB leaves 400 CKB available for payments.\n\n### Configuration\n\nThe key settings in `config.yml` for relay operation are:",
       "url": "/docs/concept/routing/multi-hop",
       "source": "docs/concept/routing/multi-hop.mdx"
     },
     {
       "id": "chunk-640",
       "title": "Multi-Hop Payments",
-      "content": "The key settings in `config.yml` for relay operation are:\n\n```yaml\nfiber:\n  # Make your node publicly reachable\n  listening_addr: \"/ip4/0.0.0.0/tcp/8228\"\n  announce_listening_addr: true\n  announced_addrs:\n    - \"/ip4/YOUR_PUBLIC_IP/tcp/8228\"\n\n  # Automatically accept channel requests (example: public node thresholds)\n  open_channel_auto_accept_min_ckb_funding_amount: 49900000000  # 99 CKB reserve + 400 CKB usable\n  auto_accept_channel_ckb_funding_amount: 25000000000           # your contribution as acceptor\n\n  # Fee policy\n  tlc_fee_proportional_millionths: 1000   # 0.1% forwarding fee\n  tlc_expiry_delta: 86400000              # 1 day expiry window\n```",
+      "content": "```yaml\nfiber:\n  # Make your node publicly reachable\n  listening_addr: \"/ip4/0.0.0.0/tcp/8228\"\n  announce_listening_addr: true\n  announced_addrs:\n    - \"/ip4/YOUR_PUBLIC_IP/tcp/8228\"\n\n  # Automatically accept channel requests (example thresholds)\n  open_channel_auto_accept_min_ckb_funding_amount: 50000000000  # 100 CKB reserve + 400 CKB usable\n  auto_accept_channel_ckb_funding_amount: 25000000000           # your contribution as acceptor\n\n  # Fee policy\n  tlc_fee_proportional_millionths: 1000   # 0.1% forwarding fee\n  tlc_expiry_delta: 86400000              # 1 day expiry window\n```\n\n<Callout type=\"warning\">\n  Without a publicly reachable address, other nodes cannot connect to you. You must set `announced_addrs` to your public IP or use a relay/VPN service.\n</Callout>",
       "url": "/docs/concept/routing/multi-hop",
       "source": "docs/concept/routing/multi-hop.mdx"
     },
     {
       "id": "chunk-641",
       "title": "Multi-Hop Payments",
-      "content": "<Callout type=\"warning\">\n  Without a publicly reachable address, other nodes cannot connect to you. You must set `announced_addrs` to your public IP or use a relay/VPN service.\n</Callout>\n\n### Maintaining Liquidity\n\nThe main operational challenge for relay nodes is **liquidity balance**. After forwarding many payments in one direction, a channel becomes one-sided: your local balance depletes, and you can no longer forward in that direction.\n\n```\nChannel with Node A:   local: 10 CKB   remote: 490 CKB  (cannot forward A → you)\nChannel with Node B:   local: 490 CKB  remote: 10 CKB   (cannot forward you → B)\n```",
+      "content": "### Maintaining Liquidity\n\nThe main operational challenge for relay nodes is **liquidity balance**. After forwarding many payments in one direction, a channel becomes one-sided: your local balance depletes, and you can no longer forward in that direction.\n\n```\nChannel with Node A:   local: 10 CKB   remote: 490 CKB  (cannot forward A → you)\nChannel with Node B:   local: 490 CKB  remote: 10 CKB   (cannot forward you → B)\n```\n\nThe solution is [channel rebalancing](/docs/concept/channels/channel-rebalancing): using circular payments to shift liquidity between channels. You can rebalance automatically with `send_payment` and `allow_self_payment: true`, or manually by specifying an explicit route with `build_router` and `send_payment_with_router`.",
       "url": "/docs/concept/routing/multi-hop",
       "source": "docs/concept/routing/multi-hop.mdx"
     },
     {
       "id": "chunk-642",
       "title": "Multi-Hop Payments",
-      "content": "The solution is [channel rebalancing](/docs/concept/channels/channel-rebalancing): using circular payments to shift liquidity between channels. You can rebalance automatically with `send_payment` and `allow_self_payment: true`, or manually by specifying an explicit route with `build_router` and `send_payment_with_router`.\n\nMonitor your channel balances regularly with `fnn-cli channel list_channels` and rebalance proactively before channels become one-sided.\n\n### Monitoring Forwarding Activity\n\nCheck which payments have been forwarded through your node and track earned fees:\n\n```bash\n# List all payments (including forwarded ones)\nfnn-cli payment list_payments\n\n# Check a specific payment's status and fee\nfnn-cli payment get_payment --payment-hash 0x...",
+      "content": "Monitor your channel balances regularly with `fnn-cli channel list_channels` and rebalance proactively before channels become one-sided.\n\n### Monitoring Forwarding Activity\n\nCheck which payments have been forwarded through your node and track earned fees:\n\n```bash\n# List all payments (including forwarded ones)\nfnn-cli payment list_payments\n\n# Check a specific payment's status and fee\nfnn-cli payment get_payment --payment-hash 0x...\n\n# Verify your node is visible in the network graph\nfnn-cli graph graph_nodes\n```\n\n## Related Topics",
       "url": "/docs/concept/routing/multi-hop",
       "source": "docs/concept/routing/multi-hop.mdx"
     },
     {
       "id": "chunk-643",
       "title": "Multi-Hop Payments",
-      "content": "# Verify your node is visible in the network graph\nfnn-cli graph graph_nodes\n```\n\n## Related Topics\n\n- [Trampoline Routing](/docs/concept/routing/trampoline-routing) — delegating pathfinding to trampoline nodes for lightweight clients\n- [Payment Lifecycle](/docs/concept/payments/payment-lifecycle) — the state machine behind every payment attempt\n- [Invoice](/docs/concept/payments/invoice-guide) — creating and paying invoices\n- [Channel Rebalancing](/docs/concept/channels/channel-rebalancing) — keeping relay liquidity balanced\n- [Cross-Chain HTLC](/docs/res/cross-chain-htlc) — atomic swaps between Fiber and the Bitcoin Lightning Network\n- [Gossip Protocol](/docs/res/gossip-protocol) — how nodes discover channels and build the network graph",
+      "content": "- [Trampoline Routing](/docs/concept/routing/trampoline-routing) — delegating pathfinding to trampoline nodes for lightweight clients\n- [Payment Lifecycle](/docs/concept/payments/payment-lifecycle) — the state machine behind every payment attempt\n- [Invoice](/docs/concept/payments/invoice-guide) — creating and paying invoices\n- [Channel Rebalancing](/docs/concept/channels/channel-rebalancing) — keeping relay liquidity balanced\n- [Cross-Chain HTLC](/docs/res/cross-chain-htlc) — atomic swaps between Fiber and the Bitcoin Lightning Network\n- [Gossip Protocol](/docs/res/gossip-protocol) — how nodes discover channels and build the network graph",
       "url": "/docs/concept/routing/multi-hop",
       "source": "docs/concept/routing/multi-hop.mdx"
     },
@@ -5540,14 +5568,14 @@
     {
       "id": "chunk-791",
       "title": "Multi-hop Transfers",
-      "content": "import { Callout } from 'fumadocs-ui/components/callout';\nimport { Tabs, Tab } from 'fumadocs-ui/components/tabs';\n\n## TL;DR\n\nRun two local v0.9.1 nodes, connect each one to a different public Testnet relay, open two public channels, and pay an invoice from Node A to Node B. Neither local node needs a public IP.\n\n~~~text\n┌────────┐       ┌────────┐       ┌────────┐       ┌────────┐\n│ Node A │ ────▶ │ bottle │ ────▶ │ bracer │ ────▶ │ Node B │\n│ :8227  │       │ public │       │ public │       │ :8237  │\n└────────┘       └────────┘       └────────┘       └────────┘\n  sender           relay 1          relay 2          receiver\n~~~\n\nFiber supports two routing modes:",
+      "content": "import { Callout } from 'fumadocs-ui/components/callout';\nimport { Tabs, Tab } from 'fumadocs-ui/components/tabs';\n\n## TL;DR\n\nRun two local v0.10.0 nodes, connect each one to a different public Testnet relay, open two public channels, and pay an invoice from Node A to Node B. Neither local node needs a public IP.\n\n~~~text\n┌────────┐       ┌────────┐       ┌────────┐       ┌────────┐\n│ Node A │ ────▶ │ bottle │ ────▶ │ bracer │ ────▶ │ Node B │\n│ :8227  │       │ public │       │ public │       │ :8237  │\n└────────┘       └────────┘       └────────┘       └────────┘\n  sender           relay 1          relay 2          receiver\n~~~\n\nFiber supports two routing modes:",
       "url": "/docs/quick-start/multi-hop-transfer",
       "source": "docs/quick-start/multi-hop-transfer.mdx"
     },
     {
       "id": "chunk-792",
       "title": "Multi-hop Transfers",
-      "content": "- **Gossip routing**: Node A learns the network graph and builds the route.\n- **Trampoline routing**: Node A delegates route selection to a relay, useful for clients without a complete graph.\n\n## Prerequisites\n\n- Complete [Basic Transfer](/docs/quick-start/basic-transfer) first.\n- Use the v0.9.1 <code>fnn</code>, <code>fnn-cli</code>, and <code>config/testnet/config.yml</code> files from the same [release package](https://github.com/nervosnetwork/fiber/releases/tag/v0.9.1).\n- Fund **each** local node with at least 561 Testnet CKB: 499 CKB for the channel, about 61 CKB for a change cell, and a small transaction-fee margin.",
+      "content": "- **Gossip routing**: Node A learns the network graph and builds the route.\n- **Trampoline routing**: Node A delegates route selection to a relay, useful for clients without a complete graph.\n\n## Prerequisites\n\n- Complete [Basic Transfer](/docs/quick-start/basic-transfer) first.\n- Use the v0.10.0 <code>fnn</code>, <code>fnn-cli</code>, and <code>config/testnet/config.yml</code> files from the same [release package](https://github.com/nervosnetwork/fiber/releases/tag/v0.10.0).\n- Fund **each** local node with at least 562 Testnet CKB: 500 CKB for the channel, about 61 CKB for a change cell, and a small transaction-fee margin.",
       "url": "/docs/quick-start/multi-hop-transfer",
       "source": "docs/quick-start/multi-hop-transfer.mdx"
     },
@@ -5596,28 +5624,28 @@
     {
       "id": "chunk-799",
       "title": "Multi-hop Transfers",
-      "content": "await nodeB.connectPeer({\n  address: \"/dns4/bracer.fiber.channel/tcp/8119/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC4F3p89\",\n  pubkey: \"0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc\",\n  save: true,\n});\n~~~\n  </Tab>\n</Tabs>\n\nRun <code>peer list_peers</code> on both local RPC endpoints and confirm that the expected relay pubkey appears.\n\n## 3. Open Both Public Channels\n\nThe documented public relays auto-accept a channel funded with at least 499 CKB. In shannons, 499 CKB is <code>49900000000</code>; its RPC hex quantity is <code>0xb9e459300</code>.",
+      "content": "await nodeB.connectPeer({\n  address: \"/dns4/bracer.fiber.channel/tcp/8119/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC4F3p89\",\n  pubkey: \"0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc\",\n  save: true,\n});\n~~~\n  </Tab>\n</Tabs>\n\nRun <code>peer list_peers</code> on both local RPC endpoints and confirm that the expected relay pubkey appears.\n\n## 3. Open Both Public Channels\n\nFund each channel with 500 CKB, including 100 CKB for on-chain settlement. In shannons, 500 CKB is <code>50000000000</code>; its RPC hex quantity is <code>0xba43b7400</code>.",
       "url": "/docs/quick-start/multi-hop-transfer",
       "source": "docs/quick-start/multi-hop-transfer.mdx"
     },
     {
       "id": "chunk-800",
       "title": "Multi-hop Transfers",
-      "content": "<Tabs items={['CLI', 'RPC', 'CCC']}>\n  <Tab value=\"CLI\">\n~~~sh\n# Node A ↔ bottle\n./fnn-cli --url http://127.0.0.1:8227 channel open_channel \\\n  --pubkey 02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71 \\\n  --funding-amount 49900000000 \\\n  --public true",
+      "content": "<Tabs items={['CLI', 'RPC', 'CCC']}>\n  <Tab value=\"CLI\">\n~~~sh\n# Node A ↔ bottle\n./fnn-cli --url http://127.0.0.1:8227 channel open_channel \\\n  --pubkey 02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71 \\\n  --funding-amount 50000000000 \\\n  --public true",
       "url": "/docs/quick-start/multi-hop-transfer",
       "source": "docs/quick-start/multi-hop-transfer.mdx"
     },
     {
       "id": "chunk-801",
       "title": "Multi-hop Transfers",
-      "content": "# Node B ↔ bracer\n./fnn-cli --url http://127.0.0.1:8237 channel open_channel \\\n  --pubkey 0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc \\\n  --funding-amount 49900000000 \\\n  --public true\n~~~\n  </Tab>\n  <Tab value=\"RPC\">\n~~~sh\n# Node A ↔ bottle\ncurl -s http://127.0.0.1:8227 \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"id\": 2, \"jsonrpc\": \"2.0\", \"method\": \"open_channel\",\n    \"params\": [{\n      \"pubkey\": \"02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71\",\n      \"funding_amount\": \"0xb9e459300\",\n      \"public\": true\n    }]\n  }'",
+      "content": "# Node B ↔ bracer\n./fnn-cli --url http://127.0.0.1:8237 channel open_channel \\\n  --pubkey 0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc \\\n  --funding-amount 50000000000 \\\n  --public true\n~~~\n  </Tab>\n  <Tab value=\"RPC\">\n~~~sh\n# Node A ↔ bottle\ncurl -s http://127.0.0.1:8227 \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"id\": 2, \"jsonrpc\": \"2.0\", \"method\": \"open_channel\",\n    \"params\": [{\n      \"pubkey\": \"02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71\",\n      \"funding_amount\": \"0xba43b7400\",\n      \"public\": true\n    }]\n  }'",
       "url": "/docs/quick-start/multi-hop-transfer",
       "source": "docs/quick-start/multi-hop-transfer.mdx"
     },
     {
       "id": "chunk-802",
       "title": "Multi-hop Transfers",
-      "content": "# Node B ↔ bracer\ncurl -s http://127.0.0.1:8237 \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"id\": 2, \"jsonrpc\": \"2.0\", \"method\": \"open_channel\",\n    \"params\": [{\n      \"pubkey\": \"0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc\",\n      \"funding_amount\": \"0xb9e459300\",\n      \"public\": true\n    }]\n  }'\n~~~\n  </Tab>\n  <Tab value=\"CCC\">\n~~~typescript\nawait nodeA.openChannel({\n  pubkey: \"02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71\",\n  fundingAmount: \"0xb9e459300\",\n  public: true,\n});\n\nawait nodeB.openChannel({\n  pubkey: \"0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc\",\n  fundingAmount: \"0xb9e459300\",\n  public: true,\n});\n~~~\n  </Tab>\n</Tabs>",
+      "content": "# Node B ↔ bracer\ncurl -s http://127.0.0.1:8237 \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"id\": 2, \"jsonrpc\": \"2.0\", \"method\": \"open_channel\",\n    \"params\": [{\n      \"pubkey\": \"0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc\",\n      \"funding_amount\": \"0xba43b7400\",\n      \"public\": true\n    }]\n  }'\n~~~\n  </Tab>\n  <Tab value=\"CCC\">\n~~~typescript\nawait nodeA.openChannel({\n  pubkey: \"02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71\",\n  fundingAmount: \"0xba43b7400\",\n  public: true,\n});\n\nawait nodeB.openChannel({\n  pubkey: \"0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc\",\n  fundingAmount: \"0xba43b7400\",\n  public: true,\n});\n~~~\n  </Tab>\n</Tabs>",
       "url": "/docs/quick-start/multi-hop-transfer",
       "source": "docs/quick-start/multi-hop-transfer.mdx"
     },
@@ -5659,7 +5687,7 @@
     {
       "id": "chunk-808",
       "title": "Multi-hop Transfers",
-      "content": "Wait for both closing transactions to confirm before deleting either data directory. Use <code>force: true</code> only if the peer is unavailable; a force close locks funds until the commitment delay passes.\n\n## Next Steps\n\n- [Network Resources](/docs/quick-start/network-resources) — current relay addresses, faucets, explorers, and dashboards\n- [Operate a Node](/docs/operate) — backups, monitoring, and production configuration",
+      "content": "Wait for both closing transactions to confirm before deleting either data directory. Use <code>force: true</code> only if the peer is unavailable; a force close locks funds until the commitment delay passes.\n\n## Next Steps\n\n- [Network Resources](/docs/quick-start/network-resources) — current relay addresses, faucets, explorers, and dashboards\n- [Operate a Node](/docs/operate/connect-nodes) — backups, monitoring, and production configuration",
       "url": "/docs/quick-start/multi-hop-transfer",
       "source": "docs/quick-start/multi-hop-transfer.mdx"
     },
@@ -5701,14 +5729,14 @@
     {
       "id": "chunk-814",
       "title": "Network Resources",
-      "content": "```\n┌───────┐        ┌───────┐        ┌───────┐        ┌───────┐\n│ nodeA │ ─────▶ │ node1 │ ─────▶ │ node2 │ ─────▶ │ nodeB │\n│:8227  │        │public │        │public │        │:8237  │\n└───────┘        └───────┘        └───────┘        └───────┘\n  sender        relay node 1     relay node 2      receiver\n```\n\nLocal nodes (nodeA, nodeB) do not need to expose a public address — they connect through the public relay nodes.\n\n## Channel Capacity\n\nWhen opening a channel, each side must reserve **99 CKB** (98 CKB for commitment lock + 1 CKB for shutdown transaction fee). This reserved amount is not available for off-chain payments.",
+      "content": "```\n┌───────┐        ┌───────┐        ┌───────┐        ┌───────┐\n│ nodeA │ ─────▶ │ node1 │ ─────▶ │ node2 │ ─────▶ │ nodeB │\n│:8227  │        │public │        │public │        │:8237  │\n└───────┘        └───────┘        └───────┘        └───────┘\n  sender        relay node 1     relay node 2      receiver\n```\n\nLocal nodes (nodeA, nodeB) do not need to expose a public address — they connect through the public relay nodes.\n\n## Channel Capacity\n\nEach side of a new Fiber v0.10.0 channel reserves **100 CKB**. This reserved amount is not available for off-chain payments.\n\n**Example**: For a Fiber v0.10.0 channel, if you fund 500 CKB and the public node contributes 250 CKB:\n- Your available balance: 500 - 100 = **400 CKB**\n- Public node available: 250 - 100 = **150 CKB**\n\n## Node Downloads",
       "url": "/docs/quick-start/network-resources",
       "source": "docs/quick-start/network-resources.mdx"
     },
     {
       "id": "chunk-815",
       "title": "Network Resources",
-      "content": "**Example**: If you fund 499 CKB and the public node contributes 250 CKB:\n- Your available balance: 499 - 99 = **400 CKB**\n- Public node available: 250 - 99 = **151 CKB**\n\n## Node Downloads\n\nDownload the pinned [Fiber Node v0.9.1 release](https://github.com/nervosnetwork/fiber/releases/tag/v0.9.1). Choose the asset matching your operating system and CPU architecture; each archive includes `fnn`, `fnn-cli`, and network config files.\n\n## Getting Help\n\n- [GitHub Issues](https://github.com/nervosnetwork/fiber/issues) — bug reports and feature requests\n- [Fiber Documentation](/docs) — full documentation",
+      "content": "Download the pinned [Fiber Node v0.9.1 release](https://github.com/nervosnetwork/fiber/releases/tag/v0.9.1). Choose the asset matching your operating system and CPU architecture; each archive includes `fnn`, `fnn-cli`, and network config files.\n\n## Getting Help\n\n- [GitHub Issues](https://github.com/nervosnetwork/fiber/issues) — bug reports and feature requests\n- [Fiber Documentation](/docs) — full documentation",
       "url": "/docs/quick-start/network-resources",
       "source": "docs/quick-start/network-resources.mdx"
     },
@@ -5834,7 +5862,7 @@
     {
       "id": "chunk-833",
       "title": "Run a WASM Node",
-      "content": "```bash\nnpm install @nervosnetwork/fiber-js@0.9.1\n# or\npnpm add @nervosnetwork/fiber-js@0.9.1\n```\n\nDownload the v0.9.1 Testnet config (the same template included in the native release archives) and serve it from your app:\n\n```bash\nmkdir -p public/fiber-config\ncurl --fail --location \\\n  --output public/fiber-config/testnet.yml \\\n  https://raw.githubusercontent.com/nervosnetwork/fiber/v0.9.1/config/testnet/config.yml\n```\n\nThe native template contains TCP bootnodes, which browsers cannot reach. Edit the existing `fiber` fields in `testnet.yml` to use browser-reachable WSS peers and avoid announcing a browser-local address. For example:",
+      "content": "```bash\nnpm install @nervosnetwork/fiber-js@0.10.0\n# or\npnpm add @nervosnetwork/fiber-js@0.10.0\n```\n\nDownload the v0.10.0 Testnet config (the same template included in the native release archives) and serve it from your app:\n\n```bash\nmkdir -p public/fiber-config\ncurl --fail --location \\\n  --output public/fiber-config/testnet.yml \\\n  https://raw.githubusercontent.com/nervosnetwork/fiber/v0.10.0/config/testnet/config.yml\n```\n\nThe native template contains TCP bootnodes, which browsers cannot reach. Edit the existing `fiber` fields in `testnet.yml` to use browser-reachable WSS peers and avoid announcing a browser-local address. For example:",
       "url": "/docs/quick-start/run-a-node/fiberjs",
       "source": "docs/quick-start/run-a-node/fiberjs.mdx"
     },
@@ -5862,14 +5890,14 @@
     {
       "id": "chunk-837",
       "title": "Run a WASM Node",
-      "content": "> **Expected Output:** The node initializes, connects to a configured `/ws/` or `/wss/` peer, and starts syncing. `nodeInfo()` returns your node's pubkey, `version: \"0.9.1\"`, and chain info; `listPeers()` should report at least one peer when the selected public node is reachable.\n\n## Common Workflows\n\n### Open a Channel and Send a Payment\n\nReplace `peerPubkey` and `peerAddress` with values for the same target peer. `openChannel()` requires the CKB secret key passed to `start()` to control spendable CKB. Browser wallet integrations usually use `openChannelWithExternalFunding()` instead.",
+      "content": "> **Expected Output:** The node initializes, connects to a configured `/ws/` or `/wss/` peer, and starts syncing. `nodeInfo()` returns your node's pubkey, `version: \"0.10.0\"`, and chain info; `listPeers()` should report at least one peer when the selected public node is reachable.\n\n## Common Workflows\n\n### Open a Channel and Send a Payment\n\nReplace `peerPubkey` and `peerAddress` with values for the same target peer. `openChannel()` requires the CKB secret key passed to `start()` to control spendable CKB. Browser wallet integrations usually use `openChannelWithExternalFunding()` instead.",
       "url": "/docs/quick-start/run-a-node/fiberjs",
       "source": "docs/quick-start/run-a-node/fiberjs.mdx"
     },
     {
       "id": "chunk-838",
       "title": "Run a WASM Node",
-      "content": "```ts\nconst toRpcHex = (value: bigint): `0x${string}` =>\n  `0x${value.toString(16)}` as `0x${string}`;\nconst ckb = (amount: bigint): `0x${string}` => toRpcHex(amount * 100_000_000n);\nconst randomHash = (): `0x${string}` => {\n  const bytes = crypto.getRandomValues(new Uint8Array(32));\n  return `0x${Array.from(bytes)\n    .map((byte) => byte.toString(16).padStart(2, \"0\"))\n    .join(\"\")}` as `0x${string}`;\n};\n\nconst peerPubkey = \"<peer_pubkey>\";\nconst peerAddress = \"<peer_wss_multiaddr>\";\n\n// Connect to a browser-reachable peer.\nawait fiber.connectPeer({\n  address: peerAddress,\n  save: true,\n});\n\n// Open a channel. The amount is a CKB RPC hex string in shannons.\nawait fiber.openChannel({\n  pubkey: peerPubkey,\n  funding_amount: ckb(499n),\n  public: true,\n});",
+      "content": "```ts\nconst toRpcHex = (value: bigint): `0x${string}` =>\n  `0x${value.toString(16)}` as `0x${string}`;\nconst ckb = (amount: bigint): `0x${string}` => toRpcHex(amount * 100_000_000n);\nconst randomHash = (): `0x${string}` => {\n  const bytes = crypto.getRandomValues(new Uint8Array(32));\n  return `0x${Array.from(bytes)\n    .map((byte) => byte.toString(16).padStart(2, \"0\"))\n    .join(\"\")}` as `0x${string}`;\n};\n\nconst peerPubkey = \"<peer_pubkey>\";\nconst peerAddress = \"<peer_wss_multiaddr>\";\n\n// Connect to a browser-reachable peer.\nawait fiber.connectPeer({\n  address: peerAddress,\n  save: true,\n});\n\n// Open a channel. The amount is a CKB RPC hex string in shannons.\nawait fiber.openChannel({\n  pubkey: peerPubkey,\n  funding_amount: ckb(500n),\n  public: true,\n});",
       "url": "/docs/quick-start/run-a-node/fiberjs",
       "source": "docs/quick-start/run-a-node/fiberjs.mdx"
     },
@@ -6359,14 +6387,14 @@
     {
       "id": "chunk-908",
       "title": "Fiber Cheat Code",
-      "content": "| Parameter | Purpose | Default / Typical Value |\n|-----------|---------|------------------------|\n| **Reserved CKB** | Channel reserve for lock and fees | 99 CKB (98 commitment + 1 shutdown fee) |\n| `tlc_fee_proportional_millionths` | Forwarding fee rate | 1000 (= 0.1%) |\n| `tlc_min_value` | Minimum TLC value to forward | 0 (any amount) |\n| `tlc_expiry_delta` | TLC expiry window (milliseconds) | 14400000 (4 hours) |\n| `commitment_delay_epoch` | Commitment delay / to-self delay | 1 epoch (~4 hours) |\n| `max_tlc_value_in_flight` | Max total TLC value in flight | `u128::MAX` by default; set at channel open, not updatable |\n| `max_tlc_number_in_flight` | Max number of TLCs in flight | 125 |\n| `pending_channels_number_limit` | Global max pending channel openings | 100 |\n| `to_be_accepted_channels_number_limit` | Max pending channel openings from one peer | 20 |\n| `open_channel_auto_accept_min_ckb_funding_amount` | Min CKB funding for auto-accept | Built-in default: 10000000000 (100 CKB); public nodes commonly require 499 CKB funding |\n| `auto_accept_channel_ckb_funding_amount` | Auto-accept contribution | Built-in default: 9900000000 (99 CKB); public nodes commonly contribute 25000000000 (250 CKB) |",
+      "content": "| Parameter | Purpose | Default / Typical Value |\n|-----------|---------|------------------------|\n| **Reserved CKB** | Channel reserve for lock and fees | 100 CKB for new Fiber v0.10.0 channels |\n| `tlc_fee_proportional_millionths` | Forwarding fee rate | 1000 (= 0.1%) |\n| `tlc_min_value` | Minimum TLC value to forward | 0 (any amount) |\n| `tlc_expiry_delta` | TLC expiry window (milliseconds) | 14400000 (4 hours) |\n| `commitment_delay_epoch` | Commitment delay / to-self delay | 1 epoch (~4 hours) |\n| `max_tlc_value_in_flight` | Max total TLC value in flight | `u128::MAX` by default; set at channel open, not updatable |\n| `max_tlc_number_in_flight` | Max number of TLCs in flight | 125 |\n| `pending_channels_number_limit` | Global max pending channel openings | 100 |\n| `to_be_accepted_channels_number_limit` | Max pending channel openings from one peer | 20 |\n| `open_channel_auto_accept_min_ckb_funding_amount` | Min CKB funding for auto-accept | Built-in default: 10000000000 (100 CKB); public nodes commonly require 499 CKB funding |\n| `auto_accept_channel_ckb_funding_amount` | Auto-accept contribution | Built-in default: 9900000000 (99 CKB); public nodes commonly contribute 25000000000 (250 CKB) |",
       "url": "/docs/res/cheat-code",
       "source": "docs/res/cheat-code.mdx"
     },
     {
       "id": "chunk-909",
       "title": "Fiber Cheat Code",
-      "content": "## Capacity Formula\n\nFor CKB channels, each side must reserve CKB for on-chain operations:\n\n```\nAvailable Balance = Funded Amount − 99 CKB\n```\n\n**Example**: Fund 499 CKB → 499 − 99 = **400 CKB** available for off-chain payments.\n\n<Callout type=\"warning\">\n  The 99 CKB reserve is **per side**. In a two-party CKB channel, both sides must reserve this amount. This reserve is not available for CKB payments — it covers the commitment transaction lock and the shutdown transaction fee. For UDT channels, the channel balance is in token base units, but the funding transaction still needs enough CKB capacity and fees.\n</Callout>\n\n## Testnet Resources",
+      "content": "## Capacity Formula\n\nFor CKB channels, each side must reserve CKB for on-chain operations:\n\n```\nAvailable Balance = Funded Amount − Settlement Reserve\n```\n\n**Example**: Fund 500 CKB on Fiber v0.10.0 → 500 − 100 = **400 CKB** available for off-chain payments.\n\n<Callout type=\"warning\">\n  The settlement reserve is **per side**. In a two-party CKB channel, both sides must reserve this amount. This reserve is not available for CKB payments — it covers the commitment transaction lock and the shutdown transaction fee. For UDT channels, the channel balance is in token base units, but the funding transaction still needs enough CKB capacity and fees.\n</Callout>\n\n## Testnet Resources",
       "url": "/docs/res/cheat-code",
       "source": "docs/res/cheat-code.mdx"
     },
@@ -10228,5 +10256,5 @@
       "source": "specs/trampoline-routing.md"
     }
   ],
-  "generatedAt": "2026-09-17T09:18:59.447Z"
+  "generatedAt": "2026-11-16T05:04:52.771Z"
 }
