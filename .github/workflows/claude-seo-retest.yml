@@ -1,27 +1,32 @@
-name: Claude SEO public production reassessment
+name: Claude SEO results reassessment November 16
 
 on:
   push:
-    branches: [codex/seo-retest-crawl-20261113]
+    branches: [codex/seo-outcomes-retest-20261116]
 
 permissions:
   contents: read
 
 concurrency:
-  group: claude-seo-retest-20261113
+  group: claude-seo-retest-20261116
   cancel-in-progress: false
 
 jobs:
   collect:
+    strategy:
+      fail-fast: false
+      matrix:
+        site: [fiber, nervos, ckba]
+    name: Public evidence - ${{ matrix.site }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     env:
       NO_PROXY: '*'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0, from pinned tool CI
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.14'
       - name: Prepare exact tool version and isolated runtime
@@ -41,23 +46,32 @@ jobs:
           "$seo_task_dir/tool/scripts/claude-seo" doctor --json > "$GITHUB_WORKSPACE/seo-retest-evidence/doctor.json"
           git -C "$seo_task_dir/tool" rev-parse HEAD > "$GITHUB_WORKSPACE/seo-retest-evidence/tool-commit.txt"
           python --version > "$GITHUB_WORKSPACE/seo-retest-evidence/python-version.txt"
-      - name: Nervos Docs full public crawl
+      - name: Full public crawl
+        id: crawl
         continue-on-error: true
-        run: python "$SEO_TASK_ROOT/collect_evidence.py" nervos --concurrency 1
-      - name: Fiber rendered and specialist evidence
-        continue-on-error: true
-        run: python "$SEO_TASK_ROOT/fiber-specialist.py"
-      - name: Nervos Docs rendered and specialist evidence
-        continue-on-error: true
-        run: python "$SEO_TASK_ROOT/nervos-specialist.py"
-      - name: CKBA rendered and specialist evidence
-        continue-on-error: true
-        run: python "$SEO_TASK_ROOT/ckba-specialist.py"
-      - name: Retain all evidence and diagnostics
+        run: python "$SEO_TASK_ROOT/collect_evidence.py" '${{ matrix.site }}' --concurrency 1
+      - name: Retain early crawl evidence
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: claude-seo-live-retest-evidence
+          name: seo-crawl-${{ matrix.site }}-20261116
+          path: seo-retest-evidence/
+          retention-days: 30
+          if-no-files-found: error
+      - name: Provide CJK glyphs for browser validation
+        if: steps.crawl.outcome == 'success'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+          fc-match ':lang=zh' > seo-retest-evidence/cjk-font.txt
+      - name: Render and specialist evidence
+        if: steps.crawl.outcome == 'success'
+        run: python "$SEO_TASK_ROOT/${{ matrix.site }}-specialist.py"
+      - name: Retain complete evidence and diagnostics
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: seo-full-${{ matrix.site }}-20261116
           path: seo-retest-evidence/
           retention-days: 30
           if-no-files-found: error
