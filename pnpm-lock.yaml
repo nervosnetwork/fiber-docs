@@ -1,11 +1,12 @@
 lockfileVersion: 5.4
 
 overrides:
+  '@fiber-pay/sdk>@nervosnetwork/fiber-js': 0.10.0
   postcss: ^8.5.10
 
 specifiers:
   '@fiber-pay/sdk': 0.3.1
-  '@nervosnetwork/fiber-js': 0.9.1
+  '@nervosnetwork/fiber-js': 0.10.0
   '@next/third-parties': ^16.3.1
   '@tailwindcss/postcss': ^4.1.8
   '@types/mdx': ^2.0.13
@@ -29,8 +30,8 @@ specifiers:
   zod: ^3.25.56
 
 dependencies:
-  '@fiber-pay/sdk': 0.3.1_pufbjbsjyzlr4yvhci4geq3h7q
-  '@nervosnetwork/fiber-js': 0.9.1
+  '@fiber-pay/sdk': 0.3.1_lqe6y4yp7w4o7xecivrzovpzvy
+  '@nervosnetwork/fiber-js': 0.10.0
   '@next/third-parties': 16.3.1_next@16.4.1+react@19.2.3
   fumadocs-core: 15.5.1_yf7ofb7iomfybiyhdwyazywyj4
   fumadocs-mdx: 11.6.7_wosjqfnxs4dnjq7xoyjm553ocy
@@ -552,7 +553,7 @@ packages:
     dev: true
     optional: true
 
-  /@fiber-pay/sdk/0.3.1_pufbjbsjyzlr4yvhci4geq3h7q:
+  /@fiber-pay/sdk/0.3.1_lqe6y4yp7w4o7xecivrzovpzvy:
     resolution: {integrity: sha512-p6WXWsW1yJp+nbxFemouCycm/1zUd0qjYbSuTSehtOcLFQ+olwuDJA+23XNs3TegGjDeIT0PuS4EPqz9+cSn4Q==}
     engines: {node: '>=20'}
     peerDependencies:
@@ -564,7 +565,7 @@ packages:
       express:
         optional: true
     dependencies:
-      '@nervosnetwork/fiber-js': 0.9.1
+      '@nervosnetwork/fiber-js': 0.10.0
       '@noble/hashes': 2.2.0
       macaroon: 3.0.4
       zod: 4.4.3
@@ -929,8 +930,8 @@ packages:
       react: 19.2.3
     dev: false
 
-  /@nervosnetwork/fiber-js/0.9.1:
-    resolution: {integrity: sha512-C+9rKvth5AkcdWUZh6cf1QY7yDuL7zLJljCpykPsMFT5jkgamd04myRVjQVxxzjg2a4cbHd+z0FB/SCkLYzqBg==}
+  /@nervosnetwork/fiber-js/0.10.0:
+    resolution: {integrity: sha512-0Kc8Mae83QrTUQvoIRNNzVW9ndKYbsMsFZVW8mP4tBloom2RrMrJBH/VKFg/oHEREx8fMFjhzH7R3byzKr1q8w==}
     dependencies:
       async-mutex: 0.5.0
       stream-browserify: 3.0.0

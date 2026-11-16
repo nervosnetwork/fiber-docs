@@ -13,6 +13,9 @@ export function CopyIconButton({ value, label }: { value: string; label: string 
   const request = useRef(0);
   const [feedback, setFeedback] = useState('');
   const [copied, setCopied] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const tooltipText = feedback || ((hovered || focused) && value ? label : '');
   const [position, setPosition] = useState({ left: 0, top: 0 });
 
   useEffect(() => {
@@ -25,7 +28,7 @@ export function CopyIconButton({ value, label }: { value: string; label: string 
   }, [value]);
 
   useLayoutEffect(() => {
-    if (!feedback) return;
+    if (!tooltipText) return;
     const updatePosition = () => {
       if (!button.current || !tooltip.current) return;
       const trigger = button.current.getBoundingClientRect();
@@ -42,7 +45,7 @@ export function CopyIconButton({ value, label }: { value: string; label: string 
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition, true);
     };
-  }, [feedback]);
+  }, [tooltipText]);
 
   async function copy() {
     const attempt = ++request.current;
@@ -67,14 +70,17 @@ export function CopyIconButton({ value, label }: { value: string; label: string 
   return (
     <>
       <button
-        aria-describedby={feedback ? id : undefined}
+        aria-describedby={tooltipText ? id : undefined}
         aria-label={label}
         className={styles.button}
         disabled={!value}
         onClick={() => void copy()}
-        onKeyDown={(event) => { if (event.key === 'Escape') setFeedback(''); }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        onKeyDown={(event) => { if (event.key === 'Escape') { setFeedback(''); setHovered(false); setFocused(false); } }}
         ref={button}
-        title={label}
         type="button"
       >
         <svg aria-hidden="true" fill="none" height="15" viewBox="0 0 16 16" width="15">
@@ -82,9 +88,9 @@ export function CopyIconButton({ value, label }: { value: string; label: string 
         </svg>
       </button>
       <span className={styles.srOnly} role="status">{feedback}</span>
-      {feedback && createPortal(
-        <span className={styles.tooltip} data-success={copied} id={id} ref={tooltip} role="tooltip" style={position}>
-          {feedback}
+      {tooltipText && createPortal(
+        <span className={styles.tooltip} data-success={copied} data-error={Boolean(feedback) && !copied} id={id} ref={tooltip} role="tooltip" style={position}>
+          {tooltipText}
         </span>,
         document.body,
       )}
