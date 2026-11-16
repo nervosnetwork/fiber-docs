@@ -1,6 +1,6 @@
 import type { FiberBrowserNode } from '@fiber-pay/sdk/browser';
 
-const channelCapacity = 50_000_000_000n;
+const channelCapacity = BigInt('50000000000');
 
 export const channelFundingGuidance =
   'Fund this address with more than 500 Testnet CKB. Opening the channel uses 500 CKB plus a separate on-chain transaction fee.';
