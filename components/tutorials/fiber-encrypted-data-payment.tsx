@@ -1522,7 +1522,7 @@ export function FiberEncryptedDataPaymentTutorial() {
           <p><a className={lesson.starterDownload} href="/downloads/fiber-encrypted-data-payment.zip" download>Download the starter project</a> and follow the README to run it locally. The standalone app has separate Seller and Buyer panels, so you can try handing off the offer JSON yourself.</p>
         </section>
       </main>
-      <TutorialFooter previousHref={liveTutorials[tutorialIndex - 1].href} nextHref={liveTutorials[tutorialIndex + 1]?.href} />
+      <TutorialFooter currentTutorialIndex={tutorialIndex} />
     </div>
   );
 }

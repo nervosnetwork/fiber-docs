@@ -62,7 +62,7 @@ export const liveTutorials: Tutorial[] = [
     shortTitle: 'Connect a WASM node',
     description:
       'Start a browser-based Fiber node, create a Testnet identity, and connect to a public peer.',
-    tags: ['React', 'WASM', 'WebSocket'],
+    tags: ['Browser node', 'Peer connection', 'WSS'],
     href: '/docs/build/connect-wasm-node',
   },
   {
@@ -74,20 +74,8 @@ export const liveTutorials: Tutorial[] = [
     shortTitle: 'Open a channel and send a payment',
     description:
       'Fund a Testnet channel and send your first off-chain payment through the Fiber network.',
-    tags: ['Channels', 'Payments', 'Fiber SDK'],
+    tags: ['Channel funding', 'Keysend'],
     href: '/docs/build/open-channel-payment',
-  },
-  {
-    id: 'multi-hop-invoice',
-    level: 'Hard',
-    mode: 'Testnet',
-    duration: '~25 min',
-    title: 'Send a Multi-Hop Invoice Payment',
-    shortTitle: 'Send a multi-hop invoice payment',
-    description:
-      'Create an invoice on a receiver node and pay it through one public Fiber intermediary.',
-    tags: ['Invoice', 'Multi-hop', 'WASM'],
-    href: '/docs/build/multi-hop-invoice',
   },
   {
     id: 'unidirectional-channel',
@@ -98,56 +86,8 @@ export const liveTutorials: Tutorial[] = [
     shortTitle: 'Open a unidirectional channel',
     description:
       'Open a private one-way channel, inspect the payer and acceptor roles, and send a forward payment.',
-    tags: ['One-way', 'Channels', 'Keysend'],
+    tags: ['Private channel', 'One-way payments', 'Channel roles'],
     href: '/docs/build/unidirectional-channel',
-  },
-  {
-    id: 'hold-invoice',
-    level: 'Hard',
-    mode: 'Testnet',
-    duration: '~20 min',
-    title: 'Build a Conditional Payment with a Hold Invoice',
-    shortTitle: 'Build a Hold Invoice payment',
-    description:
-      'Pause an Invoice at the receiver, then explicitly settle or cancel the payment.',
-    tags: ['Hold Invoice', 'Settle', 'Cancel'],
-    href: '/docs/build/hold-invoice',
-  },
-  {
-    id: 'encrypted-data-payment',
-    level: 'Hard',
-    mode: 'Testnet',
-    duration: '~30 min',
-    title: 'Unlock Encrypted Data with a Fiber Payment',
-    shortTitle: 'Unlock encrypted data with a payment',
-    description:
-      'Encrypt a result in one browser node, pay its Invoice from another, and decrypt with the revealed preimage.',
-    tags: ['Encryption', 'Invoice', 'Preimage'],
-    href: '/docs/build/encrypted-data-payment',
-  },
-  {
-    id: 'verified-result-payment',
-    level: 'Hard',
-    mode: 'Testnet',
-    duration: '~25 min',
-    title: 'Pay for a Verified Result',
-    shortTitle: 'Pay for a verified result',
-    description:
-      'Place a Hold Invoice payment, verify a structured result, and release or cancel payment from the verdict.',
-    tags: ['Verification', 'Hold Invoice', 'Conditional payment'],
-    href: '/docs/build/verified-result-payment',
-  },
-  {
-    id: 'rusd-payment',
-    level: 'Hard',
-    mode: 'Testnet',
-    duration: '~25 min',
-    title: 'Pay with RUSD over Fiber',
-    shortTitle: 'Pay with RUSD',
-    description:
-      'Fund a Testnet RUSD channel, inspect token liquidity, and send a stablecoin payment.',
-    tags: ['RUSD', 'UDT', 'Stablecoin'],
-    href: '/docs/build/rusd-payment',
   },
   {
     id: 'close-channel',
@@ -158,7 +98,67 @@ export const liveTutorials: Tutorial[] = [
     shortTitle: 'Close a channel and recover funds',
     description:
       'Cooperatively close a channel and follow its final balance back on-chain.',
-    tags: ['Shutdown', 'Recovery', 'Lifecycle'],
+    tags: ['Channel restore', 'Cooperative close', 'On-chain recovery'],
     href: '/docs/build/close-channel',
+  },
+  {
+    id: 'multi-hop-invoice',
+    level: 'Hard',
+    mode: 'Testnet',
+    duration: '~25 min',
+    title: 'Send a Multi-Hop Invoice Payment',
+    shortTitle: 'Send a multi-hop invoice payment',
+    description:
+      'Create an invoice on a receiver node and pay it through one public Fiber intermediary.',
+    tags: ['Invoice creation', 'Multi-hop routing', 'Route liquidity'],
+    href: '/docs/build/multi-hop-invoice',
+  },
+  {
+    id: 'hold-invoice',
+    level: 'Hard',
+    mode: 'Testnet',
+    duration: '~20 min',
+    title: 'Build a Conditional Payment with a Hold Invoice',
+    shortTitle: 'Build a Hold Invoice payment',
+    description:
+      'Pause an Invoice at the receiver, then explicitly settle or cancel the payment.',
+    tags: ['Hold invoice', 'Manual settlement'],
+    href: '/docs/build/hold-invoice',
+  },
+  {
+    id: 'verified-result-payment',
+    level: 'Hard',
+    mode: 'Testnet',
+    duration: '~25 min',
+    title: 'Pay for a Verified Result',
+    shortTitle: 'Pay for a verified result',
+    description:
+      'Place a Hold Invoice payment, verify a structured result, and release or cancel payment from the verdict.',
+    tags: ['Result verification', 'Conditional release'],
+    href: '/docs/build/verified-result-payment',
+  },
+  {
+    id: 'encrypted-data-payment',
+    level: 'Hard',
+    mode: 'Testnet',
+    duration: '~30 min',
+    title: 'Unlock Encrypted Data with a Fiber Payment',
+    shortTitle: 'Unlock encrypted data with a payment',
+    description:
+      'Encrypt a result in one browser node, pay its Invoice from another, and decrypt with the revealed preimage.',
+    tags: ['Payment preimage', 'AES-GCM', 'Data decryption'],
+    href: '/docs/build/encrypted-data-payment',
+  },
+  {
+    id: 'rusd-payment',
+    level: 'Hard',
+    mode: 'Testnet',
+    duration: '~25 min',
+    title: 'Pay with RUSD over Fiber',
+    shortTitle: 'Pay with RUSD',
+    description:
+      'Fund a Testnet RUSD channel, inspect token liquidity, and send a stablecoin payment.',
+    tags: ['UDT funding', 'Token liquidity', 'Stablecoin payment'],
+    href: '/docs/build/rusd-payment',
   },
 ];

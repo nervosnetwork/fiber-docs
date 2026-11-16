@@ -26,11 +26,13 @@ node, and the node used an encrypted WebSocket connection to reach Fiber
 Testnet.
 
 `@fiber-pay/sdk` provides the browser-facing APIs used here to create the node,
-manage its identity, observe its state, and connect it to peers. Install it in
-an existing TypeScript or JavaScript project with:
+manage its identity, observe its state, and connect it to peers. The tutorial uses
+Fiber JS 0.10.0. To use this setup in an existing npm project, set the SDK override
+and install both packages:
 
 ```bash
-npm install @fiber-pay/sdk
+npm pkg set 'overrides.@fiber-pay/sdk.@nervosnetwork/fiber-js=0.10.0'
+npm install --save-exact @fiber-pay/sdk@0.3.1 @nervosnetwork/fiber-js@0.10.0
 ```
 
 On the interactive page, hover or focus the dotted-underlined terms—Web Worker,

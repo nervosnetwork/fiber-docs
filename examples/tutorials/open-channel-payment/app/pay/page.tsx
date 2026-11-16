@@ -65,7 +65,7 @@ export default function PayPage() {
   const [connected, setConnected] = useState(false);
   const [address, setAddress] = useState('');
   const [balance, setBalance] = useState<bigint | null>(null);
-  const [channelAmount, setChannelAmount] = useState('499');
+  const [channelAmount, setChannelAmount] = useState('500');
   const [channelState, setChannelState] = useState('Not opened');
   const [channelReady, setChannelReady] = useState(false);
   const [channelHistory, setChannelHistory] = useState<string[]>([]);
@@ -149,7 +149,7 @@ export default function PayPage() {
   }
 
   async function open() {
-    if (!node.current || !connected || busy) return;
+    if (!node.current || !connected || busy || !enoughBalance) return;
     setBusy('channel');
     setError('');
     try {
@@ -197,7 +197,7 @@ export default function PayPage() {
 
   let enoughBalance = false;
   try {
-    enoughBalance = balance !== null && balance >= BigInt(ckbToHex(channelAmount));
+    enoughBalance = balance !== null && balance > BigInt(ckbToHex(channelAmount));
   } catch {
     enoughBalance = false;
   }
@@ -231,11 +231,11 @@ export default function PayPage() {
             <button disabled={busy !== null || (nodeState === 'running' && connected)} onClick={prepare}>{busy === 'prepare' ? 'Preparing…' : nodeState === 'running' && connected ? 'Node running' : 'Prepare browser node'}</button>
           </div>
           <div className="flow-row">
-            <b>2</b><div><strong>Fund the address</strong><code title={address}>{shorten(address)}</code><span>Balance: {formatCkb(balance)} · Faucet CKB may take up to 30s to confirm on-chain.</span></div>
+            <b>2</b><div><strong>Fund the address</strong><span>Keep more spendable Testnet CKB in this address than the channel amount. The funding transaction has a separate on-chain fee.</span><code title={address}>{shorten(address)}</code><span>Balance: {formatCkb(balance)} · Faucet CKB may take up to 30s to confirm on-chain.</span></div>
             <div className="row-actions"><a className={!address ? 'disabled' : ''} href={address ? 'https://faucet.nervos.org' : undefined} rel="noreferrer" target="_blank">Get CKB ↗</a><button className="secondary" disabled={!node.current || busy !== null} onClick={refresh}>{busy === 'refresh' ? 'Refreshing…' : 'Refresh'}</button></div>
           </div>
           <div className="flow-row">
-            <b>3</b><div><strong>Open a <span className="reserve-term" tabIndex={0} aria-describedby="reserve-tooltip">499 CKB<span id="reserve-tooltip" role="tooltip"><span className="reserve-title">499 CKB breakdown:</span><span className="reserve-list" role="list"><span role="listitem">400 CKB initially available for payments</span><span role="listitem">98 CKB reserved for the commitment cell used in on-chain settlement</span><span role="listitem">1 CKB reserved for the transaction fee when closing the channel</span></span></span></span> channel</strong><label><input aria-label="Channel funding amount in CKB" inputMode="decimal" onChange={(event) => setChannelAmount(event.target.value)} value={channelAmount} /><span>CKB</span></label></div>
+            <b>3</b><div><strong>Open a <span className="reserve-term" tabIndex={0} aria-describedby="reserve-tooltip">500 CKB<span id="reserve-tooltip" role="tooltip"><span className="reserve-title">500 CKB breakdown:</span><span className="reserve-list" role="list"><span role="listitem">400 CKB initially available for payments</span><span role="listitem">98 CKB reserved for the commitment cell used in on-chain settlement</span><span role="listitem">1 CKB reserved for the transaction fee when closing the channel</span></span></span></span> channel</strong><label><input aria-label="Channel funding amount in CKB" inputMode="decimal" onChange={(event) => setChannelAmount(event.target.value)} value={channelAmount} /><span>CKB</span></label></div>
             <button disabled={busy !== null || !connected || !enoughBalance || channelState !== 'Not opened'} onClick={open}>{busy === 'channel' ? 'Opening…' : channelReady ? 'Channel ready' : 'Open channel'}</button>
           </div>
 

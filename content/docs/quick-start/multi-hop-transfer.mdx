@@ -6,8 +6,8 @@ author: "sunchengzhu"
 authorUrl: "https://github.com/sunchengzhu"
 dependencies:
   - name: Fiber Node
-    minVersion: "0.9.1"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.1"
+    minVersion: "0.10.0"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.10.0"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -15,7 +15,7 @@ import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
 
 ## TL;DR
 
-Run two local v0.9.1 nodes, connect each one to a different public Testnet relay, open two public channels, and pay an invoice from Node A to Node B. Neither local node needs a public IP.
+Run two local v0.10.0 nodes, connect each one to a different public Testnet relay, open two public channels, and pay an invoice from Node A to Node B. Neither local node needs a public IP.
 
 ~~~text
 ┌────────┐       ┌────────┐       ┌────────┐       ┌────────┐
@@ -33,8 +33,8 @@ Fiber supports two routing modes:
 ## Prerequisites
 
 - Complete [Basic Transfer](/docs/quick-start/basic-transfer) first.
-- Use the v0.9.1 <code>fnn</code>, <code>fnn-cli</code>, and <code>config/testnet/config.yml</code> files from the same [release package](https://github.com/nervosnetwork/fiber/releases/tag/v0.9.1).
-- Fund **each** local node with at least 561 Testnet CKB: 499 CKB for the channel, about 61 CKB for a change cell, and a small transaction-fee margin.
+- Use the v0.10.0 <code>fnn</code>, <code>fnn-cli</code>, and <code>config/testnet/config.yml</code> files from the same [release package](https://github.com/nervosnetwork/fiber/releases/tag/v0.10.0).
+- Fund **each** local node with at least 562 Testnet CKB: 500 CKB for the channel, about 61 CKB for a change cell, and a small transaction-fee margin.
 
 <Callout type="warning">
 Testnet CKB has no real-world value, but opening a channel still creates an on-chain transaction and temporarily locks the funds. Use throwaway Testnet accounts and close both channels when the test is complete.
@@ -159,7 +159,7 @@ Run <code>peer list_peers</code> on both local RPC endpoints and confirm that th
 
 ## 3. Open Both Public Channels
 
-The documented public relays auto-accept a channel funded with at least 499 CKB. In shannons, 499 CKB is <code>49900000000</code>; its RPC hex quantity is <code>0xb9e459300</code>.
+Fund each channel with 500 CKB, including 100 CKB for on-chain settlement. In shannons, 500 CKB is <code>50000000000</code>; its RPC hex quantity is <code>0xba43b7400</code>.
 
 <Tabs items={['CLI', 'RPC', 'CCC']}>
   <Tab value="CLI">
@@ -167,13 +167,13 @@ The documented public relays auto-accept a channel funded with at least 499 CKB.
 # Node A ↔ bottle
 ./fnn-cli --url http://127.0.0.1:8227 channel open_channel \
   --pubkey 02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71 \
-  --funding-amount 49900000000 \
+  --funding-amount 50000000000 \
   --public true
 
 # Node B ↔ bracer
 ./fnn-cli --url http://127.0.0.1:8237 channel open_channel \
   --pubkey 0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc \
-  --funding-amount 49900000000 \
+  --funding-amount 50000000000 \
   --public true
 ~~~
   </Tab>
@@ -186,7 +186,7 @@ curl -s http://127.0.0.1:8227 \
     "id": 2, "jsonrpc": "2.0", "method": "open_channel",
     "params": [{
       "pubkey": "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
-      "funding_amount": "0xb9e459300",
+      "funding_amount": "0xba43b7400",
       "public": true
     }]
   }'
@@ -198,7 +198,7 @@ curl -s http://127.0.0.1:8237 \
     "id": 2, "jsonrpc": "2.0", "method": "open_channel",
     "params": [{
       "pubkey": "0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc",
-      "funding_amount": "0xb9e459300",
+      "funding_amount": "0xba43b7400",
       "public": true
     }]
   }'
@@ -208,13 +208,13 @@ curl -s http://127.0.0.1:8237 \
 ~~~typescript
 await nodeA.openChannel({
   pubkey: "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
-  fundingAmount: "0xb9e459300",
+  fundingAmount: "0xba43b7400",
   public: true,
 });
 
 await nodeB.openChannel({
   pubkey: "0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc",
-  fundingAmount: "0xb9e459300",
+  fundingAmount: "0xba43b7400",
   public: true,
 });
 ~~~

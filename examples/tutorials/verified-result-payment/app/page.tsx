@@ -190,7 +190,7 @@ export default function Page() {
     if (!node || !channelFundingReady(funding[role].balance)) return;
     setOpeningRoles((current) => updateOpeningRoles(current, role, true));
     try {
-      setStatus('Opening a 499 CKB Testnet channel. Confirmation can take a few minutes…');
+      setStatus('Opening a 500 CKB Testnet channel. Confirmation can take a few minutes…');
       const channel = await connectAndOpenChannel(node);
       if (role === 'customer') setCustomerChannel(channel);
       else setSolverChannel(channel);
@@ -570,8 +570,8 @@ function SetupParticipant({ channel, expanded, funding, label, locked, nodeRunni
       <em aria-hidden="true"/>
     </button>
     {expanded && <div className="setup-disclosure-body">
-      <div className="setup-task"><div className="funding"><span>{actionLabels.fund}</span><div><code title={funding.address}>{funding.address || 'Preparing address…'}</code><button disabled={!funding.address} onClick={() => funding.address && void navigator.clipboard.writeText(funding.address)} type="button">Copy</button></div><small>Balance: {formatCkb(funding.balance)} · Faucet CKB may take up to 30s to confirm on-chain.</small></div><div className="setup-actions"><a className={!canOpen ? 'primary' : ''} href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Get CKB ↗</a><button onClick={onRefresh} type="button">Refresh</button></div></div>
-      <div className="setup-task"><div><strong>{actionLabels.open}</strong><small>499 CKB</small></div><ActionHint id={`verified-${role}-channel-requirement`} label={`Open ${label} channel requirements`} reason={channelRequirement}><button className={canOpen && !actionState.disabled ? 'primary' : ''} disabled={locked || !canOpen || actionState.disabled} onClick={onOpen} type="button">{actionState.label}</button></ActionHint></div>
+      <div className="setup-task"><div className="funding"><span>{actionLabels.fund}</span><div><code title={funding.address}>{funding.address || 'Preparing address…'}</code><button disabled={!funding.address} onClick={() => funding.address && void navigator.clipboard.writeText(funding.address)} type="button">Copy</button></div><small>Balance: {formatCkb(funding.balance)} · Faucet CKB may take up to 30s to confirm on-chain.</small>{!channel && <small>Fund this address with more than 500 Testnet CKB. Opening the channel uses 500 CKB plus a separate on-chain transaction fee.</small>}</div><div className="setup-actions"><a className={!canOpen ? 'primary' : ''} href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Get CKB ↗</a><button onClick={onRefresh} type="button">Refresh</button></div></div>
+      <div className="setup-task"><div><strong>{actionLabels.open}</strong><small>500 CKB</small></div><ActionHint id={`verified-${role}-channel-requirement`} label={`Open ${label} channel requirements`} reason={channelRequirement}><button className={canOpen && !actionState.disabled ? 'primary' : ''} disabled={locked || !canOpen || actionState.disabled} onClick={onOpen} type="button">{actionState.label}</button></ActionHint></div>
       {channelHistory.length > 0 && <div className="channel-timeline"><span>Observed channel lifecycle</span><div>{channelHistory.map((state, index) => <span key={`${state}-${index}`}>{index > 0 && <i aria-hidden="true">→</i>}<b>{state}</b></span>)}{expectedChannelState && <span aria-label={`Waiting for ${expectedChannelState}`} className="pending"><i aria-hidden="true">→</i><b>{expectedChannelState}</b></span>}</div></div>}
     </div>}
   </section>;

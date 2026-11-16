@@ -27,7 +27,7 @@ import styles from './fiber-wasm-quickstart.module.css';
 import tutorialSource from './multi-hop-code.generated.json';
 import { detectMultiHopProfiles, defaultSenderKey, receiverKey, senderChoiceKey, receiverChoiceKey, profileSetupLabel, type NodeProfileChoice } from './multi-hop-setup';
 
-const channelAmount = '499';
+const channelAmount = '500';
 const steps = ['Set up', 'Create invoice', 'Pay invoice', 'Outcome'];
 
 type ChannelProgressStage =
@@ -101,7 +101,7 @@ function NodeSetup({
   onConnectAndOpen: () => Promise<void>;
 }) {
   const [openingRequested, setOpeningRequested] = useState(false);
-  const hasFunding = (runtime.balance ?? 0n) >= BigInt(ckbToHex(channelAmount));
+  const hasFunding = (runtime.balance ?? 0n) > BigInt(ckbToHex(channelAmount));
   const channelReady = isReadyState(channelState);
   const lifecycle = channelOpeningProgress(channelExists ? channelState : undefined);
   const pending = ['connecting', 'submitting', 'confirming'].includes(progressStage);
@@ -117,7 +117,7 @@ function NodeSetup({
     : !runtime.address ? 'Wait for the funding address.'
     : channelReady ? null
     : pending || channelExists ? 'Wait for CHANNEL_READY before paying.'
-    : !hasFunding ? 'Not enough Testnet CKB to open this channel.'
+    : !hasFunding ? 'Add more Testnet CKB to cover the separate channel funding transaction fee.'
     : runtime.busy ? 'Wait for the current action to finish.' : null;
   const channelAction = (
     <button
@@ -164,7 +164,7 @@ function NodeSetup({
               <code title={runtime.address}>{shorten(runtime.address)}</code>
               <CopyValue value={runtime.address} label="Copy address" iconOnly />
             </div>
-            <span>On-chain balance: <b>{hexToCkb(runtime.balance)} CKB</b>. Allow more than 499 CKB for funding and fees.</span><span>Faucet CKB may take up to 30s to confirm on-chain.</span>
+            <span>On-chain balance: <b>{hexToCkb(runtime.balance)} CKB</b>. Fund this address with more than 500 Testnet CKB. Opening the channel uses 500 CKB plus a separate on-chain transaction fee.</span><span>Faucet CKB may take up to 30s to confirm on-chain.</span>
           </div>
           <div className={styles.fundingActions}>
             <a className={`${styles.faucetButton} ${styles.demoAction} ${!hasFunding ? styles.demoPrimaryAction : ''}`} href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Get CKB ↗</a>
@@ -173,7 +173,7 @@ function NodeSetup({
         </div>
         <div className={styles.verifiedSetupTask}>
           <div className={styles.paymentFlowBody}>
-            <strong>Open a{' '}<ExplainedTerm explanation="The selected public peer requires at least 499 CKB to open a channel. Keep extra Testnet CKB available for the transaction fee." id={`multi-hop-channel-minimum-${number}`}>499 CKB</ExplainedTerm>{' '}channel</strong>
+            <strong>Open a{' '}<ExplainedTerm explanation="This tutorial uses 500 CKB to open a channel with the public peer. Keep extra Testnet CKB available for the transaction fee." id={`multi-hop-channel-minimum-${number}`}>500 CKB</ExplainedTerm>{' '}channel</strong>
             <label>
               <input aria-label={`${title} channel funding amount in CKB`} disabled readOnly value={channelAmount} />
               <span>CKB</span>
@@ -370,6 +370,10 @@ export function FiberMultiHopInvoiceTutorial() {
         );
         await runtime.refresh();
         return progressFromChannelState(existing.state.state_name);
+      }
+
+      if ((runtime.balance ?? 0n) <= BigInt(ckbToHex(channelAmount))) {
+        throw new Error('Add more Testnet CKB to cover the separate channel funding transaction fee.');
       }
 
       const result = await runtime.run('open channel', (node) =>
@@ -920,7 +924,7 @@ npm run dev`}</code></pre>
                 </p>
                 <details className={styles.multiHopLiquidityExplanation}>
                   <summary>How is available liquidity calculated?</summary>
-                  <p>A new channel funded with 499 CKB normally reserves 99 CKB for on-chain settlement, leaving 400 CKB for payments before transfers and fees. Another 1 CKB is reserved for the maximum routing fee.</p>
+                  <p>A new channel funded with 500 CKB normally reserves 100 CKB for on-chain settlement, leaving 400 CKB for payments before transfers and fees. Another 1 CKB is reserved for the maximum routing fee.</p>
                 </details>
                 <button className={`${styles.verifiedPrimaryAction} ${styles.multiHopInvoiceAction}`} disabled={!paymentRecoveryReady || Boolean(paymentRecoveryError) || restoreBlocked || !senderReady || !receiverReady || !amountValid || Boolean(receiver.busy)} onClick={() => void createInvoice()} type="button">{receiver.busy === 'create invoice' ? 'Creating invoice…' : 'Create invoice'}</button>
                 {paymentRecoveryReady && !paymentRecoveryError && <RestoreLiquidityPanel sender={sender} receiver={receiver} onBlocked={setRestoreBlocked} onRestored={() => { setAmount('1'); addEvent('Receiving liquidity restored · C → Bottle B → A'); }} />}
@@ -1013,7 +1017,7 @@ npm run dev`}</code></pre>
     <RoutingTutorialFrame
       article={article}
       codeFiles={codeFiles}
-      currentTutorialIndex={2}
+      tutorialId="multi-hop-invoice"
       defaultFile="demo"
       demoDescription="You control Sender A and Receiver C in this browser. Bottle B is the public node that forwards payments between them."
       demoTitle="Send a Multi-Hop Invoice Payment"
@@ -1021,8 +1025,6 @@ npm run dev`}</code></pre>
       walkthroughDescription="Follow the live source that prepares two nodes, creates an invoice, and confirms a payment through Bottle."
       downloadHref="/downloads/fiber-multi-hop-invoice.zip"
       liveDemo={liveDemo}
-      nextHref="/docs/build/unidirectional-channel"
-      previousHref="/docs/build/open-channel-payment"
       sectionCode={sectionCode}
     />
   );

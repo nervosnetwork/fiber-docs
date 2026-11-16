@@ -63,11 +63,11 @@ Local nodes (nodeA, nodeB) do not need to expose a public address — they conne
 
 ## Channel Capacity
 
-When opening a channel, each side must reserve **99 CKB** (98 CKB for commitment lock + 1 CKB for shutdown transaction fee). This reserved amount is not available for off-chain payments.
+Each side of a new Fiber v0.10.0 channel reserves **100 CKB**. This reserved amount is not available for off-chain payments.
 
-**Example**: If you fund 499 CKB and the public node contributes 250 CKB:
-- Your available balance: 499 - 99 = **400 CKB**
-- Public node available: 250 - 99 = **151 CKB**
+**Example**: For a Fiber v0.10.0 channel, if you fund 500 CKB and the public node contributes 250 CKB:
+- Your available balance: 500 - 100 = **400 CKB**
+- Public node available: 250 - 100 = **150 CKB**
 
 ## Node Downloads
 

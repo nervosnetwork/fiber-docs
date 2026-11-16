@@ -4,7 +4,6 @@ import { createBrowserNodeSession, PeerHandshakeTimeoutError } from './browser-n
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   type ReactNode,
   useCallback,
@@ -21,6 +20,8 @@ import type {
 import { ExplainedTerm } from './explained-term';
 import { CopyIconButton } from './copy-icon-button';
 import { MobileTutorialPicker } from './mobile-tutorial-picker';
+import { TutorialFooter } from './routing-tutorial-frame';
+import { liveTutorials as tutorials } from './tutorial-registry';
 import styles from './fiber-wasm-quickstart.module.css';
 
 const routerAddress =
@@ -29,45 +30,10 @@ const routerPubkey =
   '0x02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71';
 const profileKey = 'fiber-docs:wasm-quickstart-profile-v1';
 const isolationReloadKey = 'fiber-docs:wasm-isolation-reload-v1';
-const sdkInstallCommand = 'npm install @fiber-pay/sdk';
+const sdkInstallCommand = `npm pkg set 'overrides.@fiber-pay/sdk.@nervosnetwork/fiber-js=0.10.0'
+npm install --save-exact @fiber-pay/sdk@0.3.1 @nervosnetwork/fiber-js@0.10.0`;
 
-const tutorials = [
-  {
-    title: 'Connect to Fiber with a WASM Node',
-    shortTitle: 'Connect a WASM node',
-    href: '/docs/build/connect-wasm-node',
-  },
-  {
-    title: 'Open a Fiber Channel and Send a Payment',
-    shortTitle: 'Open a channel and send a payment',
-    href: '/docs/build/open-channel-payment',
-  },
-  {
-    title: 'Send a Multi-Hop Invoice Payment',
-    shortTitle: 'Send a multi-hop invoice payment',
-    href: '/docs/build/multi-hop-invoice',
-  },
-  {
-    title: 'Open a Unidirectional Fiber Channel',
-    shortTitle: 'Open a unidirectional channel',
-    href: '/docs/build/unidirectional-channel',
-  },
-  { title: 'Build a Conditional Payment with a Hold Invoice', shortTitle: 'Build a Hold Invoice payment', href: '/docs/build/hold-invoice' },
-  { title: 'Unlock Encrypted Data with a Fiber Payment', shortTitle: 'Unlock encrypted data with a payment', href: '/docs/build/encrypted-data-payment' },
-  { title: 'Pay for a Verified Result', shortTitle: 'Pay for a verified result', href: '/docs/build/verified-result-payment' },
-  { title: 'Pay with RUSD over Fiber', shortTitle: 'Pay with RUSD', href: '/docs/build/rusd-payment' },
-  { title: 'Close a Fiber Channel and Recover Funds', shortTitle: 'Close a channel and recover funds', href: '/docs/build/close-channel' },
-] as const;
-
-const currentTutorialIndex = tutorials.findIndex(
-  (tutorial) => tutorial.href === '/docs/build/connect-wasm-node',
-);
-const previousTutorial = tutorials[currentTutorialIndex - 1] ?? {
-  title: 'Interactive Tutorials',
-  shortTitle: 'Interactive tutorials',
-  href: '/docs/build/interactive-tutorials',
-};
-const nextTutorial = tutorials[currentTutorialIndex + 1];
+const currentTutorialIndex = tutorials.findIndex((tutorial) => tutorial.id === 'connect-wasm-node');
 
 type CodeFile = {
   id: 'headers' | 'fiber' | 'app';
@@ -385,7 +351,6 @@ function CodeBlock({
 }
 
 export function FiberWasmQuickstart() {
-  const router = useRouter();
   const nodeRef = useRef<FiberBrowserNode | null>(null);
   const nodeSessionRef = useRef<ReturnType<typeof createBrowserNodeSession> | null>(null);
   const topRef = useRef<HTMLElement | null>(null);
@@ -961,8 +926,8 @@ export function FiberWasmQuickstart() {
               <p className={styles.followupParagraph}>
                 <code>@fiber-pay/sdk</code> provides the browser-facing APIs used
                 here to create the node, manage its identity, observe its state,
-                and connect it to peers. Install it in an existing TypeScript or
-                JavaScript project with:
+                and connect it to peers. Set the SDK override and install both
+                packages to use Fiber JS 0.10.0 in an existing npm project:
               </p>
               <div className={styles.setupCodeBlock}>
                 <div className={styles.setupCodeHeader}>
@@ -1263,24 +1228,7 @@ npm run dev`}</code></pre>
           </aside>
         </div>
         {articleAtBottom && (
-          <nav
-            aria-label="Tutorial navigation"
-            className={`${styles.tutorialFooter} ${styles.walkthroughFooter}`}
-          >
-            <button
-              onClick={() => router.push(previousTutorial.href)}
-              type="button"
-            >
-              <span aria-hidden="true">←</span> Previous
-            </button>
-            <button
-              disabled={!nextTutorial}
-              onClick={() => nextTutorial && router.push(nextTutorial.href)}
-              type="button"
-            >
-              Next <span aria-hidden="true">→</span>
-            </button>
-          </nav>
+          <TutorialFooter currentTutorialIndex={currentTutorialIndex} className={styles.walkthroughFooter} />
         )}
       </section>
     </div>

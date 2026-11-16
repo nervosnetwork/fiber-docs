@@ -1,12 +1,14 @@
 'use client';
 
+import { channelFundingGuidance } from '../lib/channel-funding';
 import { useEffect, useRef, useState } from 'react';
-import type { Channel, FiberBrowserNode } from '@fiber-pay/sdk/browser';
+import { scriptToAddress, type Channel, type FiberBrowserNode } from '@fiber-pay/sdk/browser';
 import { bottle, ensureChannel, findChannel, startFiber } from '../lib/fiber';
 import { closeCooperatively, listIncludingClosed } from '../lib/close';
 
 export default function Page() {
   const node = useRef<FiberBrowserNode | null>(null);
+  const [address, setAddress] = useState('');
   const [channel, setChannel] = useState<Channel>();
   const [connected, setConnected] = useState(false);
   const [status, setStatus] = useState('Stopped');
@@ -27,13 +29,20 @@ export default function Page() {
 
   async function start() {
     node.current = await startFiber();
+    const info = await node.current.nodeInfo();
+    setAddress(scriptToAddress(info.default_funding_lock_script, 'testnet'));
     setStatus('Running');
     await refresh();
   }
 
   async function open() {
     if (!node.current || shuttingDown) return;
-    await ensureChannel(node.current);
+    try {
+      await ensureChannel(node.current);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Could not open the channel.');
+      return;
+    }
     setStatus('Preparing channel');
     await refresh();
   }
@@ -60,6 +69,11 @@ export default function Page() {
   return <main>
     <h1>Close a Fiber Channel</h1>
     <p className="status">{status}</p>
+    {address && !ready && !shuttingDown && <section className="card">
+      <code>{address}</code>
+      <p>{channelFundingGuidance}</p>
+      <a href="https://faucet.nervos.org" target="_blank" rel="noreferrer">Get Testnet CKB ↗</a>
+    </section>}
     <div className="row">
       <button onClick={() => void start()}>Start</button>
       <button disabled={shuttingDown || ready} onClick={() => void open()}>{ready ? 'Channel ready' : shuttingDown ? 'Shutdown pending' : 'Prepare channel'}</button>

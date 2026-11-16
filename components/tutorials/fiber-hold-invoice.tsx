@@ -62,7 +62,7 @@ import {
   verifiedResultStep,
 } from '../../examples/tutorials/verified-result-payment/lib/job';
 
-const channelAmount = '499';
+const channelAmount = '500';
 const inboundSeedAmount = '5';
 
 type AllocationResult = { routeA: number; routeB: number; routeC: number };
@@ -362,7 +362,7 @@ function SetupNode({
   const ready = isChannelReady(channel);
   const inboundLiquidity = channel ? BigInt(channel.remote_balance) : 0n;
   const inboundReady = inboundLiquidity >= BigInt(ckbToHex(inboundSeedAmount));
-  const funded = (runtime.balance ?? 0n) >= BigInt(ckbToHex(channelAmount));
+  const funded = (runtime.balance ?? 0n) > BigInt(ckbToHex(channelAmount));
   const open = async () => {
     const node = runtime.nodeRef.current;
     if (!node) return;
@@ -374,6 +374,11 @@ function SetupNode({
       setStage(progressFromChannelState(existing));
       addEvent(`${label} reused ${existing.state.state_name}`);
       return void runtime.refresh();
+    }
+    if ((runtime.balance ?? 0n) <= BigInt(ckbToHex(channelAmount))) {
+      runtime.setError('Add more Testnet CKB to cover the separate channel funding transaction fee.');
+      setStage('idle');
+      return;
     }
     setStage('submitting');
     const result = await runtime.run('open channel', (current) => current.openChannel({
@@ -402,7 +407,7 @@ function SetupNode({
   return <div className={styles.multiHopNodeSetup}>
     <div className={styles.paymentFlow}>
       <div className={styles.paymentFlowNumber}>{label.slice(-1)}</div>
-      <div><strong>{label}</strong><span>{runtime.address ? channel ? `${hexToCkb(channel.local_balance)} CKB local · ${hexToCkb(channel.remote_balance)} CKB remote` : `${hexToCkb(runtime.balance)} CKB on-chain · opens a ${channelAmount} CKB channel` : 'Start a separate browser identity.'}</span>{runtime.address && <span>Faucet CKB may take up to 30s to confirm on-chain.</span>}</div>
+      <div><strong>{label}</strong><span>{runtime.address ? channel ? `${hexToCkb(channel.local_balance)} CKB local · ${hexToCkb(channel.remote_balance)} CKB remote` : `${hexToCkb(runtime.balance)} CKB on-chain · opens a ${channelAmount} CKB channel` : 'Start a separate browser identity.'}</span>{runtime.address && !channel && <span>Fund this address with more than 500 Testnet CKB. Opening the channel uses 500 CKB plus a separate on-chain transaction fee.</span>}{runtime.address && <span>Faucet CKB may take up to 30s to confirm on-chain.</span>}</div>
       <div className={styles.compactActions}>
         <button className={styles.startButton} disabled={Boolean(runtime.nodeInfo) || Boolean(runtime.busy)} onClick={runtime.start}>{runtime.busy === 'start' ? 'Starting node…' : 'Start local node'}</button>
         <button className={styles.connectButton} disabled={!runtime.nodeInfo || !funded || Boolean(channel) || Boolean(runtime.busy)} onClick={() => void open()}>{ready ? 'Channel ready' : stage === 'connecting' ? 'Connecting…' : stage === 'submitting' ? 'Opening…' : stage === 'confirming' ? 'Confirming…' : `Connect & open ${channelAmount} CKB`}</button>
@@ -469,7 +474,7 @@ function VerifiedSetupParticipant({
   const channelReady = isChannelReady(channel);
   const peerConnected = runtime.peers.some((key) => samePubkey(key, bottlePeer.pubkey));
   const nodePrepared = Boolean(runtime.nodeInfo && peerConnected);
-  const fundingReady = (runtime.balance ?? 0n) >= BigInt(ckbToHex(channelAmount));
+  const fundingReady = (runtime.balance ?? 0n) > BigInt(ckbToHex(channelAmount));
   const actionState = channelActionState({
     stage,
     busy: runtime.busy === 'open channel',
@@ -504,6 +509,11 @@ function VerifiedSetupParticipant({
       setStage(progressFromChannelState(existing));
       addEvent(`${label} reused ${existing.state.state_name}`);
       await runtime.refresh();
+      return;
+    }
+    if ((runtime.balance ?? 0n) <= BigInt(ckbToHex(channelAmount))) {
+      runtime.setError('Add more Testnet CKB to cover the separate channel funding transaction fee.');
+      setStage('idle');
       return;
     }
     setStage('submitting');
@@ -541,7 +551,7 @@ function VerifiedSetupParticipant({
     </button>
     {expanded && <div className={styles.verifiedSetupDisclosureBody}>
       <div className={styles.verifiedSetupTask}>
-        <div className={styles.paymentFlowBody}><strong>{actionLabels.fund}</strong><div className={styles.addressLine}><code title={runtime.address}>{shorten(runtime.address)}</code><button aria-label={`Copy ${label} funding address`} className={`${styles.demoAction} ${styles.addressCopyButton}`} disabled={!runtime.address} onClick={() => runtime.address && void navigator.clipboard.writeText(runtime.address)} type="button"><Image alt="" aria-hidden="true" height={15} src="/icon-copy.svg" width={15}/></button></div><span>Balance: <b>{hexToCkb(runtime.balance)} CKB</b> · Faucet CKB may take up to 30s to confirm on-chain.</span></div>
+        <div className={styles.paymentFlowBody}><strong>{actionLabels.fund}</strong><div className={styles.addressLine}><code title={runtime.address}>{shorten(runtime.address)}</code><button aria-label={`Copy ${label} funding address`} className={`${styles.demoAction} ${styles.addressCopyButton}`} disabled={!runtime.address} onClick={() => runtime.address && void navigator.clipboard.writeText(runtime.address)} type="button"><Image alt="" aria-hidden="true" height={15} src="/icon-copy.svg" width={15}/></button></div><span>Balance: <b>{hexToCkb(runtime.balance)} CKB</b> · Faucet CKB may take up to 30s to confirm on-chain.</span>{!channel && <span>Fund this address with more than 500 Testnet CKB. Opening the channel uses 500 CKB plus a separate on-chain transaction fee.</span>}</div>
         <div className={styles.fundingActions}>{runtime.address ? <a className={`${styles.faucetButton} ${styles.demoAction} ${!fundingReady ? styles.demoPrimaryAction : ''}`} href="https://faucet.nervos.org" rel="noreferrer" target="_blank">Get CKB ↗</a> : <button className={`${styles.faucetButton} ${styles.demoAction}`} disabled type="button">Get CKB ↗</button>}<button className={`${styles.refreshButton} ${styles.demoAction}`} disabled={!runtime.nodeInfo || Boolean(runtime.busy)} onClick={() => void runtime.refresh()} type="button"><RefreshIcon/>Refresh</button></div>
       </div>
       <div className={styles.verifiedSetupTask}>
@@ -1159,15 +1169,13 @@ npm run dev`}</code></pre>
   return <RoutingTutorialFrame
     article={verifiedResult ? verifiedResultArticle : holdArticle}
     codeFiles={verifiedResult ? verifiedResultCodeFiles : holdCodeFiles}
-    currentTutorialIndex={verifiedResult ? 6 : 4}
+    tutorialId={verifiedResult ? 'verified-result-payment' : 'hold-invoice'}
     defaultFile={verifiedResult ? 'job' : 'hold'}
     demoDescription={verifiedResult ? 'Place a 1 CKB Testnet payment on hold, verify a sample 300 CKB route allocation, and release or cancel payment from the result.' : 'Create a real Hold Invoice, observe the pending receiver state, then settle or cancel it.'}
     demoFirst={verifiedResult}
     demoTitle={verifiedResult ? 'Pay for a Verified Result' : 'Run the Hold Invoice Demo'}
     downloadHref={verifiedResult ? '/downloads/fiber-verified-result-payment.zip' : '/downloads/fiber-hold-invoice.zip'}
     liveDemo={verifiedResult ? verifiedLiveDemo : holdLiveDemo}
-    nextHref={verifiedResult ? '/docs/build/rusd-payment' : '/docs/build/encrypted-data-payment'}
-    previousHref={verifiedResult ? '/docs/build/encrypted-data-payment' : '/docs/build/unidirectional-channel'}
     sectionCode={verifiedResult ? verifiedResultSectionCode : holdSectionCode}
   />;
 }

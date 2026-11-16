@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { useState } from 'react';
 import styles from './interactive-tutorials.module.css';
 import {
   conceptTutorials,
@@ -13,18 +16,23 @@ const levelClassNames: Record<TutorialLevel, string> = {
   Hard: styles.levelHard,
 };
 
+const difficultyOptions = ['All', 'Beginner', 'Intermediate', 'Hard'] as const;
+
 function TutorialCard({ tutorial, concept = false }: { tutorial: Tutorial; concept?: boolean }) {
   const content = (
     <>
-      <span aria-hidden="true" className={styles.externalArrow}>
-        {concept ? '→' : '↗'}
-      </span>
       <div className={styles.meta}>
         <span className={`${styles.level} ${levelClassNames[tutorial.level]}`}>
           {tutorial.level}
         </span>
-        <span className={styles.mode}>{tutorial.mode}</span>
-        <span className={styles.duration}>◷ {tutorial.duration}</span>
+        {concept && <span className={styles.mode}>{tutorial.mode}</span>}
+        <span className={styles.duration}>
+          <svg aria-hidden="true" focusable="false" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round">
+            <circle cx="7" cy="7" r="5.75" />
+            <path d="M7 3.75V7h2.75" />
+          </svg>
+          {tutorial.duration}
+        </span>
       </div>
       <h3>{tutorial.title}</h3>
       <p>{tutorial.description}</p>
@@ -52,23 +60,33 @@ function TutorialCard({ tutorial, concept = false }: { tutorial: Tutorial; conce
 }
 
 export function InteractiveTutorials() {
+  const [level, setLevel] = useState<TutorialLevel | 'All'>('All');
+  const tutorials = liveTutorials.filter((tutorial) => level === 'All' || tutorial.level === level);
+
   return (
-    <div className={styles.catalog}>
-      <section className={styles.group}>
-        <div className={styles.groupHeading}>
-          <span>Live Testnet projects</span>
-          <div>
-            <h2>Build with real Fiber nodes</h2>
-            <p>Run browser nodes, fund Testnet channels, and inspect real payment state.</p>
+    <div className={`${styles.catalog} ${styles.liveCatalog}`}>
+      <section className={styles.group} aria-label="Tutorial catalog">
+        <div className={styles.difficultyFilter} role="group" aria-label="Difficulty">
+          <span aria-hidden="true">Difficulty:</span>
+          <div className={styles.difficultyOptions}>
+            {difficultyOptions.map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={level === value}
+                onClick={() => setLevel(value)}
+              >
+                {value}
+              </button>
+            ))}
           </div>
         </div>
         <div className={styles.grid}>
-          {liveTutorials.map((tutorial) => (
+          {tutorials.map((tutorial) => (
             <TutorialCard key={tutorial.href} tutorial={tutorial} />
           ))}
         </div>
       </section>
-
     </div>
   );
 }

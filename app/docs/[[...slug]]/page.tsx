@@ -119,23 +119,23 @@ export default async function Page(props: {
     return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} /><FiberCloseChannelTutorial /></>;
   }
 
+  const isInteractiveTutorialCatalog = slug === "build/interactive-tutorials";
+
   return (
     <DocsPage
       toc={page.data.toc}
       full={page.data.full}
-      footer={
-        slug === "build/interactive-tutorials"
-          ? { enabled: false }
-          : undefined
-      }
+      footer={isInteractiveTutorialCatalog ? { enabled: false } : undefined}
     >
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
-      <div className="mb-4">
+      <div className={isInteractiveTutorialCatalog ? undefined : "mb-4"}>
         <DocsTitle className="mb-4">{page.data.title}</DocsTitle>
-        <DocsDescription>{page.data.description}</DocsDescription>
+        <DocsDescription className={isInteractiveTutorialCatalog ? "mb-0" : undefined}>
+          {page.data.description}
+        </DocsDescription>
         <VersionBadge
           author={page.data.author}
           authorUrl={page.data.authorUrl}

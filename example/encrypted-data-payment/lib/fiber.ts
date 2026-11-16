@@ -1,3 +1,4 @@
+import { requireNewChannelFunding } from './channel-funding';
 import { encryptedBuyerProfile, encryptedSellerProfile, savedNodeIdentifier } from './progress';
 import type { Channel, FiberBrowserNode } from '@fiber-pay/sdk/browser';
 
@@ -60,6 +61,7 @@ export async function connectAndOpenChannel(node: FiberBrowserNode) {
   await node.connectPeer(bottle);
   const existing = await readChannel(node);
   if (!existing) {
+    await requireNewChannelFunding(node);
     await node.openChannel({
       pubkey: bottle.pubkey,
       funding_amount: `0x${(channelFundingCkb * 100_000_000n).toString(16)}`,

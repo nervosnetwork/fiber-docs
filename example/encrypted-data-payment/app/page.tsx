@@ -1,5 +1,6 @@
 'use client';
 
+import { channelFundingGuidance } from '../lib/channel-funding';
 import { useEffect, useRef, useState } from 'react';
 import { scriptToAddress, type Channel, type FiberBrowserNode, type GetPaymentResult } from '@fiber-pay/sdk/browser';
 import { decryptResult, toHex } from '../lib/crypto';
@@ -167,6 +168,7 @@ export default function Page() {
       <h2>{role === 'buyer' ? 'Buyer A' : 'Seller C'}</h2>
       {!addresses[role] && <button disabled={!loaded || busy} onClick={() => void run(() => start(role))}>Start node</button>}
       {addresses[role] && <><code>{addresses[role]}</code><a href="https://faucet.nervos.org" target="_blank" rel="noreferrer">Get Testnet CKB ↗</a>
+        {!channels[role] && <p>{channelFundingGuidance}</p>}
         <button disabled={busy} onClick={() => void run(() => open(role))}>{channels[role] ? 'Reconnect / check channel' : `Open ${channelFundingCkb} CKB channel`}</button>
         <button disabled={busy} onClick={() => void run(() => refresh(role))}>Refresh channel status</button>
       </>}

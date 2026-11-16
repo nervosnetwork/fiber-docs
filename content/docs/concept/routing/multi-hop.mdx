@@ -294,7 +294,7 @@ Relay nodes are the backbone of multi-hop routing. If you operate a well-connect
 
 A relay node needs a server with a publicly reachable IP address, sufficient CKB to fund channels, stable uptime (payments can only route through online nodes), and balanced liquidity on both sides of each channel.
 
-Each channel side must reserve 99 CKB (98 CKB for the commitment lock's on-chain [occupied capacity](https://github.com/nervosnetwork/fiber-scripts) + 1 CKB for the shutdown transaction fee) — this amount is locked for on-chain settlement and cannot be used for off-chain payments. The actual minimum funding amount depends on your `open_channel_auto_accept_min_ckb_funding_amount` setting (code default: 100 CKB). For example, the public Fiber relay nodes require at least 499 CKB (99 CKB reserve + 400 CKB usable).
+Each side of a new Fiber v0.10.0 channel reserves 100 CKB for on-chain settlement. This amount cannot be used for off-chain payments. The actual minimum funding amount depends on your `open_channel_auto_accept_min_ckb_funding_amount` setting (code default: 100 CKB). For example, funding a channel with 500 CKB leaves 400 CKB available for payments.
 
 ### Configuration
 
@@ -308,8 +308,8 @@ fiber:
   announced_addrs:
     - "/ip4/YOUR_PUBLIC_IP/tcp/8228"
 
-  # Automatically accept channel requests (example: public node thresholds)
-  open_channel_auto_accept_min_ckb_funding_amount: 49900000000  # 99 CKB reserve + 400 CKB usable
+  # Automatically accept channel requests (example thresholds)
+  open_channel_auto_accept_min_ckb_funding_amount: 50000000000  # 100 CKB reserve + 400 CKB usable
   auto_accept_channel_ckb_funding_amount: 25000000000           # your contribution as acceptor
 
   # Fee policy
