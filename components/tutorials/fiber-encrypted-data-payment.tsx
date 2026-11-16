@@ -25,6 +25,7 @@ import styles from './fiber-wasm-quickstart.module.css';
 import lesson from './encrypted-data-lesson.module.css';
 import { encryptedSessionKey, encryptedBuyerProfile, encryptedSellerProfile, savedNodeIdentifier, readEncryptedProgress, canSubmitEncryptedPayment, encryptedNodeStatus } from './encrypted-data-session';
 import { detectMultiHopProfiles } from './multi-hop-setup';
+import { assertEncryptedInvoiceNotExpired, EncryptedPaymentRejectedError, submitEncryptedPayment } from './encrypted-payment-submission';
 
 const tutorialIndex = liveTutorials.findIndex((tutorial) => tutorial.id === 'encrypted-data-payment');
 const channelAmount = '500';
@@ -343,7 +344,7 @@ try {
   {
     id: 'validation', label: 'lib/payment.ts', language: 'typescript',
     code: `// Validate the offer before submitting the payment.
-export async function validateReceivedOffer(buyer, receivedJson: string) {
+export async function validateReceivedOffer(buyer, receivedJson: string, forPayment = false) {
   const offer = parseOffer(receivedJson);
   const { invoice } = await buyer.parseInvoice({ invoice: offer.invoice });
   if (
@@ -353,6 +354,8 @@ export async function validateReceivedOffer(buyer, receivedJson: string) {
   ) {
     throw new Error('The Invoice does not match this 1 CKB encrypted offer.');
   }
+  // Checking an old payment must still work after its Invoice expires.
+  if (forPayment) assertEncryptedInvoiceNotExpired(invoice);
   return offer;
 }`,
   },
@@ -363,18 +366,21 @@ export async function validateReceivedOffer(buyer, receivedJson: string) {
   if (!saveAttempt(offer.paymentHash)) {
     throw new Error('Payment progress could not be saved.');
   }
-  const submitted = await node.sendPayment({
-    invoice: offer.invoice,
-    hop_hints: [offer.lastHop],
-    max_fee_amount: ckbToHex('1'),
-    max_parts: '0x1',
-  });
-  return submitted.status === 'Success' || submitted.status === 'Failed'
-    ? submitted
-    : await node.waitForPayment(submitted.payment_hash, {
-        timeout: 60_000,
-        interval: 1_000,
-      });
+  try {
+    return await submitEncryptedPayment(node, offer.paymentHash, {
+      invoice: offer.invoice,
+      hop_hints: [offer.lastHop],
+      max_fee_amount: ckbToHex('1'),
+      max_parts: '0x1',
+    });
+  } catch (error) {
+    // This error requires a known rejection AND a confirmed missing record.
+    // Timeouts and unavailable status reads keep the original attempt.
+    if (error instanceof EncryptedPaymentRejectedError && !saveAttempt('')) {
+      throw new Error('Payment progress could not be saved.');
+    }
+    throw error;
+  }
 }
 
 // After a refresh or timeout, check the saved attempt.
@@ -1094,7 +1100,7 @@ export function FiberEncryptedDataPaymentTutorial() {
     } finally { invoiceLock.current = false; }
   }, [amountHex, encryptedDraft, generatedOffer, attemptedPaymentHash, routeReady, buyer.busy, seller, sellerChannel]);
 
-  const validateOffer = useCallback(async () => {
+  const validateOffer = useCallback(async (forPayment = false) => {
     const parsed = parseOffer(receivedOfferJson.trim());
     const decoded = await buyer.run('validate offer invoice', (node) =>
       node.parseInvoice({ invoice: parsed.invoice }),
@@ -1108,6 +1114,7 @@ export function FiberEncryptedDataPaymentTutorial() {
       throw new Error('The Invoice does not match this 1 CKB encrypted offer.');
     }
     if (attemptedPaymentHash && parsed.paymentHash.toLowerCase() !== attemptedPaymentHash.toLowerCase()) throw new Error('Restore the offer for the previous payment before continuing.');
+    if (forPayment) assertEncryptedInvoiceNotExpired(decoded.invoice);
     return parsed;
   }, [amountHex, buyer, receivedOfferJson, attemptedPaymentHash]);
 
@@ -1146,7 +1153,7 @@ export function FiberEncryptedDataPaymentTutorial() {
     paymentLock.current = true;
     let offer: EncryptedOffer;
     try {
-      offer = await validateOffer();
+      offer = await validateOffer(true);
     } catch (error) {
       buyer.setError(error instanceof Error ? error.message : 'Unable to validate the Invoice.');
       paymentLock.current = false;
@@ -1167,21 +1174,39 @@ export function FiberEncryptedDataPaymentTutorial() {
     setDecryptStatus('Payment submitted. Waiting for the key.');
 
     try {
-      const result = await buyer.run('pay encrypted offer', async (node) => {
-        const submitted = await node.sendPayment({
-          invoice: offer.invoice,
-          hop_hints: browserHopHints({ ...offer.lastHop, channel_outpoint: normalizeOutpoint(offer.lastHop.channel_outpoint) }),
-          max_fee_amount: ckbToHex('1'),
-          max_parts: '0x1',
-        });
-        if (submitted.status === 'Success' || submitted.status === 'Failed') return submitted;
-        return node.waitForPayment(submitted.payment_hash, { timeout: 60_000, interval: 1_000 });
+      const outcome = await buyer.run('pay encrypted offer', async (node) => {
+        try {
+          const payment = await submitEncryptedPayment(node, offer.paymentHash, {
+            invoice: offer.invoice,
+            hop_hints: browserHopHints({ ...offer.lastHop, channel_outpoint: normalizeOutpoint(offer.lastHop.channel_outpoint) }),
+            max_fee_amount: ckbToHex('1'),
+            max_parts: '0x1',
+          });
+          return { kind: 'payment' as const, payment };
+        } catch (error) {
+          if (error instanceof EncryptedPaymentRejectedError) return { kind: 'rejected' as const, rejection: error.message };
+          throw error;
+        }
       });
-      if (!result) {
+      if (!outcome) {
         setPaymentStatus('Check status');
         setDecryptStatus('Check the payment status before continuing.');
         return;
       }
+      if (outcome.kind === 'rejected') {
+        if (!saveProgress('')) {
+          setPaymentStatus('Check status');
+          setDecryptStatus('Unable to save the rejected payment. Check status before continuing.');
+          return;
+        }
+        setAttemptedPaymentHash('');
+        setPaymentStatus('Not sent');
+        setLiquidityBeforePayment(null);
+        setDecryptStatus('Payment was not submitted. Start another offer to continue.');
+        buyer.setError(outcome.rejection ?? 'Payment was not submitted.');
+        return;
+      }
+      const result = outcome.payment;
       setPaymentStatus(result.status);
       setPaymentReceipt(result);
       if (result.status === 'Success') {
@@ -1250,9 +1275,9 @@ export function FiberEncryptedDataPaymentTutorial() {
   const invoiceTone = invoiceStatus === 'Paid' ? 'success'
     : invoiceStatus === 'Cancelled' || invoiceStatus === 'Expired' ? 'error' : 'pending';
   const canCreateOffer = routeReady && Boolean(encryptedDraft) && !generatedOffer && !attemptedPaymentHash && !busy;
-  const canStartAnother = Boolean(decrypted) || (Boolean(generatedOffer) && !busy && ['Expired', 'Cancelled'].includes(invoiceStatus) && (!attemptedPaymentHash || paymentStatus === 'Failed'));
+  const canStartAnother = !busy && (Boolean(decrypted) || (Boolean(receivedOfferJson) && (!attemptedPaymentHash || paymentStatus === 'Failed')));
   const startAnother = () => {
-    if (!canStartAnother) return;
+    if (!canStartAnother || paymentLock.current || invoiceLock.current || cryptoLock.current) return;
     setCompletedSteps((previous) => previous.filter((step) => step === 'setup'));
     setGeneratedOffer(''); setEncryptedDraft(null); setCryptoError(''); setRestoredBuyerOffer(''); setBuyerOffer(null);
     setAttemptedPaymentHash(''); setPaymentHash(''); setPaymentStatus('Not sent'); setPaymentReceipt(null);
@@ -1397,7 +1422,7 @@ export function FiberEncryptedDataPaymentTutorial() {
                 <div className={styles.multiHopOutcomeAmount}><dt>Invoice amount</dt><dd>{paymentAmount} <span>CKB</span></dd></div>
               </dl>
               <ResultValue label="Invoice payment hash" value={paymentHash} copyLabel="Copy invoice payment hash" />
-              {!buyerOffer && !attemptedPaymentHash && !canStartAnother && <div className={lesson.actions}><a className={lesson.resultLink} href="#transfer">Continue to transfer</a></div>}
+              {!buyerOffer && !attemptedPaymentHash && !['Expired', 'Cancelled'].includes(invoiceStatus) && <div className={lesson.actions}><a className={lesson.resultLink} href="#transfer">Continue to transfer</a></div>}
             </div>}
             <div className={lesson.actions}>
               {!generatedOffer && <button className={lesson.primary} disabled={!canCreateOffer} onClick={() => void createOffer()} type="button">{seller.busy === 'create data invoice' ? 'Creating…' : 'Create 1 CKB Invoice'}</button>}

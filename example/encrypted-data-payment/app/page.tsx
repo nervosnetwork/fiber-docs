@@ -158,6 +158,14 @@ export default function Page() {
     acceptPayment(await nodes.current.buyer.getPayment({ payment_hash: attempt as `0x${string}` }));
   }
 
+  function startAnotherOffer() {
+    if (busy || (attempt && payment?.status !== 'Failed')) return;
+    save({ generatedOffer: '', buyerOfferText: '', attemptedPaymentHash: '', triedWithoutKey: false, completedSteps: [] });
+    setGenerated(''); setReceived(''); setOffer(null); setAttempt(''); setTested(false);
+    setPayment(null); setKey(''); setDecrypted(''); setError('');
+    setStatus('Create a fresh encrypted offer.');
+  }
+
   const routeReady = Boolean(connected.buyer && connected.seller && channels.buyer && ready(channels.buyer) && BigInt(channels.buyer.local_balance) >= 100_000_000n && channels.seller && ready(channels.seller) && BigInt(channels.seller.remote_balance) >= 100_000_000n);
   const canSubmit = Boolean(offer && tested && routeReady && !key && (!attempt || payment?.status === 'Failed'));
 
@@ -190,5 +198,6 @@ export default function Page() {
     </section></div>
     {payment?.status === 'Success' && <section className="card"><h2>Receipt</h2><p>Amount: 1 CKB · Fee: {ckb(payment.fee)} CKB · Total: {ckb(`0x${(100_000_000n + BigInt(payment.fee)).toString(16)}`)} CKB</p><code>{payment.payment_hash}</code></section>}
     {decrypted && <section className="result"><h2>Decrypted result</h2><pre>{decrypted}</pre></section>}
+    {(generated || received) && (!attempt || payment?.status === 'Failed') && <button disabled={busy} onClick={() => void run(async () => startAnotherOffer())}>Start another offer</button>}
   </main>;
 }
