@@ -32,6 +32,7 @@ export function progressFromChannelState(
   if (state === 'channelready') return 'ready';
   if (state === 'shuttingdown') return 'closing';
   if (state === 'closed') return 'closed';
+  if (state === 'stale') return 'error';
   if (state.includes('failed') || state.includes('aborted')) return 'error';
   if (state === 'awaitingchannelready') return 'confirming';
   return 'submitting';

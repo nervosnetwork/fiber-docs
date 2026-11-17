@@ -1,7 +1,7 @@
 ---
 title: Module `Payment`
 description: Payment management RPC methods
-date: 2026-08-17
+date: 2026-11-16
 ---
 
 ## Module `Payment`
@@ -80,7 +80,7 @@ Sends a payment to a peer.
 * `failed_error` - `Option<String>`, The error message if the payment failed
 * `fee` - `u128`, fee paid for the payment
 * `custom_records` - `Option<[PaymentCustomRecords](#type-paymentcustomrecords)>`, The custom records to be included in the payment.
-* `routers` - `Vec<[SessionRoute](#type-sessionroute)>`, The router is a list of nodes that the payment will go through.
+* `routers` - `Vec<[SessionRoute](#type-sessionroute)>`, **Debug/test/bench builds only; omitted by official release binaries.** The router is a list of nodes that the payment will go through.
  We store in the payment session and then will use it to track the payment history.
  If the payment adapted MPP (multi-part payment), the routers will be a list of nodes.
  For example:
@@ -109,7 +109,7 @@ Retrieves a payment.
 * `failed_error` - `Option<String>`, The error message if the payment failed
 * `fee` - `u128`, fee paid for the payment
 * `custom_records` - `Option<[PaymentCustomRecords](#type-paymentcustomrecords)>`, The custom records to be included in the payment.
-* `routers` - `Vec<[SessionRoute](#type-sessionroute)>`, The router is a list of nodes that the payment will go through.
+* `routers` - `Vec<[SessionRoute](#type-sessionroute)>`, **Debug/test/bench builds only; omitted by official release binaries.** The router is a list of nodes that the payment will go through.
  We store in the payment session and then will use it to track the payment history.
  If the payment adapted MPP (multi-part payment), the routers will be a list of nodes.
  For example:
@@ -199,7 +199,7 @@ Sends a payment to a peer with specified router.
 * `failed_error` - `Option<String>`, The error message if the payment failed
 * `fee` - `u128`, fee paid for the payment
 * `custom_records` - `Option<[PaymentCustomRecords](#type-paymentcustomrecords)>`, The custom records to be included in the payment.
-* `routers` - `Vec<[SessionRoute](#type-sessionroute)>`, The router is a list of nodes that the payment will go through.
+* `routers` - `Vec<[SessionRoute](#type-sessionroute)>`, **Debug/test/bench builds only; omitted by official release binaries.** The router is a list of nodes that the payment will go through.
  We store in the payment session and then will use it to track the payment history.
  If the payment adapted MPP (multi-part payment), the routers will be a list of nodes.
  For example:

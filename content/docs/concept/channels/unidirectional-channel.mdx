@@ -1,7 +1,7 @@
 ---
 title: Unidirectional Channel
 description: Open a one-way payment channel where funds can only flow from initiator to acceptor — ideal for streaming payments and merchant receiving
-date: 2026-06-17
+date: 2026-11-16
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -98,7 +98,7 @@ fnn-cli channel open_channel --pubkey <acceptor_pubkey> --funding-amount 5000000
 ```
 
 <Callout>
-  The `funding_amount` is in **shannons** (1 CKB = 10⁸ shannons). For a new Fiber v0.10.0 channel, 100 CKB is reserved for on-chain settlement, so the available balance for payments is `funding_amount - 10_000_000_000` shannons. The `FIBER_AUTO_ACCEPT_CHANNEL_CKB_FUNDING_AMOUNT` environment variable controls the auto-accept funding contribution (the amount the acceptor automatically contributes when accepting a channel open request), not the channel reserve itself.
+  The `funding_amount` is in **shannons** (1 CKB = 10⁸ shannons). By default, 100 CKB is reserved for a V2 CKB channel (99 CKB minimum commitment-cell capacity + 1 CKB default shutdown fee), so the available balance for payments is `funding_amount - 100_00000000` shannons. The `FIBER_AUTO_ACCEPT_CHANNEL_CKB_FUNDING_AMOUNT` environment variable controls the auto-accept funding contribution (the amount the acceptor automatically contributes when accepting a channel open request), not the channel reserve itself.
 </Callout>
 
 ## Sending Payments
@@ -136,7 +136,7 @@ This is an important point that often causes confusion. A one-way channel restri
 
 - **Initiator's remaining balance** goes back to the initiator's CKB address
 - **Acceptor's received balance** goes to the acceptor's CKB address
-- The channel reserve (100 CKB for Fiber v0.10.0) is released back to the initiator
+- The channel reserve (100 CKB for a standard V2 CKB channel) is released back to the initiator, less the closing fee
 
 For example, if you open a one-way channel with 500 CKB and send 120 CKB worth of payments before closing:
 

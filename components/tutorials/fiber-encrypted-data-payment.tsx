@@ -1,5 +1,7 @@
 'use client';
 
+import { createTestnetFiberFactory } from './fiber-testnet-runtime';
+
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { Channel, CkbInvoiceStatus, GetPaymentResult, SendPaymentParams } from '@fiber-pay/sdk/browser';
 import { RoutingCodeBlock, TutorialFooter, TutorialToolbar, type RoutingCodeFile } from './routing-tutorial-frame';
@@ -393,7 +395,8 @@ const revealedKey = result.status === 'Success'
   },
   {
     id: 'nodes', label: 'lib/fiber.ts', language: 'typescript',
-    code: `import {
+    code: `import { createTestnetFiberFactory } from './fiber-testnet-runtime';
+import {
   FiberBrowserNode,
   RawKeyCredentialProvider,
   scriptToAddress,
@@ -419,6 +422,7 @@ export async function startBrowserNode(profile: {
   identifier: string;
 }) {
   const node = new FiberBrowserNode({
+    wasmFactory: await createTestnetFiberFactory(),
     network: 'testnet',
     credential: new RawKeyCredentialProvider(
       fromHex(profile.fiberKey), fromHex(profile.ckbKey), profile.identifier,
@@ -1307,7 +1311,7 @@ export function FiberEncryptedDataPaymentTutorial() {
       />
       <main className={lesson.article}>
         <header className={lesson.intro}>
-          <p className={lesson.eyebrow}>Fiber v0.10.0 · 30 min</p>
+          <p className={lesson.eyebrow}>Fiber v0.10.1 · 30 min</p>
           <h1>Unlock Encrypted Data with a Fiber Payment</h1>
           <p className={lesson.lead}>Run a buyer and a seller in your browser. As the seller, encrypt a sample report and create an invoice. As the buyer, pay 1 Testnet CKB to get the key and read the report.</p>
         </header>

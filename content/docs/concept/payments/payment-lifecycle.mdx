@@ -1,7 +1,7 @@
 ---
 title: Payment Lifecycle
 description: Understand how payments are created, routed, settled, and failed in the Fiber network
-date: 2026-06-17
+date: 2026-11-16
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -23,11 +23,11 @@ Fiber's payment system uses two independent state machines: **PaymentSession** (
 ```mermaid
 flowchart LR
     Created --> Inflight
-    Inflight -- "Settled amounts reach the total" --> Success
+    Inflight -- "Payment TLC claimed; preimage learned" --> Success
     Inflight -- "All attempts failed, no retries left" --> Failed
 ```
 
-A session is `Created` when the payment request is accepted, becomes `Inflight` as soon as the first TLC is dispatched, and reaches a terminal state (`Success` or `Failed`) only when all attempts have resolved.
+A session is `Created` when the payment request is accepted and becomes `Inflight` when a TLC is dispatched. In 0.10.1 it reports `Success` once a payment TLC is claimed and the preimage is learned, even if other attempts still have pending channel work. It reports `Failed` only after unresolved issued TLCs and channel-owned work have cleared; a local timeout alone does not refund an outstanding TLC.
 
 ### Attempt Lifecycle
 
@@ -43,7 +43,7 @@ flowchart LR
 Each attempt routes a portion of the payment through a specific path. If it fails with a retryable error (e.g., a channel temporarily lacks liquidity), it transitions to `Retrying` and is re-dispatched with a new route. Terminal errors (e.g., invoice expired, permanent channel failure) move it directly to `Failed`.
 
 <Callout type="info">
-  **How the two layers connect**: When a session is `Created`, the payment module splits the total amount into one or more attempts (routes). As each attempt reaches `Success`, its settled amount is added to the session's running total. The session transitions to `Success` when the sum of all successful attempts meets or exceeds the requested amount. If all attempts end up `Failed` and the retry limit is exhausted, the session becomes `Failed`.
+  **How the two layers connect**: A session coordinates one or more routing attempts. A successfully claimed TLC establishes payment success. Remaining attempts can still be resolving, so `Success` does not mean every TLC has disappeared from the channel. Failed attempts and exhausted retries result in `Failed` only once outstanding channel work has cleared.
 </Callout>
 
 ## PaymentSession States
@@ -65,16 +65,16 @@ One or more routing attempts are actively being processed. Funds are locked in T
 **What happens here**:
 - Each attempt adds a TLC to the sender's first-hop channel and dispatches an onion packet
 - Intermediate nodes peel the onion, validate fees and expiry, then forward a new TLC to the next hop
-- As attempts settle (partially or fully), the settled amount accumulates on the session
-- The session remains `Inflight` until either the full amount is collected or all attempts have been exhausted
+- A fulfilled payment TLC supplies the preimage and establishes session success
+- Outstanding issued TLCs keep a would-be failure `Inflight` until the channel resolves them
 
 **Key transitions from Inflight**:
-- → **Success**: When the sum of settled amounts across all successful attempts equals or exceeds the total payment amount
-- → **Failed**: When all attempts have failed and the retry limit has been reached, or a terminal error occurs
+- → **Success**: A payment TLC is claimed and its preimage is learned
+- → **Failed**: Payment attempts have failed and there is no unresolved issued TLC or channel-owned work
 
 ### Success
 
-The payment has been completed. The full amount has been delivered to the recipient and the preimage has been revealed.
+The payment preimage has been learned from a claimed payment TLC. Other attempts may still be pending; do not interpret this status as proof that every channel TLC has finished clearing.
 
 **What this means**: The recipient's node revealed the preimage (proof of payment) by including it in a `RemoveTlcFulfill` message. This preimage propagates backward through each hop, settling each TLC in sequence. All intermediate nodes have been paid their forwarding fees. The preimage is stored in the session and can be used as cryptographic proof of payment.
 
@@ -141,7 +141,7 @@ To understand the full picture, here is what happens step by step when you call 
 
 6. **Settlement**: The final hop recognizes itself as the recipient (the onion indicates `is_last`). If the payment hash matches a known invoice, it reveals the preimage by sending `RemoveTlcFulfill` back to the previous hop. Each intermediate node then fulfills its upstream TLC using the same preimage, releasing funds hop by hop.
 
-7. **Session update**: As each attempt settles, the `PaymentSession` recalculates its status. When the sum of successful attempt amounts reaches the requested total, the session transitions to `Success`.
+7. **Session update**: `PaymentSession` derives success from a claimed payment TLC and its preimage. A failed local session remains externally `Inflight` while its channels still own outstanding payment work.
 
 ## TLC State Machine
 
@@ -222,7 +222,7 @@ Trampoline routing is especially useful for mobile or light nodes that do not ma
 
 ## Multi-Path Payments
 
-Fiber supports **Atomic Multi-path Payments (AMP)**, which split a large payment into smaller parts routed through different channels. This is critical for large payments when no single path has enough liquidity.
+Fiber supports **multi-part payments (MPP)**, which split a large payment into smaller parts routed through different channels. Parts share the invoice's payment hash and payment secret. This can carry a payment when no single path has enough liquidity.
 
 ### How MPP Works
 
@@ -231,7 +231,7 @@ Fiber supports **Atomic Multi-path Payments (AMP)**, which split a large payment
 3. Each route becomes a separate `Attempt` with its own amount, path, and onion packet
 4. A `payment_secret` is included in the invoice and embedded in each attempt's custom records, so the recipient can correlate partial payments
 5. As each attempt settles, the partial amounts accumulate on the session
-6. When the sum of successful attempt amounts reaches the total, the session transitions to `Success`
+6. Once a payment TLC is fulfilled and the sender learns its preimage, the session reports `Success`; other attempts can still be clearing
 
 ### MPP Eligibility
 
@@ -298,7 +298,7 @@ fnn-cli payment list_payments
 {
   "jsonrpc": "2.0",
   "method": "get_payment",
-  "params": ["0x..."],
+  "params": [{"payment_hash": "0x..."}],
   "id": 1
 }
 ```
@@ -311,7 +311,7 @@ The payment response includes:
 |-------|-------------|
 | `status` | Session status: `Created`, `Inflight`, `Success`, or `Failed` |
 | `amount` | The total target amount |
-| `fee_paid` | Total routing fees paid across all successful attempts |
+| `fee` | Routing fee calculated from active attempts; remaining attempt cleanup can still be pending |
 | `failed_error` | The most recent error message (if failed) |
 
 If `status` is `Inflight`, the payment is still being processed — likely waiting for TLC propagation or retry. Payments in `Inflight` for an extended period may indicate a stuck route; the system's periodic status check will eventually time out unresponsive attempts.

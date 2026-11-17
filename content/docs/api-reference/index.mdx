@@ -1,7 +1,7 @@
 ---
 title: RPC Overview
 description: Technical reference for RPC endpoint format, JSON-RPC request/response structure, and authentication
-date: 2026-08-17
+date: 2026-11-16
 ---
 
 <span id="rpc-overview" />
@@ -45,7 +45,7 @@ Every request is a standard JSON-RPC 2.0 object sent as an HTTP POST with `Conte
 |-------|------|----------|-------------|
 | `jsonrpc` | `string` | Yes | Must be `"2.0"`. |
 | `method` | `string` | Yes | The RPC method name (e.g., `send_payment`, `open_channel`). |
-| `params` | `array` | Yes | Method arguments as a single-element array containing the params object. Even methods that take no arguments must send an empty array `[]`. |
+| `params` | `array` | Yes | Method arguments as a single-element array containing the params object. Methods without arguments accept an empty array `[]` or omitted `params`. |
 | `id` | `number \| string \| null` | Yes | Client-defined request identifier; echoed back in the response for correlation. |
 
 > **Implementation detail:** Internally, the middleware may inject an `RpcContext` object as the first element of the `params` array when authentication is enabled and the method requires caller identity (e.g., watchtower operations). Client callers do not need to construct this themselves; the server injects it after verifying the Biscuit token.
@@ -60,7 +60,7 @@ Every request is a standard JSON-RPC 2.0 object sent as an HTTP POST with `Conte
 {
   "jsonrpc": "2.0",
   "result": {
-    "version": "0.9.1",
+    "version": "0.10.1",
     "pubkey": "03a1b2c3...",
     "channel_count": "0x5"
   },
@@ -139,10 +139,11 @@ Each method is protected by a Datalog rule that checks for a specific permission
 - `read("<resource>")` — grants read-only access to that resource.
 - `write("<resource>")` — grants write access to that resource only; it does **not** imply read access.
 
-Resources map roughly to modules, with two exceptions for the `dev` module:
+Resources map to API areas:
 
 - `node`, `peers`, `channels`, `payments`, `invoices`, `graph`, `cch`, `watchtower`, `pprof` — each maps to the module of the same name.
-- `chain`, `messages` — used only by low-level `dev` module methods (`submit_commitment_transaction` and `commitment_signed` respectively); there are no standalone `chain` or `messages` API-reference pages.
+- `dev` — required by development-only methods, including `submit_commitment_transaction` and `commitment_signed`.
+- `node` — `read("node")` for `node_info`, `write("node")` for `backup`.
 
 For example, to call `send_payment`, the token must contain `write("payments")`. To call `node_info`, the token needs `read("node")`.
 
@@ -211,21 +212,21 @@ curl -X POST http://127.0.0.1:8227 \
 {
   "jsonrpc": "2.0",
   "result": {
-    "version": "0.9.1",
-    "commit_hash": "b5600232",
+    "version": "0.10.1",
+    "commit_hash": "d9b6bbd 2026-11-14",
     "pubkey": "03a1b2c3d4e5f6...",
-    "features": ["announcement"],
+    "features": ["GOSSIP_QUERIES_REQUIRED", "BASIC_MPP_REQUIRED", "TRAMPOLINE_ROUTING_REQUIRED", "CHANNEL_V2_OPTIONAL"],
     "node_name": "my-node",
     "addresses": ["/ip4/127.0.0.1/tcp/8228/p2p/Qm..."],
     "chain_hash": "0x92b197aa1f0cb...",
     "open_channel_auto_accept_min_ckb_funding_amount": "0x2540be400",
-    "auto_accept_channel_ckb_funding_amount": "0x24e273300",
+    "auto_accept_channel_ckb_funding_amount": "0x2540be400",
     "default_funding_lock_script": {
       "code_hash": "0x...",
       "hash_type": "type",
       "args": "0x"
     },
-    "tlc_expiry_delta": "0x5265c00",
+    "tlc_expiry_delta": "0xdbba00",
     "tlc_min_value": "0x0",
     "tlc_fee_proportional_millionths": "0x3e8",
     "channel_count": "0x2",
@@ -284,7 +285,7 @@ In addition to request/response HTTP calls, the `pubsub` module exposes a WebSoc
 - **Unsubscribe:** `unsubscribe_store_changes`
 - **Notification topic:** `store_changes`
 
-When authentication is enabled, `subscribe_store_changes` requires `read("cch")` in the Biscuit token (the same resource used by the CCH module). This reflects the fact that the subscription is primarily intended for Cross-Chain Hub integration rather than general client use.
+When authentication is enabled, `subscribe_store_changes` requires `internal("store_changes")` in the Biscuit token (the same resource used by the CCH module). This reflects the fact that the subscription is primarily intended for Cross-Chain Hub integration rather than general client use.
 
 This is primarily used by external services (such as a standalone Cross-Chain Hub instance) to receive real-time store change events from the Fiber node without polling.
 
@@ -296,7 +297,7 @@ This is primarily used by external services (such as a standalone Cross-Chain Hu
 2. **Keep the Biscuit private key offline.** Only the public key belongs in the node config.
 3. **Scope tokens narrowly.** Create tokens with the minimum permissions required (e.g., `read("graph")` only, rather than an all-access token).
 4. **Use CORS allowlists** in production rather than `*`.
-5. **Prefer localhost or Unix-domain sockets** when the client and node run on the same machine.
+5. **Prefer localhost** when the client and node run on the same machine.
 
 ---
 

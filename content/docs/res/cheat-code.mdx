@@ -1,7 +1,7 @@
 ---
 title: "Fiber Cheat Code"
 description: "Quick reference for common Fiber CLI commands, RPC calls, channel operations, and configuration"
-date: 2026-08-17
+date: 2026-11-16
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -50,7 +50,7 @@ Use [Run a Fiber Node](/docs/quick-start/run-a-node) for installation and startu
 | Channel | Open a UDT channel | Channel initiator / funder | `fnn-cli channel open_channel --pubkey <pubkey> --funding-amount <base_units> --funding-udt-type-script '<json>'` |
 | Channel | List all channels | Node whose local channel state you want | `fnn-cli channel list_channels` |
 | Channel | List pending opens only | Node whose local pending channel state you want | `fnn-cli channel list_channels --only-pending true` |
-| Channel | Close a channel | Either channel participant; caller initiates close | `fnn-cli channel shutdown_channel --channel-id <id> --force true` |
+| Channel | Close a channel cooperatively | Either participant; both peers online | `fnn-cli channel shutdown_channel --channel-id <id>` |
 | Channel | Update channel config | Node whose local forwarding config you want to change | `fnn-cli channel update_channel --channel-id <id> --tlc-minimum-value <base_units>` |
 
 ### Invoice & Payment
@@ -120,7 +120,7 @@ curl -s -X POST -H "Content-Type: application/json" \
 NegotiatingFunding -> CollaboratingFundingTx -> SigningCommitment
 SigningCommitment -> AwaitingTxSignatures -> AwaitingChannelReady
 AwaitingChannelReady -> ChannelReady -> ShuttingDown -> Closed
-Restored risk state -> Stale -> Passive peer audit
+Restored risk state -> Stale (V1: peer audit; V2: quarantined)
 ```
 
 | State | Description |
@@ -136,7 +136,7 @@ Restored risk state -> Stale -> Passive peer audit
 | **Stale** | Restored channel state may be outdated and must be passively audited with its peer before normal operation resumes |
 
 <Callout type="info">
-  Use `fnn-cli channel list_channels` to check the state of your channels. JSON-RPC returns states as `{"state_name":"ChannelReady"}` and similar PascalCase names. Each side must reserve **99 CKB** (98 for commitment lock + 1 for shutdown fee).
+  Use `fnn-cli channel list_channels` to check the state of your channels. JSON-RPC returns states as `{"state_name":"ChannelReady"}` and similar PascalCase names. Each side must reserve **100 CKB** for a standard V2 CKB channel (99 for commitment-cell capacity + 1 for shutdown fee).
 </Callout>
 
 ## Payment Lifecycle
@@ -173,7 +173,7 @@ fee = ⌈(amount × tlc_fee_proportional_millionths) / 1,000,000⌉
 
 | Parameter | Purpose | Default / Typical Value |
 |-----------|---------|------------------------|
-| **Reserved CKB** | Channel reserve for lock and fees | 100 CKB for new Fiber v0.10.0 channels |
+| **Reserved CKB** | Channel reserve for lock and fees | 100 CKB for a standard V2 CKB channel (99 commitment + 1 shutdown fee) |
 | `tlc_fee_proportional_millionths` | Forwarding fee rate | 1000 (= 0.1%) |
 | `tlc_min_value` | Minimum TLC value to forward | 0 (any amount) |
 | `tlc_expiry_delta` | TLC expiry window (milliseconds) | 14400000 (4 hours) |
@@ -182,21 +182,21 @@ fee = ⌈(amount × tlc_fee_proportional_millionths) / 1,000,000⌉
 | `max_tlc_number_in_flight` | Max number of TLCs in flight | 125 |
 | `pending_channels_number_limit` | Global max pending channel openings | 100 |
 | `to_be_accepted_channels_number_limit` | Max pending channel openings from one peer | 20 |
-| `open_channel_auto_accept_min_ckb_funding_amount` | Min CKB funding for auto-accept | Built-in default: 10000000000 (100 CKB); public nodes commonly require 499 CKB funding |
-| `auto_accept_channel_ckb_funding_amount` | Auto-accept contribution | Built-in default: 9900000000 (99 CKB); public nodes commonly contribute 25000000000 (250 CKB) |
+| `open_channel_auto_accept_min_ckb_funding_amount` | Minimum spendable CKB contribution for auto-accept | Built-in default: 10000000000 (100 CKB), after the opener's reserve is deducted; at least 200 CKB total for a standard V2 channel |
+| `auto_accept_channel_ckb_funding_amount` | Auto-accept contribution | Built-in default: 10000000000 (100 CKB); public nodes commonly contribute 25000000000 (250 CKB) |
 
 ## Capacity Formula
 
 For CKB channels, each side must reserve CKB for on-chain operations:
 
 ```
-Available Balance = Funded Amount − Settlement Reserve
+Available Balance = Funded Amount − 100 CKB (standard V2 CKB channel)
 ```
 
-**Example**: Fund 500 CKB on Fiber v0.10.0 → 500 − 100 = **400 CKB** available for off-chain payments.
+**Example**: Fund 500 CKB → 500 − 100 = **400 CKB** available for off-chain payments.
 
 <Callout type="warning">
-  The settlement reserve is **per side**. In a two-party CKB channel, both sides must reserve this amount. This reserve is not available for CKB payments — it covers the commitment transaction lock and the shutdown transaction fee. For UDT channels, the channel balance is in token base units, but the funding transaction still needs enough CKB capacity and fees.
+  The 100 CKB V2 reserve is **per side**. In a two-party CKB channel, both sides must reserve this amount. This reserve is not available for CKB payments — it covers the commitment transaction lock and the shutdown transaction fee. For UDT channels, the channel balance is in token base units, but the funding transaction still needs enough CKB capacity and fees.
 </Callout>
 
 ## Testnet Resources
@@ -213,8 +213,8 @@ Available Balance = Funded Amount − Settlement Reserve
 
 | Name | Pubkey | Auto-accept CKB | Auto-accept UDT |
 |------|--------|------------------|------------------|
-| fiber-testnet-public-bottle | `02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71` | ≥ 499 CKB | RUSD ≥ 20 |
-| fiber-testnet-public-bracer | `0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc` | ≥ 499 CKB | RUSD ≥ 20 |
+| fiber-testnet-public-bottle | `02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71` | ≥ 500 CKB | RUSD ≥ 20 |
+| fiber-testnet-public-bracer | `0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc` | ≥ 500 CKB | RUSD ≥ 20 |
 
 ## Common Patterns
 

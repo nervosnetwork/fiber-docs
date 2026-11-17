@@ -71,10 +71,10 @@ For more community-built demos and examples, see the Showcase.
 - [x] Create and close Fiber channels
 - [x] Send payments over Fiber channels (via fiber-scripts)
 - [x] Support cross-network asset transfers
-- [ ] Web-browser-friendly runtime
-- [ ] Programmable conditional payments
+- [x] Web-browser-friendly runtime
+- [x] Conditional payments with hold invoices
 - [ ] Advanced channel liquidity management
-- [ ] Atomic multi-path payments
+- [x] Multi-part payments (MPP)
 
 ---
 
@@ -88,7 +88,7 @@ This page explains the core mechanisms behind Fiber: payment channels, multi-hop
 
 ## Payment Channels
 
-A payment channel is a direct relationship between two participants. To open a channel, both participants lock assets into a shared on-chain Script. This funding transaction defines the initial state of the channel.
+A payment channel is a direct relationship between two participants. To open a channel, the participants lock assets into a shared on-chain Script. A normal channel reserves CKB from each side; a private one-way channel can be funded entirely by its initiator. This funding transaction defines the initial state of the channel.
 
 After the channel is opened, participants can start exchanging payments off-chain. Instead of sending every payment to Layer 1, they keep track of the latest balance between themselves and only submit the final result when the channel is closed.
 
@@ -144,7 +144,7 @@ A Fiber node is a running instance of the Fiber Network Node (FNN) — the refer
 
 If you want to send or receive payments over Fiber, build a wallet that speaks the protocol, or earn routing fees by forwarding payments for others, you need a node.
 
-FNN is still under active development. Before upgrading, stop the node and back up its complete data directory. v0.9.1 includes built-in migrations, backup, and restore support, but protocol and storage formats can still change between releases.
+FNN is still under active development. Before upgrading, stop the node and back up its complete data directory. v0.10.1 includes built-in migrations, backup, and restore support, but protocol and storage formats can still change between releases.
 
 ## What a Fiber Node Does
 
@@ -156,7 +156,7 @@ Running a node gives you a local view of the Fiber network and the ability to:
 - Route payments — forward payments for others and collect routing fees if you run a well-connected public node.
 - Gossip with the network — discover peers, channels, and fee policies through the P2P protocol.
 
-All of this happens through a JSON-RPC interface (and an optional CLI wrapper). The node itself is responsible for channel state management, HTLC/PTLC-style locking, and publishing the correct on-chain settlement transaction when a channel closes.
+All of this happens through a JSON-RPC interface (and an optional CLI wrapper). The node itself is responsible for channel state management, HTLC locking, and publishing the correct on-chain settlement transaction when a channel closes.
 
 ## Node Forms
 
@@ -174,7 +174,7 @@ The native Rust binary is the full production node. It runs as a standalone proc
 | Network exposure | Public IP recommended for routing; private nodes can connect through public relay nodes |
 | Interaction | fnn-cli or raw JSON-RPC |
 
-Use the native node when you need full control, persistent storage, and the ability to accept inbound channel requests from the public internet. Fiber v0.9.1 includes a guided installer that downloads the release bundle, configures the selected network, sets up keys, and generates a reusable startup script.
+Use the native node when you need full control, persistent storage, and the ability to accept inbound channel requests from the public internet. Fiber v0.10.1 includes a guided installer that downloads the release bundle, configures the selected network, sets up keys, and generates a reusable startup script.
 
 → Run a Native Node
 
@@ -216,7 +216,7 @@ Use the WASM node when you want users to bring their own node inside a web app, 
 
 The fastest way to experiment. You run fnn locally against Fiber Testnet, fund the address from a testnet faucet, and open channels with the public Testnet relay nodes. No public IP is required because you initiate outbound connections to the public nodes.
 
-Typical flow with the v0.9.1 installer:
+Typical flow with the v0.10.1 installer:
 
 1. Bootstrap the FNN bundle, ckb-cli, and Testnet configuration.
 2. Run the guided setup to create or import a CKB account.
@@ -292,17 +292,17 @@ Source: https://www.fiber.world/docs/quick-start/run-a-node/rust
 
 ## TL;DR
 
-Fiber v0.9.1 includes an installer that downloads the FNN release bundle and ckb-cli, prepares the selected network configuration, guides you through key setup, and creates a reusable startup script.
+Fiber v0.10.1 includes an installer that downloads the FNN release bundle and ckb-cli, prepares the selected network configuration, guides you through key setup, and creates a reusable startup script.
 
-The commands below pin both the installer source and the FNN release bundle to v0.9.1. This avoids depending on a moving branch and ensures the installed helper script remains on the same release.
+The commands below pin both the installer source and the FNN release bundle to v0.10.1. This avoids depending on a moving branch and ensures the installed helper script remains on the same release.
 
 ## Choose an Installation Method
 
 | Method | Best for | Status |
 |--------|----------|--------|
-| Automated installer | Fast guided setup on Testnet or Mainnet | Available in v0.9.1 |
-| Manual installation | Custom directory layouts and source builds | Available in v0.9.1 |
-| Docker | Reproducible container deployments | Available in v0.9.1 |
+| Automated installer | Fast guided setup on Testnet or Mainnet | Available in v0.10.1 |
+| Manual installation | Custom directory layouts and source builds | Available in v0.10.1 |
+| Docker | Reproducible container deployments | Available in v0.10.1 |
 
 ## Automated Installer
 
@@ -314,7 +314,7 @@ Run the bootstrap step:
 
 [bash code block]
 
-This non-interactive step installs the v0.9.1 release bundle and ckb-cli into ~/.fiber, writes the Testnet configuration, and saves the pinned guided installer. It does not create or import your CKB key.
+This non-interactive step installs the v0.10.1 release bundle and ckb-cli into ~/.fiber, writes the Testnet configuration, and saves the pinned guided installer. It does not create or import your CKB key.
 
 Run the guided step to set up the key and startup script:
 
@@ -373,13 +373,13 @@ Use this path when you need a custom installation layout or want to build FNN yo
 
 ### 1. Obtain the FNN Binary
 
-Download the archive for your operating system and CPU from the v0.9.1 release. The portable archives include fnn, fnn-cli, and the Mainnet and Testnet configuration templates.
+Download the archive for your operating system and CPU from the v0.10.1 release. The portable archives include fnn, fnn-cli, and the Mainnet and Testnet configuration templates.
 
 For example, on an Apple Silicon Mac:
 
 [bash code block]
 
-The expected versions are fnn Fiber v0.9.1 and fnn-cli 0.9.1. Replace aarch64-darwin with the target matching your system; the release also provides archives for Intel macOS, x86-64 and ARM64 Linux, and x86-64 Windows.
+The expected versions are fnn Fiber v0.10.1 and fnn-cli 0.10.1. Replace aarch64-darwin with the target matching your system; the release also provides archives for Intel macOS, x86-64 and ARM64 Linux, and x86-64 Windows.
 
 Alternatively, build the tagged source release:
 
@@ -447,22 +447,24 @@ For a manual installation, rerun the original fnn command with the same data dir
 
 ## Version Compatibility and Upgrades
 
-### Upgrade Safely to v0.9.1
+### Upgrade Safely to v0.10.1
+
+The 0.10.x releases introduce V2 P2P messaging. Existing V1 channels continue to operate, but a 0.10.x node cannot open a new channel with a pre-0.10 node. Upgrade both peers before opening channels. Plan to close and settle existing V1 channels: upstream plans to remove V1 support in the next major release.
 
 1. Stop the old node cleanly. Never run two FNN processes against the same data directory.
 2. Back up the complete node directory, including ckb, fiber/store, fiber/sk, and config.yml.
-3. Replace both fnn and fnn-cli with the v0.9.1 binaries.
+3. Replace both fnn and fnn-cli with the v0.10.1 binaries.
 4. Start FNN against the existing directory and review any migration confirmation before proceeding.
 
 Do not delete fiber/store during an upgrade. It contains channel state, and losing it can put funds at risk. See Backup and Restore for backup contents, validation, and recovery steps.
 
 ### RPC Changes Since v0.7.1
 
-The v0.8.0 release changed node identifiers from peerid to pubkey, renamed the nodeinfo identifier field, and changed several JSON enum formats. Integrations upgrading from v0.7.1 or earlier must update their RPC payloads before using v0.9.1.
+The v0.8.0 release changed node identifiers from peerid to pubkey, renamed the nodeinfo identifier field, and changed several JSON enum formats. Integrations upgrading from v0.7.1 or earlier must update their RPC payloads before using v0.10.1.
 
 ### Storage Migration
 
-Storage migration has been integrated into fnn since v0.9.0-rc1. A v0.8.x database can be migrated when v0.9.1 starts; databases older than v0.8.x must first be upgraded with the matching v0.8.x fnn-migrate tool. Back up the full data directory first, and do not bypass an unexpected migration error by deleting the store.
+Storage migration has been integrated into fnn since v0.9.0-rc1. A v0.8.x database can be migrated when v0.10.1 starts; databases older than v0.8.x must first be upgraded with the matching v0.8.x fnn-migrate tool. Back up the full data directory first, and do not bypass an unexpected migration error by deleting the store.
 
 ## Next Steps
 
@@ -502,7 +504,7 @@ The Fiber image is published to two registries:
 
 [bash code block]
 
-Check Docker Hub or GHCR for available tags. For production, pin a specific version tag (for example, 0.9.1) to avoid unexpected upgrades.
+Check Docker Hub or GHCR for available tags. For production, pin a specific version tag (for example, 0.10.1) to avoid unexpected upgrades.
 
 ### 2. Prepare the Data Directory
 
@@ -569,7 +571,7 @@ Once the RPC port is mapped, you can call the JSON-RPC interface directly from t
 
 [bash code block]
 
-Exposing the RPC port to the public internet allows remote callers to control your node, including opening channels and sending payments. Keep the host-side mapping on 127.0.0.1 unless you have configured v0.9.1 RPC authentication and a secure access layer. Do not publish an unauthenticated RPC endpoint.
+Exposing the RPC port to the public internet allows remote callers to control your node, including opening channels and sending payments. Keep the host-side mapping on 127.0.0.1 unless you have configured v0.10.1 RPC authentication and a secure access layer. Do not publish an unauthenticated RPC endpoint.
 
 ### 8. Build the Image Locally
 
@@ -577,7 +579,7 @@ If you want to build from source — for example to test an unreleased branch �
 
 [bash code block]
 
-Then run the locally built image using fiber:local instead of nervos/fiber:0.9.1.
+Then run the locally built image using fiber:local instead of nervos/fiber:0.10.1.
 
 ### 9. Upgrade an Existing Data Directory
 
@@ -585,9 +587,9 @@ Stop the old container and back up the complete bind-mounted directory before ch
 
 [bash code block]
 
-Then start nervos/fiber:0.9.1 with the same /fiber mount. v0.9.1 has migration support built into fnn; do not delete fiber/store and do not run two versions against the same directory.
+Then start nervos/fiber:0.10.1 with the same /fiber mount. v0.10.1 has migration support built into fnn; do not delete fiber/store and do not run two versions against the same directory. Existing V1 channels remain usable, but new channels require both peers to use 0.10.x; close and settle V1 channels before upstream removes their support.
 
-v0.9.1 cannot directly migrate a pre-v0.8.x database. First use the matching v0.8.x fnn-migrate tool, then start v0.9.1. Follow Backup and Restore rather than guessing a migration command for valuable channel data.
+v0.10.1 cannot directly migrate a pre-v0.8.x database. First use the matching v0.8.x fnn-migrate tool, then start v0.10.1. Follow Backup and Restore rather than guessing a migration command for valuable channel data.
 
 ## Next Steps
 
@@ -632,7 +634,7 @@ fiber-js is a JavaScript/TypeScript wrapper around the Fiber WebAssembly (WASM) 
 |---|---|---|
 | Runtime | Native binary | Browser |
 | Deployment | Server or local machine | Embedded in web app |
-| Public IP required | Yes | No, use outbound /ws/ or /wss/ peers |
+| Public IP required | Only for publicly reachable nodes | No, use outbound /ws/ or /wss/ peers |
 | Storage | File system (SQLite/RocksDB) | IndexedDB (via WASM worker) |
 | Use case | Production node operators | Browser wallets, web games, client-side dApps |
 
@@ -649,7 +651,7 @@ The examples below use npm. If your project already uses pnpm, use the equivalen
 
 [bash code block]
 
-Download the v0.10.0 Testnet config (the same template included in the native release archives) and serve it from your app:
+Download the v0.10.1 Testnet config (the same template included in the native release archives) and serve it from your app:
 
 [bash code block]
 
@@ -667,7 +669,7 @@ new Fiber() creates SharedArrayBuffer objects immediately. Only create a Fiber i
 
 [ts code block]
 
-> Expected Output: The node initializes, connects to a configured /ws/ or /wss/ peer, and starts syncing. nodeInfo() returns your node's pubkey, version: "0.10.0", and chain info; listPeers() should report at least one peer when the selected public node is reachable.
+> Expected Output: The node initializes, connects to a configured /ws/ or /wss/ peer, and starts syncing. nodeInfo() returns your node's pubkey, version: "0.10.1", and chain info; listPeers() should report at least one peer when the selected public node is reachable.
 
 ## Common Workflows
 
@@ -740,7 +742,7 @@ This guide walks you through setting up and executing a basic token (CKB) transf
 
 ### 1. Prepare Fiber Binary
 
-Download and extract the v0.9.1 portable archive as described in Run a Native Node. The extracted directory contains fnn, fnn-cli, and config/testnet/config.yml.
+Download and extract the v0.10.1 portable archive as described in Run a Native Node. The extracted directory contains fnn, fnn-cli, and config/testnet/config.yml.
 
 Alternatively, build the tagged source release:
 
@@ -919,11 +921,11 @@ This guide demonstrates a direct UDT transfer using Testnet RUSD. For routing th
 
 ### 1. Prepare Fiber Binary
 
-Download the v0.9.1 package for your platform from GitHub Releases. For example, on an Apple Silicon Mac:
+Download the v0.10.1 package for your platform from GitHub Releases. For example, on an Apple Silicon Mac:
 
 [sh code block]
 
-The final command should report Fiber v0.9.1. To build instead, check out the matching tag with git clone --branch v0.9.1 --depth 1 https://github.com/nervosnetwork/fiber.git before running cargo build --release.
+The final command should report Fiber v0.10.1. To build instead, check out the matching tag with git clone --branch v0.10.1 --depth 1 https://github.com/nervosnetwork/fiber.git before running cargo build --release.
 
 [sh code block]
 
@@ -952,7 +954,7 @@ Keep Node 1's release config unchanged. Change only Node 2's listening ports:
 
 [sh code block]
 
-The v0.9.1 Testnet config already contains the current RUSD type script and cell dependency. Its local autoacceptamount is 10 RUSD; this guide funds 20 RUSD to match the minimum accepted by the official Testnet public nodes.
+The v0.10.1 Testnet config already contains the current RUSD type script and cell dependency. Its local autoacceptamount is 10 RUSD; this guide funds 20 RUSD to match the minimum accepted by the official Testnet public nodes.
 
 ### 4. Start Both Nodes
 
@@ -988,7 +990,7 @@ The fundingudttypescript identifies the RUSD token:
 [typescript code block]
   
 
-Opening a UDT channel reserves about 99 CKB from each participant for on-chain cell capacity and shutdown fees. Fund both node accounts with CKB, and fund Node 1 with at least 20 RUSD. The 20 RUSD amount also meets the official Testnet public nodes' current auto-accept threshold.
+For this RUSD type script, a V2 UDT channel reserves 181 CKB from each participant for commitment-cell capacity and the shutdown fee. Longer custom shutdown scripts can require more. Fund both node accounts with CKB plus transaction fees, and fund Node 1 with at least 20 RUSD. UDT funding amounts do not include this separate CKB reserve.
 
 Fiber passes UDT amounts through as raw unsigned integers and does not apply the token's display decimals. Therefore, --funding-amount 10 is valid, but for this 8-decimal Testnet RUSD deployment it funds 10 base units (0.00000010 RUSD), not 10 RUSD.
 
@@ -1085,7 +1087,7 @@ Source: https://www.fiber.world/docs/quick-start/multi-hop-transfer
 
 ## TL;DR
 
-Run two local v0.10.0 nodes, connect each one to a different public Testnet relay, open two public channels, and pay an invoice from Node A to Node B. Neither local node needs a public IP.
+Run two local v0.10.1 nodes, connect them to public Testnet relays, open two public channels, and pay an invoice from Node A to Node B. Neither local node needs a public IP. Different relays must have an active channel path between them with enough liquidity in the payment direction.
 
 ~~~text
 ┌────────┐       ┌────────┐       ┌────────┐       ┌────────┐
@@ -1095,6 +1097,8 @@ Run two local v0.10.0 nodes, connect each one to a different public Testnet rela
   sender           relay 1          relay 2          receiver
 ~~~
 
+The diagram describes the intended route. Connecting to both relays and opening your two channels does not guarantee that a usable route exists between bottle and bracer. Their channels, enabled directions, and liquidity can change. To establish a simpler baseline, connect both local nodes to bottle and open a channel from each node to bottle; this produces a real two-hop payment through the public relay: Node A → bottle → Node B. Use different relays after confirming an available path between them.
+
 Fiber supports two routing modes:
 
 - Gossip routing: Node A learns the network graph and builds the route.
@@ -1103,7 +1107,7 @@ Fiber supports two routing modes:
 ## Prerequisites
 
 - Complete Basic Transfer first.
-- Use the v0.10.0 fnn, fnn-cli, and config/testnet/config.yml files from the same release package.
+- Use the v0.10.1 fnn, fnn-cli, and config/testnet/config.yml files from the same release package.
 - Fund each local node with at least 562 Testnet CKB: 500 CKB for the channel, about 61 CKB for a change cell, and a small transaction-fee margin.
 
 Testnet CKB has no real-world value, but opening a channel still creates an on-chain transaction and temporarily locks the funds. Use throwaway Testnet accounts and close both channels when the test is complete.
@@ -1224,7 +1228,7 @@ Run peer listpeers on both local RPC endpoints and confirm that the expected rel
 
 ## 3. Open Both Public Channels
 
-Fund each channel with 500 CKB, including 100 CKB for on-chain settlement. In shannons, 500 CKB is 50000000000; its RPC hex quantity is 0xba43b7400.
+The documented public relays auto-accept a channel funded with at least 500 CKB. In shannons, 500 CKB is 50000000000; its RPC hex quantity is 0xba43b7400.
 
   
 ~~~sh
@@ -1362,6 +1366,8 @@ To delegate route finding to bottle, pass its pubkey as the trampoline hop:
 
 The equivalent RPC field is "trampolinehops": ["02b6...be71"]; the CCC field is trampolineHops.
 
+Trampoline routing delegates pathfinding; it still needs funded channels and sufficient outbound liquidity along the remaining route. It cannot bridge two relay components that have no usable channel path.
+
 sendpayment may return Created or Inflight. Copy its paymenthash and poll until the status is Success or Failed.
 
 ~~~sh
@@ -1370,6 +1376,8 @@ sendpayment may return Created or Inflight. Copy its paymenthash and poll until 
 ~~~
 
 After Success, compare channel listchannels on Node A and Node B. Node A's local balance decreases by the invoice amount plus relay fees; Node B's local balance increases by the invoice amount.
+
+Also verify the receiver's receipt with fnn-cli --url http://127.0.0.1:8237 invoice getinvoice --payment-hash &lt;paymenthash&gt;. The ordinary invoice should report Paid.
 
 ## 6. Close Both Channels
 
@@ -1404,7 +1412,7 @@ Wait for both closing transactions to confirm before deleting either data direct
 
 Source: https://www.fiber.world/docs/quick-start/network-resources
 
-This page collects the public nodes, faucets, explorers, and tools used by the v0.9.1 quick-start guides. The endpoints below were checked on 2026-08-17.
+This page collects the public nodes, faucets, explorers, and tools used by the v0.10.1 quick-start guides. Public-node addresses come from the pinned upstream resource list. Public-node availability and channel policies can change independently of the release.
 
   Testnet resources may change without notice. This page is updated to reflect the current state. If you find outdated information, please open an issue.
 
@@ -1414,17 +1422,19 @@ This page collects the public nodes, faucets, explorers, and tools used by the v
 
 | Name | Pubkey | WSS Address | Minimum channel funding |
 |------|--------|-------------|------------------|
-| fiber-mainnet-public-ca | 03a8d7da8d0934363dbc17f52c872e8d833016415266eabb3527439c5dd17adc6b | /dns4/ca.fiber.channel/tcp/443/wss/p2p/QmZCfzENZqWrWwifJj9BFDvxQWFyYw5GjdB4vN7Ynd4FxY | ≥ 499 CKB |
-| fiber-mainnet-public-tokyo | 033a69e5be369dab43aefa96fa729d83c571ccb066f312136c6ab2d354fcc028f9 | /dns4/tokyo.fiber.channel/tcp/443/wss/p2p/QmZ73KHvZ5GFxf6XhHZ3icPeKFo93rk86kZ8qauox3avJP | ≥ 499 CKB |
+| fiber-mainnet-public-ca | 03a8d7da8d0934363dbc17f52c872e8d833016415266eabb3527439c5dd17adc6b | /dns4/ca.fiber.channel/tcp/443/wss/p2p/QmZCfzENZqWrWwifJj9BFDvxQWFyYw5GjdB4vN7Ynd4FxY | ≥ 500 CKB |
+| fiber-mainnet-public-tokyo | 033a69e5be369dab43aefa96fa729d83c571ccb066f312136c6ab2d354fcc028f9 | /dns4/tokyo.fiber.channel/tcp/443/wss/p2p/QmZ73KHvZ5GFxf6XhHZ3icPeKFo93rk86kZ8qauox3avJP | ≥ 500 CKB |
 
 ### Testnet
 
 | Name | Pubkey | Native TCP address | Browser WSS address | Minimum funding |
 |------|--------|--------------------|---------------------|-----------------|
-| fiber-testnet-public-bottle | 02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71 | /dns4/bottle.fiber.channel/tcp/8119/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo | /dns4/bottle.fiber.channel/tcp/443/wss/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo | 499 CKB or 20 RUSD |
-| fiber-testnet-public-bracer | 0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc | /dns4/bracer.fiber.channel/tcp/8119/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC4F3p89 | /dns4/bracer.fiber.channel/tcp/443/wss/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC4F3p89 | 499 CKB or 20 RUSD |
+| fiber-testnet-public-bottle | 02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71 | /dns4/bottle.fiber.channel/tcp/8119/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo | /dns4/bottle.fiber.channel/tcp/443/wss/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo | 500 CKB or 20 RUSD |
+| fiber-testnet-public-bracer | 0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc | /dns4/bracer.fiber.channel/tcp/8119/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC4F3p89 | /dns4/bracer.fiber.channel/tcp/443/wss/p2p/QmbKyzq9qUmymW2Gi8Zq7kKVpPiNA1XUJ6uMvsUC4F3p89 | 500 CKB or 20 RUSD |
 
   Since v0.8.0, Fiber RPCs identify peers by pubkey (hex-encoded secp256k1). A synced node can resolve a pubkey from gossip, but quick-start commands pass both the pubkey and explicit address so the first connection does not depend on graph synchronization. Native nodes use TCP; browser/WASM nodes use WSS.
+
+For new channels, verify that the selected public peer supports 0.10.x V2 channels. A successful peer connection alone does not prove channel-version compatibility.
 
 ## Faucets
 
@@ -1449,17 +1459,21 @@ The typical testnet topology for multi-hop payments:
 
 Local nodes (nodeA, nodeB) do not need to expose a public address — they connect through the public relay nodes.
 
+This topology requires a usable channel path between the two relays. Peer connectivity alone does not establish that path or guarantee its liquidity. For an initial multi-hop test, both local nodes can instead open channels to the same public relay, producing nodeA → relay → nodeB.
+
+The 0.10.1 browser checks confirmed that both bottle and bracer leave a 499 CKB request pending (399 CKB spendable), while a 500 CKB request is accepted (400 CKB spendable). Amounts here include the V2 reserve; retain additional CKB for transaction fees.
+
 ## Channel Capacity
 
-Each side of a new Fiber v0.10.0 channel reserves 100 CKB. This reserved amount is not available for off-chain payments.
+When opening a channel, each side must reserve 100 CKB for a standard V2 CKB channel (99 CKB for commitment-cell capacity + 1 CKB for the shutdown transaction fee). This reserved amount is not available for off-chain payments.
 
-Example: For a Fiber v0.10.0 channel, if you fund 500 CKB and the public node contributes 250 CKB:
+Example: If you fund 500 CKB and the public node contributes 250 CKB:
 - Your available balance: 500 - 100 = 400 CKB
 - Public node available: 250 - 100 = 150 CKB
 
 ## Node Downloads
 
-Download the pinned Fiber Node v0.9.1 release. Choose the asset matching your operating system and CPU architecture; each archive includes fnn, fnn-cli, and network config files.
+Download the pinned Fiber Node v0.10.1 release. Choose the asset matching your operating system and CPU architecture; each archive includes fnn, fnn-cli, and network config files.
 
 ## Getting Help
 
@@ -1627,11 +1641,9 @@ From here, the same sdk handles everything — see the User Stories below.
 
 ## Architecture
 
-FiberSDK is the main class. It composes five API domains (Channel, Invoice, Payment, Info, Peer) into a single object. Most methods are available directly on the sdk instance, while a few are accessed through domain sub-objects:
+FiberSDK exposes channel, invoice, payment, node-info, and peer methods directly on the client. The pinned package composes these APIs using class mixins; it does not expose sdk.channel or sdk.invoice sub-objects.
 
 [typescript code block]
-
-  acceptChannel and settleInvoice are on sub-objects because they represent the counterparty's side of a two-party handshake — sdk.channel.acceptChannel() and sdk.invoice.settleInvoice().
 
 ## Two-Party Interaction Model
 
@@ -1675,19 +1687,15 @@ Flow: Alice connects to Bob's node → Alice opens a channel → Bob accepts the
 
   openChannel returns a temporary channel ID. Once both parties accept and the funding transaction confirms on-chain, the temporary ID is replaced by a permanent channelId and the channel state becomes ChannelReady.
 
-If you want to cancel before the channel is ready, either party can call sdk.abandonChannel({ temporaryChannelId, reason: "..." }).
+Before funding is committed, either party can call sdk.abandonChannel({ channelId }) with the current channel ID from listChannels() (initially the temporary ID). After a signed external funding transaction has been submitted, abandonment is refused; see external funding.
 
 ### 3. Receive a Payment
 
-Goal: Bob wants to receive a payment from Alice. He creates an invoice, Alice pays it, and Bob settles to finalize.
-
-Flow: Bob creates an invoice → Bob shares the invoiceAddress with Alice → Alice pays the invoice → Bob detects the payment → Bob settles with the preimage.
+Goal: Bob creates an ordinary invoice and Alice pays it. Bob's node already knows the preimage and settles automatically.
 
 [typescript code block]
 
-[typescript code block]
-
-  How settlement works: When Alice pays, the funds flow through the channel but are not yet final — Bob's node holds them pending the preimage. When Bob calls settleInvoice, he reveals the preimage, which unlocks the funds cryptographically. This is the core Lightning-style trustless exchange: Alice knows Bob can only claim the funds if he knows the preimage, and Bob knows Alice can only reclaim after the expiry.
+For an ordinary invoice, do not call settleInvoice(): providing paymentPreimage makes settlement automatic. To defer settlement, create a hold invoice with only paymentHash, wait for Received, and then call bob.settleInvoice({ paymentHash, paymentPreimage }). If the SDK's pinned invoice type requires a preimage for creation, use the native JSON-RPC hold-invoice request rather than supplying both fields.
 
 ### 4. Send a Payment
 
@@ -1711,7 +1719,7 @@ Either party can initiate a close. The channel must be in ChannelReady state.
 
 | Close Type                   | When to Use                  | Speed                     | Counterparty Needed? |
 | ---------------------------- | ---------------------------- | ------------------------- | -------------------- |
-| Cooperative (force: false) | Both parties are online      | Immediate                 | Yes                  |
+| Cooperative (force: false) | Both parties are online      | After on-chain confirmation | Yes                  |
 | Force (force: true)        | Counterparty is unresponsive | After timelock (~4 hours) | No                   |
 
   Force-closing imposes a timelock before you can spend your funds. Always try a cooperative close first — it's faster and cheaper.
@@ -1754,7 +1762,7 @@ Before using it, make sure your project environment meets these requirements:
 - Serve WASM files with the correct application/wasm MIME type in deployment.
 - Configure CORS, SSL/TLS, and browser isolation appropriately, as described later in this document.
 
-When connecting to public nodes or self-hosted peers, keep fiber-js, fnn, and the peer node release line aligned, since small RPC or protocol differences can otherwise surface during peer, channel, or payment flows.
+These examples pin the official 0.10.1 package. New channels require 0.10.x peers because this release uses V2 P2P messaging; a pre-0.10 peer cannot open a new channel with this node. Keep the browser runtime and peer release line aligned.
 
 ### Basic Usage
 
@@ -1811,6 +1819,8 @@ If the browser page cannot complete signing directly, for example because the ta
 
 The default external funding timeout is 5 minutes and is controlled by fiber.externalfundingtimeoutseconds. For mobile wallet redirects, slow user confirmation, or longer signing flows, increase this value and show the remaining time clearly in the UI.
 
+After submitSignedFundingTx() succeeds, the signing timeout and ordinary funding timeout no longer discard the channel, and abandonChannel() cannot cancel it. If the peer disappears before broadcast, spend a funding input in a conflicting wallet transaction and wait for confirmation; FNN then marks the opening FUNDINGABORTED. If funding already confirmed, use a force close. See External Funding for recovery details.
+
 ## API Model
 
 Methods on the Fiber class are mostly camelCase wrappers around Fiber RPC:
@@ -1863,7 +1873,8 @@ Design the prefix around these dimensions:
 Lifecycle notes:
 
 - After a page refresh, if fiberKeyPair and databasePrefix stay the same, the node reuses state from IndexedDB.
-- stop() only terminates workers. It does not delete IndexedDB data.
+- In 0.10.1, await stop() shuts down the node, waits for final storage writes, and then terminates both workers. It does not delete IndexedDB data. A 30-second timeout rejects the promise and forces worker termination; a safe backup is then not guaranteed.
+- A Fiber instance can be started only once. After stopping it, create a new Fiber instance to restart with the same keys and databasePrefix.
 - When switching accounts, switching networks, or logging out, call await fiber.stop() before starting a new instance.
 - Do not open the same databasePrefix from two pages or two instances at the same time. This can cause state races.
 - When the browser enters the background, the mobile operating system enables power saving, or the page is closed, the Fiber node may be paused. Use an always-online fnn for high-availability receiving, route forwarding, or watchtower capabilities.
@@ -1894,7 +1905,7 @@ Browser nodes cannot accept inbound TCP connections like native fnn nodes. Under
 
 [yaml code block]
 
-Bootnode or peer addresses that only contain /tcp/ are better suited for native nodes. Browser nodes usually need the remote peer to provide a /ws/ or /wss/ address. Before creating a channel, call connectPeer() with an explicit WebSocket peer address, or call connectPeer({ pubkey, addr_type: "wss" }) after the peer's WSS address has propagated through gossip. Do not rely on the browser node being dialed from the public network.
+Bootnode or peer addresses that only contain /tcp/ are better suited for native nodes. Browser nodes usually need the remote peer to provide a /ws/ or /wss/ address. Before creating a channel, call connectPeer() with an explicit WebSocket peer address, or call connectPeer({ pubkey, addrtype: "wss" }) after the peer's WSS address has propagated through gossip. Do not rely on the browser node being dialed from the public network.
 
 Node.js environments are only suitable for testing or special integration scenarios. Because this wrapper depends on Workers, IndexedDB-style storage, and the browser security model, production server-side nodes should still prefer fnn.
 
@@ -1925,7 +1936,7 @@ authentication, or rendering a checkout flow.
 
 | Project | Best for | Current status |
 | --- | --- | --- |
-| fiber-pay | Typed RPC clients, browser WASM nodes, passkeys, React payment UI, and operator automation | Actively maintained; v0.3.1 supports Fiber JS 0.9.x |
+| fiber-pay | Typed RPC clients, browser WASM nodes, passkeys, React payment UI, and operator automation | Actively maintained; v0.3.1 declares Fiber JS 0.9.x; 0.10.1 requires integration testing |
 | fiber-checkout | Adding an invoice-based checkout component or custom checkout hooks to a React app | Spark grant completed; stable maintenance |
 
 ## How projects are selected
@@ -1973,7 +1984,7 @@ local node lifecycle helpers, and an automation-friendly CLI.
   fiber-pay is maintained independently of the official Fiber repository.
   Version 0.3.1 declares compatibility with the stable Fiber WASM package
   @nervosnetwork/fiber-js ~0.9.0. Pin compatible package and node versions,
-  and rerun integration tests before upgrading either side.
+  and rerun integration tests before upgrading either side. Fiber 0.10.1 is outside this declared peer range. This site tests its pinned 0.3.1 wrapper with Fiber JS 0.10.1 for the browser tutorials; that is not an upstream compatibility guarantee.
 
 ## Where it fits
 
@@ -2042,6 +2053,11 @@ providers for passkeys, passwords, and raw keys. A minimal passkey-backed node
 looks like this:
 
 [typescript code block]
+
+For SDK 0.3.1 with Fiber JS 0.10.1, copy the
+fiber-testnet-runtime.ts helper
+from the browser-node guide or a downloadable tutorial. It updates the SDK's
+obsolete Testnet CKB Auth dependency to the official 0.10.1 configuration.
 
 Persist a stable walletId or credential identifier for the same user and
 network. Changing it creates a different local identity instead of reopening
@@ -2395,6 +2411,7 @@ Source: https://www.fiber.world/docs/build/ffi/ffi-user-guide
 ## Background
 
   fiber-ffi currently lives in a personal repository. It is used here as an exploratory reference for Fiber native/mobile integration, not as an official Fiber release artifact, supported SDK, or compatibility commitment.
+  The referenced upstream Cargo.toml pins fnn to v0.9.0-rc2, so this build is not a Fiber 0.10.1 runtime. To open new channels with 0.10.x peers, the FFI maintainer must update the core dependency and verify the ABI, storage migration, and V2 recovery behavior. See the dependency declaration.
 
 This FFI layer originally came from an exploration of mobile support. The community hoped that Fiber could support mobile platforms, so we tried to run the existing Rust Fiber node inside Android/iOS app processes instead of reimplementing the node logic on mobile.
 
@@ -2663,6 +2680,7 @@ The linked fiber-ffi reference provides a C ABI that lets non-Rust applications 
 Source: https://www.fiber.world/docs/build/ffi/android-native-integration
 
 fiber-ffi currently lives in a personal repository. This page uses it as an exploratory reference for Android native integration, not as an official Fiber Android SDK or support commitment.
+  The referenced upstream Cargo.toml pins fnn to v0.9.0-rc2, so this build is not a Fiber 0.10.1 runtime. To open new channels with 0.10.x peers, the FFI maintainer must update the core dependency and verify the ABI, storage migration, and V2 recovery behavior. See the dependency declaration.
 
 This document uses fiber-ffi as a reference example to explain how the existing Rust Fiber node can be integrated into an Android app through JNI and the native C ABI. The repository provides a runnable demo:
 
@@ -2851,6 +2869,7 @@ The demo requires running SetCKBKey first. The key is a 32-byte hex string, with
 Source: https://www.fiber.world/docs/build/ffi/ios-native-integration
 
 fiber-ffi currently lives in a personal repository. This page uses it as an exploratory reference for iOS native integration, not as an official Fiber iOS SDK or support commitment.
+  The referenced upstream Cargo.toml pins fnn to v0.9.0-rc2, so this build is not a Fiber 0.10.1 runtime. To open new channels with 0.10.x peers, the FFI maintainer must update the core dependency and verify the ABI, storage migration, and V2 recovery behavior. See the dependency declaration.
 
 This document uses fiber-ffi as a reference example to explain how the existing Rust Fiber node can be integrated into an iOS app through Swift and an Objective-C bridging header. The repository provides a runnable demo:
 
@@ -3145,6 +3164,8 @@ Source: https://www.fiber.world/docs/build/browser-extension
 
 ## Introduction
 
+> 0.10.1 compatibility: The extension repository is an independent demo. The official 0.10.1 npm bundle creates Blob-backed workers, so the demo's worker-src 'self' policy alone does not admit those worker URLs. Package extension-local worker entry files and verify the Manifest V3 CSP before upgrading the demo. The ordinary browser-page WASM test does not validate an extension deployment.
+
 This demo verifies whether @nervosnetwork/fiber-js can run inside a browser extension.
 
 ( fiber-js is a JavaScript wrapper around the Fiber WebAssembly runtime. It starts a Fiber node inside browser workers and exposes JavaScript methods for controlling that node.)
@@ -3359,6 +3380,8 @@ Before getting started, make sure you have:
 ### 1. Prepare two Fiber Nodes
 
 You need to setup and running two fiber Testnet nodes locally, and make sure they have at least 500 CKB liquidity in their payment channels.
+For 500 CKB of usable balance per side in a V2 channel, each side must contribute at least 600 CKB (including the 100 CKB reserve), plus on-chain fees. Configure the acceptor contribution or accept manually; the default automatic contribution supplies only the reserve.
+
 It is highly recommended to follow the Run a Fiber Node and Basic Transfer Example guides to set up your nodes first.
 
 In this tutorial, we assume the info for the two nodes are:
@@ -3397,8 +3420,8 @@ First, install the dependencies:
 [bash code block]
 
   Fiber Node and @ckb-ccc/fiber use independent version numbers. This
-  tutorial targets Fiber Node v0.9.1; the RPC SDK is currently published under
-  the canary version shown above rather than as 0.9.1.
+  tutorial targets Fiber Node v0.10.1; the RPC SDK is currently published under
+  the canary version shown above rather than as 0.10.1.
 
 ### 2. Create the FiberNode Class
 
@@ -3640,7 +3663,7 @@ These options affect native fnn startup. They are not config.yml fields.
 | -d, --dir  | Set BASEDIR; also changes the implicit config path to $BASEDIR/config.yml when --config is not provided. |
 | -s, --services  | Services to start. When present, this replaces the services list from config.yml. Values are comma-separated or space-separated. |
 | --check-validate | Validate the Fiber store database and exit without starting services. |
-| --restore  | Restore the Fiber database and node keys from a v0.9.1 timestamped backup directory, then exit. See the native v0.9.1 restore requirements. |
+| --restore  | Restore the Fiber database and node keys from a v0.10.1 timestamped backup directory, then exit. See the native v0.10.1 restore requirements. |
 
 ## Top-Level Fields
 
@@ -3667,6 +3690,7 @@ Service dependencies:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | listeningaddr | string | /ip4/0.0.0.0/tcp/0 | TCP listening address for P2P connections (multiaddr format) |
+| listeningaddrs | string[] | [] | Additional P2P listening addresses, appended to listeningaddr, for example an IPv6 or QUIC listener. |
 | reuseportforwebsocket | bool | true | Also listen on a WebSocket multiaddr using the same TCP port. |
 | announcelisteningaddr | bool | false | Whether to announce the listening address to peers |
 | announceprivateaddr | bool | false | Whether to announce and process private addresses. Keep false unless testing or running a private network. |
@@ -3686,13 +3710,19 @@ name must be one of the contract names used by Fiber, such as FundingLock or Com
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| openchannelautoacceptminckbfundingamount | u64 | 10000000000 (100 CKB) | Minimum CKB funding to auto-accept channel requests |
-| autoacceptchannelckbfundingamount | u64 | 9900000000 (99 CKB) | CKB amount to auto-accept. Set to 0 to disable auto-accept. |
+| openchannelautoacceptminckbfundingamount | u64 | 10000000000 (100 CKB) | Minimum spendable CKB contribution from the opener, after its channel reserve is deducted, for automatic acceptance. With the standard V2 reserve, the default requires at least 200 CKB total opener funding. |
+| autoacceptchannelckbfundingamount | u64 | 10000000000 (100 CKB) | CKB contributed when auto-accepting a CKB channel. Set to 0 to disable auto-accept. |
 | tobeacceptedchannelsnumberlimit | usize | 20 | Max pending channels from one peer |
 | tobeacceptedchannelsbyteslimit | usize | 51200 (50 KiB) | Max storage bytes of pending channels from one peer |
 | pendingchannelsnumberlimit | usize | 100 | Max pending channel openings globally |
-| fundingtimeoutseconds | u64 | 86400 (1 day) | Timeout for funding transaction confirmation |
+| fundingtimeoutseconds | u64 | 86400 (1 day) | Timeout for ordinary funding. Disabled for external funding after signed submission succeeds; see External Funding. |
 | externalfundingtimeoutseconds | u64 | 300 (5 min) | Timeout waiting for externally signed funding tx |
+
+### Storage Durability
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| storesyncwrites | bool | false | Wait for each database write to reach disk. Enable for nodes holding funds for others; it trades throughput for protection against losing recent channel writes after power loss or a hard reboot. |
 
 ### TLC
 
@@ -3822,6 +3852,7 @@ Only fields wired to clap can be overridden by environment variables. List value
 | Field | Environment variable |
 |-------|----------------------|
 | listeningaddr | FIBERLISTENINGADDR |
+| listeningaddrs | FIBERLISTENINGADDRS |
 | announcelisteningaddr | FIBERANNOUNCELISTENINGADDR |
 | announceprivateaddr | FIBERANNOUNCEPRIVATEADDR |
 | announcedaddrs | FIBERANNOUNCEDADDRS |
@@ -3844,6 +3875,7 @@ Only fields wired to clap can be overridden by environment variables. List value
 | gossipnetworknumtargetedactivesyncingpeers | FIBERGOSSIPNETWORKNUMTARGETEDACTIVESYNCINGPEERS |
 | gossipnetworknumtargetedoutboundpassivesyncingpeers | FIBERGOSSIPNETWORKNUMTARGETEDOUTBOUNDPASSIVESYNCINGPEERS |
 | syncnetworkgraph | FIBERSYNCNETWORKGRAPH |
+| storesyncwrites | FIBERSTORESYNCWRITES |
 | watchtowercheckintervalseconds | FIBERWATCHTOWERCHECKINTERVALSECONDS |
 | standalonewatchtowerrpcurl | FIBERSTANDALONEWATCHTOWERRPCURL |
 | standalonewatchtowertoken | FIBERSTANDALONEWATCHTOWERTOKEN |
@@ -3903,7 +3935,7 @@ No supported direct environment variable exists for native service directories, 
 
 [yaml code block]
 
-> Tip: Use the config files from the Fiber v0.9.1 release as starting points. They include the matching script hashes, cell deps, UDT whitelist entries, and bootnode addresses for each network.
+> Tip: Use the config files from the Fiber v0.10.1 release as starting points. They include the matching script hashes, cell deps, UDT whitelist entries, and bootnode addresses for each network.
 
 ---
 
@@ -3913,13 +3945,13 @@ Source: https://www.fiber.world/docs/operate/backup
 
 ## TL;DR
 
-Fiber v0.9.1 creates online backups automatically under
+Fiber v0.10.1 creates online backups automatically under
 $BASEDIR/fiber/backups/. Enable the admin RPC module when you
 also need an immediate manual backup. To restore one of these backup
 directories, stop the node, run fnn --restore , and then
 start the node normally with the same FIBERSECRETKEYPASSWORD.
 
-## What a v0.9.1 Backup Contains
+## What a v0.10.1 Backup Contains
 
 Each timestamped native-node backup contains:
 
@@ -3936,7 +3968,7 @@ funds.
 
 ## Automatic Online Backups
 
-When the Fiber service is running, v0.9.1 schedules a backup every 24 hours.
+When the Fiber service is running, v0.10.1 schedules a backup every 24 hours.
 Important channel-state changes pull the next backup forward so it normally
 runs within 60 seconds. The default location is:
 
@@ -3971,7 +4003,7 @@ either interface:
 A successful request returns null and creates a new timestamped directory.
 Keep the RPC listener private; if you expose it beyond the local machine,
 configure Biscuit authentication and grant administrative access only to a
-trusted operator.
+trusted operator. In 0.10.1, backup requires the Biscuit permission write("node"); enabling the admin module alone does not grant that permission.
 
 ## Create a Full Offline Archive
 
@@ -3986,13 +4018,13 @@ by extracting it and starting Fiber with the same base directory:
 
 [bash code block]
 
-## Restore a v0.9.1 Online Backup
+## Restore a v0.10.1 Online Backup
 
 Stop the node before restoring. Pass the timestamped directory itself—not its
 db subdirectory—to --restore.
 
   Restore into the stopped node's existing, initialized base directory. The
-  v0.9.1 native binary cannot restore into an empty base directory, and its
+  v0.10.1 native binary cannot restore into an empty base directory, and its
   read-only fiber/sk file prevents an in-place restore unless you make that
   file writable first. The restored key returns to read-only mode.
 
@@ -4003,27 +4035,25 @@ files, then exits. Start the node normally afterward:
 
 [bash code block]
 
-The restore process preserves the replaced database as a timestamped safety
-backup. Channels that could carry penalty risk are marked Stale; Fiber must
-passively audit them with their peers before normal operation resumes. Keep the
-node online and connected to those peers, and do not assume a restored channel
-is spendable merely because it exists in list_channels.
+The restore process preserves the replaced database as a timestamped safety backup. Channels that could carry penalty risk are marked Stale.
+
+Legacy V1 channels retain their passive audit with the peer. A restored V2 channel stays quarantined: an old backup cannot prove which nonces were already used. Do not sign, replay, send payments, or force close from a V2 Stale channel. Use current node state for ordinary restart recovery and retain the backup for investigation. See the V2 restore rules.
 
 ## Cross-Version Restore
 
-### From v0.8.x to v0.9.1
+### From v0.8.x to v0.10.1
 
-For a complete v0.8.x data-directory backup, extract it and start the v0.9.1
+For a complete v0.8.x data-directory backup, extract it and start the v0.10.1
 binary. Fiber detects the older database and runs the supported migration on
 startup after confirmation.
 
 [bash code block]
 
-### From v0.7.x or Older to v0.9.1
+### From v0.7.x or Older to v0.10.1
 
 Databases older than version 20260302100001 cannot migrate directly with the
-v0.9.1 fnn binary. First use the v0.8.x fnn-migrate tool to upgrade the
-database, then start v0.9.1:
+v0.10.1 fnn binary. First use the v0.8.x fnn-migrate tool to upgrade the
+database, then start v0.10.1:
 
 [bash code block]
 
@@ -4109,7 +4139,7 @@ Source: https://www.fiber.world/docs/concept/channels/channel-lifecycle
 
 A Fiber channel undergoes several states: NegotiatingFunding, CollaboratingFundingTx, SigningCommitment, AwaitingTxSignatures, AwaitingChannelReady, ChannelReady, ShuttingDown, and Closed. After restoring a backup, a channel may temporarily appear as Stale. RPC responses report the current state through the ChannelState enum.
 
-The following sections show the complete Fiber channel lifecycle in its actual state order.
+The following sections show the channel lifecycle. In 0.10.x new channels use V2 messages with separate nonce sessions for commitment, revocation, and cooperative closing; existing V1 channels retain their legacy message flow.
 
 ## NegotiatingFunding
 
@@ -4176,9 +4206,8 @@ ChannelReady means the channel is active and can send or receive payments. This 
 ## Stale
 
 Stale means the restored channel data may be older than the peer's latest
-state. Fiber v0.9.1 marks channels that could carry penalty risk as Stale
-after a database restore and waits for a passive audit with the peer before
-resuming normal channel operations. This state has no stateflags.
+state. Fiber v0.10.1 marks channels that could carry penalty risk as Stale
+after a database restore. Legacy V1 channels use the historical passive peer audit. V2 channels remain quarantined because an older backup cannot establish safe nonce use; do not force close, sign, or replay from a V2 Stale backup. A normal restart with current data uses V2 reconciliation and replay instead. This state has no stateflags.
 
 Keep the node online and connected to the channel peer. Do not send payments,
 force close, or otherwise treat the restored channel as current until the
@@ -4190,7 +4219,7 @@ ShuttingDown means the channel is closing.
 
 Channels can close cooperatively, when both peers agree on the close, or
 uncooperatively, when one side force closes the channel. For a cooperative
-close, provide closescript and feerate. For a force close, set force
+close, closescript and feerate are optional overrides of the saved defaults. For a force close, set force
 to true; for example, fnn-cli channel shutdownchannel --force true. In
 that case, Fiber uses the default close script and fee rate from channel
 opening.
@@ -4310,7 +4339,7 @@ Set oneway: true when calling openchannel. The parameter is optional and default
 
 [json code block]
 
-  The funding_amount is in shannons (1 CKB = 10⁸ shannons). For a new Fiber v0.10.0 channel, 100 CKB is reserved for on-chain settlement, so the available balance for payments is fundingamount - 10000000000 shannons. The FIBERAUTOACCEPTCHANNELCKBFUNDINGAMOUNT environment variable controls the auto-accept funding contribution (the amount the acceptor automatically contributes when accepting a channel open request), not the channel reserve itself.
+  The funding_amount is in shannons (1 CKB = 10⁸ shannons). By default, 100 CKB is reserved for a V2 CKB channel (99 CKB minimum commitment-cell capacity + 1 CKB default shutdown fee), so the available balance for payments is fundingamount - 10000000000 shannons. The FIBERAUTOACCEPTCHANNELCKBFUNDINGAMOUNT environment variable controls the auto-accept funding contribution (the amount the acceptor automatically contributes when accepting a channel open request), not the channel reserve itself.
 
 ## Sending Payments
 
@@ -4330,7 +4359,7 @@ This is an important point that often causes confusion. A one-way channel restri
 
 - Initiator's remaining balance goes back to the initiator's CKB address
 - Acceptor's received balance goes to the acceptor's CKB address
-- The channel reserve (100 CKB for Fiber v0.10.0) is released back to the initiator
+- The channel reserve (100 CKB for a standard V2 CKB channel) is released back to the initiator, less the closing fee
 
 For example, if you open a one-way channel with 500 CKB and send 120 CKB worth of payments before closing:
 
@@ -4405,6 +4434,17 @@ For Rust developers using secp256k1-sighash locks, Fiber includes a development-
 This helper only covers secp256k1 signing and should be treated as a development reference, not a production wallet integration.
 
 For JavaScript developers, see the pinned fiber-wallet example using @ckb-ccc/ccc. The example includes JSON-RPC to CCC transaction conversion, copying signed witnesses back to the original transaction, standard CCC signers, OmniLock witness preparation, and JoyID redirect signing.
+
+## Timeouts, Cancellation, and Recovery
+
+Before signed submission, fiber.externalfundingtimeoutseconds limits the wallet-signing wait (default: 5 minutes). You can also cancel with abandonchannel.
+
+After submitsignedfundingtx succeeds, FNN disables time-based funding cancellation, manual abandonchannel, and peer TxAbort for that opening. The signed inputs could still fund the channel on-chain, so FNN must retain its saved commitment transaction and channel state.
+
+- If the peer goes offline before broadcast, spend one of the funding input cells in another wallet transaction. Once the conflict confirms and reaches FNN's tracing confirmation depth, FNN aborts the opening with FUNDINGABORTED.
+- If the funding transaction already confirmed, call shutdownchannel with force: true to publish the saved initial commitment transaction and recover through on-chain settlement.
+
+Keep the node state until cancellation or settlement is confirmed. See the 0.10.1 recovery notes.
 
 ## Related APIs
 
@@ -4499,7 +4539,7 @@ Fiber's payment system uses two independent state machines: PaymentSession (one 
 
 [mermaid code block]
 
-A session is Created when the payment request is accepted, becomes Inflight as soon as the first TLC is dispatched, and reaches a terminal state (Success or Failed) only when all attempts have resolved.
+A session is Created when the payment request is accepted and becomes Inflight when a TLC is dispatched. In 0.10.1 it reports Success once a payment TLC is claimed and the preimage is learned, even if other attempts still have pending channel work. It reports Failed only after unresolved issued TLCs and channel-owned work have cleared; a local timeout alone does not refund an outstanding TLC.
 
 ### Attempt Lifecycle
 
@@ -4507,7 +4547,7 @@ A session is Created when the payment request is accepted, becomes Inflight as s
 
 Each attempt routes a portion of the payment through a specific path. If it fails with a retryable error (e.g., a channel temporarily lacks liquidity), it transitions to Retrying and is re-dispatched with a new route. Terminal errors (e.g., invoice expired, permanent channel failure) move it directly to Failed.
 
-  How the two layers connect: When a session is Created, the payment module splits the total amount into one or more attempts (routes). As each attempt reaches Success, its settled amount is added to the session's running total. The session transitions to Success when the sum of all successful attempts meets or exceeds the requested amount. If all attempts end up Failed and the retry limit is exhausted, the session becomes Failed.
+  How the two layers connect: A session coordinates one or more routing attempts. A successfully claimed TLC establishes payment success. Remaining attempts can still be resolving, so Success does not mean every TLC has disappeared from the channel. Failed attempts and exhausted retries result in Failed only once outstanding channel work has cleared.
 
 ## PaymentSession States
 
@@ -4528,16 +4568,16 @@ One or more routing attempts are actively being processed. Funds are locked in T
 What happens here:
 - Each attempt adds a TLC to the sender's first-hop channel and dispatches an onion packet
 - Intermediate nodes peel the onion, validate fees and expiry, then forward a new TLC to the next hop
-- As attempts settle (partially or fully), the settled amount accumulates on the session
-- The session remains Inflight until either the full amount is collected or all attempts have been exhausted
+- A fulfilled payment TLC supplies the preimage and establishes session success
+- Outstanding issued TLCs keep a would-be failure Inflight until the channel resolves them
 
 Key transitions from Inflight:
-- → Success: When the sum of settled amounts across all successful attempts equals or exceeds the total payment amount
-- → Failed: When all attempts have failed and the retry limit has been reached, or a terminal error occurs
+- → Success: A payment TLC is claimed and its preimage is learned
+- → Failed: Payment attempts have failed and there is no unresolved issued TLC or channel-owned work
 
 ### Success
 
-The payment has been completed. The full amount has been delivered to the recipient and the preimage has been revealed.
+The payment preimage has been learned from a claimed payment TLC. Other attempts may still be pending; do not interpret this status as proof that every channel TLC has finished clearing.
 
 What this means: The recipient's node revealed the preimage (proof of payment) by including it in a RemoveTlcFulfill message. This preimage propagates backward through each hop, settling each TLC in sequence. All intermediate nodes have been paid their forwarding fees. The preimage is stored in the session and can be used as cryptographic proof of payment.
 
@@ -4604,7 +4644,7 @@ To understand the full picture, here is what happens step by step when you call 
 
 6. Settlement: The final hop recognizes itself as the recipient (the onion indicates is_last). If the payment hash matches a known invoice, it reveals the preimage by sending RemoveTlcFulfill back to the previous hop. Each intermediate node then fulfills its upstream TLC using the same preimage, releasing funds hop by hop.
 
-7. Session update: As each attempt settles, the PaymentSession recalculates its status. When the sum of successful attempt amounts reaches the requested total, the session transitions to Success.
+7. Session update: PaymentSession derives success from a claimed payment TLC and its preimage. A failed local session remains externally Inflight while its channels still own outstanding payment work.
 
 ## TLC State Machine
 
@@ -4667,7 +4707,7 @@ Trampoline routing is especially useful for mobile or light nodes that do not ma
 
 ## Multi-Path Payments
 
-Fiber supports Atomic Multi-path Payments (AMP), which split a large payment into smaller parts routed through different channels. This is critical for large payments when no single path has enough liquidity.
+Fiber supports multi-part payments (MPP), which split a large payment into smaller parts routed through different channels. Parts share the invoice's payment hash and payment secret. This can carry a payment when no single path has enough liquidity.
 
 ### How MPP Works
 
@@ -4676,7 +4716,7 @@ Fiber supports Atomic Multi-path Payments (AMP), which split a large payment int
 3. Each route becomes a separate Attempt with its own amount, path, and onion packet
 4. A paymentsecret is included in the invoice and embedded in each attempt's custom records, so the recipient can correlate partial payments
 5. As each attempt settles, the partial amounts accumulate on the session
-6. When the sum of successful attempt amounts reaches the total, the session transitions to Success
+6. Once a payment TLC is fulfilled and the sender learns its preimage, the session reports Success; other attempts can still be clearing
 
 ### MPP Eligibility
 
@@ -4735,7 +4775,7 @@ The payment response includes:
 |-------|-------------|
 | status | Session status: Created, Inflight, Success, or Failed |
 | amount | The total target amount |
-| feepaid | Total routing fees paid across all successful attempts |
+| fee | Routing fee calculated from active attempts; remaining attempt cleanup can still be pending |
 | failederror | The most recent error message (if failed) |
 
 If status is Inflight, the payment is still being processed — likely waiting for TLC propagation or retry. Payments in Inflight for an extended period may indicate a stuck route; the system's periodic status check will eventually time out unresponsive attempts.
@@ -4747,7 +4787,7 @@ If status is Inflight, the payment is still being processed — likely waiting f
 | Payment stuck | Inflight (long time) | A hop is offline or unresponsive | Wait for TLC expiry timeout; the system will fail and retry the attempt |
 | Payment failed immediately | Failed | No route with sufficient liquidity | Open a channel to a well-connected node, or try MPP |
 | Partial payment delivered | Inflight (no progress) | Some attempts failed, remaining are retrying | Wait for retries or check failederror for the failure reason |
-| Fee too high | Failed | Route fees exceed maxfeeamount | Increase maxfeeamount or maxfee_rate, or use a shorter route |
+| Fee too high | Failed | Route fees exceed maxfeeamount | Increase maxfeeamount or maxfeerate, or use a shorter route |
 | Wrong amount | Failed | Invoice amount mismatch | Verify the invoice amount and payment hash before paying |
 
 ## Related Topics
@@ -4784,7 +4824,7 @@ Every Fiber invoice carries the following core fields:
 |-------|----------|-------------|
 | Currency | Yes | Network identifier: fibb (mainnet), fibt (testnet), or fibd (devnet) |
 | Amount | No | Payment amount in shannons (1 CKB = 10⁸ shannons). Omit for open-ended invoices (e.g., donations) |
-| Payment hash | Yes | A 32-byte cryptographic commitment. For regular invoices it's derived from a random preimage; for hold invoices, the recipient provides the preimage and the hash is computed from it |
+| Payment hash | Yes | A 32-byte cryptographic commitment. For regular invoices it's derived from a random preimage; for hold invoices, the recipient supplies only the hash at creation and keeps the preimage secret until settlement |
 | Timestamp | Yes | Invoice creation time in milliseconds since the UNIX epoch |
 | Signature | Yes | A secp256k1 recoverable signature over the invoice data, proving the invoice was created by the holder of the payee's private key |
 
@@ -4835,7 +4875,7 @@ The serialized invoice data contains the following fields:
 | # | Field | Required | Size | Description |
 |---|-------|----------|------|-------------|
 | 1 | timestamp | Yes | 128 bits | Milliseconds since the UNIX epoch |
-| 2 | paymenthash | Yes | 256 bits | Unique identifier of the invoice. Derived from blake2b256(preimage) for hold invoices, or randomly generated for AMP invoices |
+| 2 | paymenthash | Yes | 256 bits | Unique identifier of the invoice. Computed with the selected hashalgorithm from the preimage; hold invoices supply the hash before revealing the preimage |
 | 3 | expiry | No | 64 bits | Validity period in seconds; timestamp + expiry gives the expiration time |
 | 4 | description | No | Variable | UTF-8 text (e.g., "a cup of coffee"), max 639 characters |
 | 5 | finalexpirydelta | No | 64 bits | Final TLC expiry delta in milliseconds |
@@ -4901,7 +4941,7 @@ Full parameter reference:
 | paymenthash | Hash256 | No | Payment hash only (creates a hold invoice). The caller supplies the hash; the preimage must be provided later via settleinvoice. Mutually exclusive with paymentpreimage |
 | expiry | u64 (hex) | No | Invoice validity period in seconds |
 | fallbackaddress | string | No | CKB on-chain fallback address |
-| finalexpirydelta | u64 (hex) | No | Final TLC expiry delta in milliseconds (min ~160 minutes, max 14 days). newinvoice defaults to the minimum; v0.9.1 treats an externally encoded invoice that omits the attribute as 24 hours. |
+| finalexpirydelta | u64 (hex) | No | Final TLC expiry delta in milliseconds (min ~160 minutes, max 14 days). newinvoice defaults to the minimum; v0.10.1 treats an externally encoded invoice that omits the attribute as 24 hours. |
 | udttypescript | Script | No | CKB type script for UDT (non-CKB) assets |
 | hashalgorithm | HashAlgorithm | No | ckbhash (default) or sha256 |
 | allowmpp | bool | No | Enable multi-part payments |
@@ -5148,7 +5188,7 @@ Recipient holds the preimage. The simplest model: the recipient decides when to 
 
 Sender holds the preimage. The sender pays the hold invoice and later reveals the preimage to let the recipient claim the funds. This is equivalent to "I'll pay you after I'm satisfied." The risk is reversed: the sender could simply never reveal the preimage, leaving the recipient unpaid even after delivering goods.
 
-Third-party escrow. A trusted arbitrator holds the preimage. Neither the sender nor the recipient can unilaterally settle or cancel — only the escrow agent can. When both parties agree, the agent settles; when there is a dispute, the agent reviews evidence and decides whether to settle or cancel. This is the closest analogue to traditional escrow services.
+Third-party escrow. A trusted arbitrator holds the preimage. Only the preimage holder can authorize settlement, but the receiver still controls cancel_invoice unless the application restricts its RPC access. When both parties agree, the agent settles; when there is a dispute, the agent reviews evidence and decides whether to settle or cancel. This is the closest analogue to traditional escrow services.
 
 Automated / programmatic release. The preimage is released by an external system when a verifiable condition is met — for example, an on-chain oracle confirming a transaction, or a smart contract callback. Fiber's cross-chain hub uses this model: the preimage is automatically obtained from the outgoing payment on the other chain, so there is no human judgment involved and no opportunity for either party to cheat.
 
@@ -5158,7 +5198,7 @@ A common question is: why not use a regular invoice and simply call sendpayment 
 
 With a regular invoice, the buyer has made no commitment at all — they could walk away at any time, and the seller has no proof that the buyer ever intended to pay. The seller ships goods entirely on trust.
 
-With a hold invoice, the buyer has already called sendpayment and the funds are locked in the network. The seller can observe the Received state as verifiable proof that funds are committed and waiting. The buyer cannot double-spend or withdraw the locked funds. Both parties are protected: the seller knows the money is there, and the buyer knows the seller cannot claim it without fulfilling the condition.
+With a hold invoice, the buyer has already called sendpayment and the funds are locked in the network. The seller can observe the Received state as verifiable proof that funds are committed and waiting. The buyer cannot double-spend or withdraw the locked funds. The seller can observe the held payment. Buyer protection still depends on who controls the preimage and the application release rule; Fiber does not verify delivery of goods.
 
 ### Why Not Use a Platform with Regular Invoices?
 
@@ -5171,7 +5211,7 @@ With a hold invoice, the funds never reach the recipient's account until settlei
 | Funds after payment | In the platform's account | Locked in the network, not claimable by anyone |
 | Buyer protection | Relies on the platform's refund policy | Enforced by the protocol — funds cannot be claimed without settlement |
 | Refund mechanism | Platform sends a new payment from its own balance | cancel_invoice releases the original locked funds automatically |
-| Trust assumption | Buyer trusts the platform | Neither party needs to trust the other |
+| Trust assumption | Buyer trusts the platform | Depends on who controls the preimage and release rule |
 
 In short, hold invoices separate the cryptographic commitment (funds locked, preimage required to unlock) from the business logic (who decides when the condition is met). The commitment layer is universal; the trust model is built on top by your application.
 
@@ -5310,7 +5350,7 @@ Before sending a payment, the sender must discover a viable route through the ne
 
 The cost function considers both the fee charged by each relay node and the estimated probability that the channel has sufficient liquidity to carry the payment. This produces routes that balance low cost against high success probability. The sender can influence route selection by specifying parameters such as maxfeeamount (the maximum total fee budget) and maxparts (for multi-path splitting).
 
-When no single path has enough liquidity for the full amount, Fiber can split the payment across multiple routes using atomic multi-path payments (AMP). Each part travels independently, and the payment only succeeds when all parts are delivered.
+When no single path has enough liquidity for the full amount, Fiber can split the payment across multiple routes using multi-part payments (MPP). Each part travels independently, and the payment only succeeds when all parts are delivered.
 
 ### Onion Construction
 
@@ -5434,7 +5474,7 @@ Alice pays the invoice from nodeA. Fiber automatically discovers a route through
 
   
 
-The response includes the paymenthash, the route taken (routers), and the total fee charged by relay nodes. The routers field shows each hop as node(amount, channeloutpoint), revealing the full path the sender computed.
+The response includes paymenthash, asynchronous status, and fee. Official 0.10.1 release binaries omit the debug-only routers field. Use buildrouter when you need an inspectable explicit route.
 
 ### 3. Preview a Route Without Sending
 
@@ -5451,7 +5491,7 @@ Use dryrun to validate the route and estimate fees without actually sending:
 
   
 
-This returns the same route and fee information without creating any TLCs, which is useful for checking whether a payment would succeed before committing funds.
+This checks route construction and estimates fees without creating TLCs. The release response omits routers, and a successful preview does not reserve liquidity or guarantee that a later payment succeeds.
 
 ### 4. Monitor the Payment
 
@@ -5486,7 +5526,7 @@ Relay nodes are the backbone of multi-hop routing. If you operate a well-connect
 
 A relay node needs a server with a publicly reachable IP address, sufficient CKB to fund channels, stable uptime (payments can only route through online nodes), and balanced liquidity on both sides of each channel.
 
-Each side of a new Fiber v0.10.0 channel reserves 100 CKB for on-chain settlement. This amount cannot be used for off-chain payments. The actual minimum funding amount depends on your openchannelautoacceptminckbfundingamount setting (code default: 100 CKB). For example, funding a channel with 500 CKB leaves 400 CKB available for payments.
+Each channel side must reserve 100 CKB (99 CKB for the commitment lock's on-chain occupied capacity + 1 CKB for the shutdown transaction fee) — this amount is locked for on-chain settlement and cannot be used for off-chain payments. The auto-accept minimum applies to the opener's spendable amount after reserve, so the default 100 CKB policy requires at least 200 CKB total funding for a standard V2 channel. For example, the public Fiber relay nodes require at least 500 CKB (100 CKB reserve + 400 CKB usable).
 
 ### Configuration
 
@@ -5494,7 +5534,7 @@ The key settings in config.yml for relay operation are:
 
 [yaml code block]
 
-  Without a publicly reachable address, other nodes cannot connect to you. You must set announcedaddrs to your public IP or use a relay/VPN service.
+  Without a publicly reachable address, other nodes cannot connect to you. You must set announced_addrs to your public IP or use a relay/VPN service.
 
 ### Maintaining Liquidity
 
@@ -5725,7 +5765,7 @@ Set the trampolinehops field in the sendpayment RPC to specify the trampoline no
 
 The trampolinehops array is an ordered list of public keys. The first entry is the node the sender routes to directly; subsequent entries form the trampoline chain. The final recipient is implied by the invoice and must not appear in the trampoline hops list.
 
-  When using trampolinehops, maxfeeamount is required. This sets the total fee budget for the entire trampoline route, including both the outer route and all trampoline sub-routes.
+  sendpayment computes a fee budget from maxfeerate even when maxfeeamount is omitted. Set an explicit maxfeeamount to cap the budget further; the effective cap is the lower of that amount and the rate-derived limit. This covers the outer route and all trampoline sub-routes.
 
 ### Feature Negotiation
 
@@ -5744,14 +5784,14 @@ Trampoline routing introduces several constraints beyond those of standard multi
 | Constraint | Value | Notes |
 |------------|-------|-------|
 | Max trampoline hops | 5 | Defined as MAXTRAMPOLINEHOPSLIMIT |
-| maxfeeamount | Required | Must be set when trampolinehops is provided |
+| maxfeeamount | Optional RPC cap | Otherwise derived from maxfeerate; an explicit cap cannot exceed that rate-derived limit |
 | Duplicate hops | Rejected | The trampoline hops list must not contain duplicates |
 | Target in hops | Rejected | The final recipient must not appear in trampolinehops |
 | Self-payment | Incompatible | allowselfpayment cannot be used with trampoline routing |
-| MPP with multiple trampoline hops | Incompatible | max_parts > 1 requires exactly 1 trampoline hop |
+| MPP with multiple trampoline hops | Incompatible | maxparts > 1 requires exactly 1 trampoline hop |
 | Inner packet size | 1300 bytes | Smaller than the outer onion's 6500 bytes |
 
-  The MPP (Multi-Path Payment) restriction exists because splitting a trampoline payment across multiple paths would require coordinating multiple inner onions, each with their own trampoline hop chain. With a single trampoline hop, MPP works normally — the sender splits the payment across multiple routes to the trampoline node, and the trampoline node forwards each part independently.
+  The MPP (Multi-Path Payment) restriction exists because splitting a trampoline payment across multiple paths would require coordinating multiple inner onions, each with their own trampoline hop chain. With a single trampoline hop, max_parts can authorize splitting on the trampoline's downstream payment. The source payment to the first trampoline remains single-part in 0.10.1.
 
 ## Trampoline vs. Source Routing
 
@@ -6069,6 +6109,7 @@ rule("graphchannels", r#"allow if read("graph");"#);
 
 // info
 rule("nodeinfo", r#"allow if read("node");"#);
+rule("backup", r#"allow if write("node");"#);
 rule("newinvoice", r#"allow if write("invoices");"#);
 rule("parseinvoice", r#"allow if read("invoices");"#);
 rule("getinvoice", r#"allow if read("invoices");"#);
@@ -6120,7 +6161,7 @@ write("payments");
 
 // You can also add checks, like an expiration date.
 // This check ensures the token is only valid before the specified UTC timestamp.
-check if time($time), $time <= 2025-01-01T00:00:00Z;
+check if time($time), $time <= 2027-01-01T00:00:00Z;
 [code block]bash
 biscuit generate --private-key ed25519-private/89d6c88919e5ca326fbb8d1cbef406df08c0620575376651d53008762dc81f45 permissions.bc
 [code block]
@@ -6214,6 +6255,8 @@ Configure the Fiber node to send watchtower updates to the standalone service:
 
 standalonewatchtowertoken is only needed when the standalone watchtower RPC service requires authentication. If the built-in watchtower is disabled, standalonewatchtowerrpcurl must be configured.
 
+In 0.10.1, a standalone watchtower must support channelfeatures in createwatch_channel: "0x0" for Legacy V1 and "0x1" for V2. V2 settlement uses full payment hashes, so an old watchtower that assumes the V1 layout must be upgraded with the node.
+
 ## References
 
 - Fiber WatchtowerActor source
@@ -6250,7 +6293,7 @@ Every request is a standard JSON-RPC 2.0 object sent as an HTTP POST with Conten
 |-------|------|----------|-------------|
 | jsonrpc | string | Yes | Must be "2.0". |
 | method | string | Yes | The RPC method name (e.g., sendpayment, open_channel). |
-| params | array | Yes | Method arguments as a single-element array containing the params object. Even methods that take no arguments must send an empty array []. |
+| params | array | Yes | Method arguments as a single-element array containing the params object. Methods without arguments accept an empty array [] or omitted params. |
 | id | number \| string \| null | Yes | Client-defined request identifier; echoed back in the response for correlation. |
 
 > Implementation detail: Internally, the middleware may inject an RpcContext object as the first element of the params array when authentication is enabled and the method requires caller identity (e.g., watchtower operations). Client callers do not need to construct this themselves; the server injects it after verifying the Biscuit token.
@@ -6317,10 +6360,11 @@ Each method is protected by a Datalog rule that checks for a specific permission
 - read("") — grants read-only access to that resource.
 - write("") — grants write access to that resource only; it does not imply read access.
 
-Resources map roughly to modules, with two exceptions for the dev module:
+Resources map to API areas:
 
 - node, peers, channels, payments, invoices, graph, cch, watchtower, pprof — each maps to the module of the same name.
-- chain, messages — used only by low-level dev module methods (submitcommitmenttransaction and commitmentsigned respectively); there are no standalone chain or messages API-reference pages.
+- dev — required by development-only methods, including submitcommitmenttransaction and commitmentsigned.
+- node — read("node") for nodeinfo, write("node") for backup.
 
 For example, to call sendpayment, the token must contain write("payments"). To call nodeinfo, the token needs read("node").
 
@@ -6338,7 +6382,7 @@ You can also override every field via environment variables or CLI flags:
 
 ### CORS
 
-If corsenabled is true, the server adds Cross-Origin Resource Sharing headers to HTTP responses. When corsallowedorigins is empty, all origins are allowed (*). If you list specific origins, preflight OPTIONS requests are handled automatically.
+If corsenabled is true, the server adds Cross-Origin Resource Sharing headers to HTTP responses. When corsallowed_origins is empty, all origins are allowed (*). If you list specific origins, preflight OPTIONS requests are handled automatically.
 
 ## Concrete Example
 
@@ -6370,7 +6414,7 @@ In addition to request/response HTTP calls, the pubsub module exposes a WebSocke
 - Unsubscribe: unsubscribestorechanges
 - Notification topic: storechanges
 
-When authentication is enabled, subscribestore_changes requires read("cch") in the Biscuit token (the same resource used by the CCH module). This reflects the fact that the subscription is primarily intended for Cross-Chain Hub integration rather than general client use.
+When authentication is enabled, subscribestorechanges requires internal("storechanges") in the Biscuit token (the same resource used by the CCH module). This reflects the fact that the subscription is primarily intended for Cross-Chain Hub integration rather than general client use.
 
 This is primarily used by external services (such as a standalone Cross-Chain Hub instance) to receive real-time store change events from the Fiber node without polling.
 
@@ -6380,7 +6424,7 @@ This is primarily used by external services (such as a standalone Cross-Chain Hu
 2. Keep the Biscuit private key offline. Only the public key belongs in the node config.
 3. Scope tokens narrowly. Create tokens with the minimum permissions required (e.g., read("graph") only, rather than an all-access token).
 4. Use CORS allowlists in production rather than .
-5. Prefer localhost or Unix-domain sockets when the client and node run on the same machine.
+5. Prefer localhost when the client and node run on the same machine.
 
 ## Further Reading
 
@@ -6491,9 +6535,11 @@ Source: https://www.fiber.world/docs/api-reference/node/admin
 ## Module Admin
 
 The admin module contains privileged node-administration operations. It is
-available on native v0.9.1 nodes but is not enabled by default. Add admin to
+available on native v0.10.1 nodes but is not enabled by default. Add admin to
 rpc.enabledmodules and protect any non-local RPC listener with Biscuit
 authentication before using it.
+
+With Biscuit authentication enabled, backup requires write("node").
 
 ### Method backup
 
@@ -6562,9 +6608,9 @@ Attempts to open a channel with a peer.
  Not that, we use outbound channel to calculate the fee for TLC forwarding. For example,
  if we have a path A -&gt; B -&gt; C, then the fee B requires for TLC forwarding, is calculated
  the channel configuration of B and C, not A and B.
-* maxtlcvalueinflight - Option, The maximum value in flight for TLCs, an optional parameter.
+* maxtlcvalueinflight - Option, The maximum total value of in-flight TLCs our side will accept from the peer, an optional parameter.
  This parameter can not be updated after channel is opened.
-* maxtlcnumberinflight - Option, The maximum number of TLCs that can be accepted, an optional parameter, default is 125
+* maxtlcnumberinflight - Option, The maximum number of in-flight TLCs our side will accept from the peer, an optional parameter, default is 125
  This parameter can not be updated after channel is opened.
 
 #### Returns
@@ -6583,9 +6629,9 @@ Accepts a channel opening request from a peer.
 * funding_amount - u128, The amount of CKB or UDT to fund the channel with
 * shutdownscript - Option, The script used to receive the channel balance, an optional parameter,
  default value is the secp256k1blake160sighashall script corresponding to the configured private key
-* maxtlcvalueinflight - Option, The max tlc sum value in flight for the channel, default is u128::MAX
+* maxtlcvalueinflight - Option, The maximum total value of in-flight TLCs our side will accept from the peer, default is u128::MAX
  This parameter can not be updated after channel is opened.
-* maxtlcnumberinflight - Option, The max tlc number in flight send from our side, default is 125
+* maxtlcnumberinflight - Option, The maximum number of in-flight TLCs our side will accept from the peer, default is 125
  This parameter can not be updated after channel is opened.
 * tlcminvalue - Option, The minimum value for a TLC our side can send,
  an optional parameter, default is 0, which means we can send any TLC is larger than 0.
@@ -6651,7 +6697,7 @@ Shuts down a channel.
  default is defaultfundinglock_script in CkbConfig
 * fee_rate - Option, The fee rate for the closing transaction, the fee will be deducted from the closing initiator's channel balance
  default is 1000 shannons/KW
-* force - Option, Whether to force the channel to close, when set to false, closescript and feerate should be set, default is false.
+* force - Option, Whether to force the channel to close, when false, closescript and feerate optionally override saved defaults. The default is false.
  When set to true, closescript and feerate will be ignored and will use the default value when opening the channel.
 
 #### Returns
@@ -6716,9 +6762,9 @@ Opens a channel with external funding. The node will negotiate the channel with 
 * tlcfeeproportionalmillionths - Option, The fee proportional millionths for a TLC, proportional to the amount of the forwarded tlc.
  The unit is millionths of the amount. default is 1000 which means 0.1%.
  This parameter can be updated with rpc updatechannel later.
-* maxtlcvalueinflight - Option, The maximum value in flight for TLCs, an optional parameter.
+* maxtlcvalueinflight - Option, The maximum total value of in-flight TLCs our side will accept from the peer, an optional parameter.
  This parameter can not be updated after channel is opened.
-* maxtlcnumberinflight - Option, The maximum number of TLCs that can be accepted, an optional parameter, default is 125
+* maxtlcnumberinflight - Option, The maximum number of in-flight TLCs our side will accept from the peer, an optional parameter, default is 125
  This parameter can not be updated after channel is opened.
 
 #### Returns
@@ -6776,7 +6822,7 @@ Generates a new invoice.
  expiry - Option, The expiry time of the invoice, in seconds.
  fallback_address - Option, The fallback address of the invoice.
 * finalexpirydelta - Option, The final HTLC timeout of the invoice, in milliseconds.
- Minimal value is 16 hours, and maximal value is 14 days.
+ The 0.10.1 release binary accepts a minimum of 9,600,000 ms (160 minutes) and a maximum of 14 days. Omission uses that minimum; the upstream generated help still says 16 hours.
 * udttypescript - Option, The UDT type script of the invoice.
 * hash_algorithm - Option<HashAlgorithm>, The hash algorithm of the invoice.
 * allow_mpp - Option, Whether allow payment to use MPP
@@ -6821,7 +6867,7 @@ Retrieves an invoice.
 
 ### Method cancel_invoice
 
-Cancels an invoice, only when invoice is in status Open can be canceled.
+Cancels an unpaid invoice in Open, Received, or Expired state. Cancelling a received hold invoice rejects its held TLCs. Paid and Cancelled invoices cannot be cancelled again.
 
 #### Params
 
@@ -6846,7 +6892,7 @@ Settles an invoice by saving the preimage to this invoice.
 
 #### Returns
 
-* None
+* An empty object ({}).
 
 ---
 
@@ -6922,7 +6968,7 @@ Sends a payment to a peer.
 * failed_error - Option, The error message if the payment failed
  fee - u128, fee paid for the payment
  custom_records - Option<PaymentCustomRecords>, The custom records to be included in the payment.
- routers - Vec<SessionRoute>, The router is a list of nodes that the payment will go through.
+ routers - Vec<SessionRoute>, Debug/test/bench builds only; omitted by official release binaries. The router is a list of nodes that the payment will go through.
  We store in the payment session and then will use it to track the payment history.
  If the payment adapted MPP (multi-part payment), the routers will be a list of nodes.
  For example:
@@ -6949,7 +6995,7 @@ Retrieves a payment.
 * failed_error - Option, The error message if the payment failed
  fee - u128, fee paid for the payment
  custom_records - Option<PaymentCustomRecords>, The custom records to be included in the payment.
- routers - Vec<SessionRoute>, The router is a list of nodes that the payment will go through.
+ routers - Vec<SessionRoute>, Debug/test/bench builds only; omitted by official release binaries. The router is a list of nodes that the payment will go through.
  We store in the payment session and then will use it to track the payment history.
  If the payment adapted MPP (multi-part payment), the routers will be a list of nodes.
  For example:
@@ -7028,7 +7074,7 @@ Sends a payment to a peer with specified router.
 * failed_error - Option, The error message if the payment failed
  fee - u128, fee paid for the payment
  custom_records - Option<PaymentCustomRecords>, The custom records to be included in the payment.
- routers - Vec<SessionRoute>, The router is a list of nodes that the payment will go through.
+ routers - Vec<SessionRoute>, Debug/test/bench builds only; omitted by official release binaries. The router is a list of nodes that the payment will go through.
  We store in the payment session and then will use it to track the payment history.
  If the payment adapted MPP (multi-part payment), the routers will be a list of nodes.
  For example:
@@ -7321,6 +7367,7 @@ Create a new watched channel
 * localfundingpubkey - Pubkey, The local party's funding public key (hex without 0x prefix)
 * remotefundingpubkey - Pubkey, The remote party's funding public key (hex without 0x prefix)
 * settlement_data - SettlementData, Settlement data
+* channel_features - ChannelFeatures, Channel feature bitmap: "0x0" for Legacy V1 or "0x1" for V2 with full payment hashes. Required when creating the watched channel.
 
 #### Returns
 
@@ -7504,6 +7551,12 @@ The channel data structure.
 * shutdowntransactionhash - Option, The hash of the shutdown transaction
 * failure_detail - Option, Human-readable reason why the channel opening failed.
  Only present when the channel is in a failed state (e.g. abandoned or funding aborted).
+***
+
+### Type ChannelFeatures
+
+Channel feature bitmap, serialized as a hexadecimal string: "0x0" selects Legacy V1; "0x1" selects V2 with full 32-byte payment hashes in settlement witnesses. Pass the channel's actual bitmap to createwatchchannel.
+
 **
 
 ### Type ChannelInfo
@@ -7548,7 +7601,7 @@ The state of a channel.
  now operational.
  ShuttingDown - ShuttingDownFlags, We've successfully negotiated a closing_signed dance. At this point, the ChannelManager
  Closed - CloseFlags, This channel is closed.
- Stale - The channel state may be outdated after a database restore. The node must passively audit the channel with its peer before resuming normal operation.
+ Stale - Restored channel state may be outdated. Legacy V1 channels use passive peer audit; V2 channels remain quarantined because an old backup cannot establish safe nonce use. Do not sign or force close a V2 Stale channel.
 **
 
 ### Type ChannelUpdateInfo
@@ -7620,7 +7673,7 @@ The result of a get_payment command, which includes the payment hash, status, ti
 * failed_error - Option, The error message if the payment failed
  fee - u128, fee paid for the payment
  custom_records - Option<PaymentCustomRecords>, The custom records to be included in the payment.
- routers - Vec<SessionRoute>, The router is a list of nodes that the payment will go through.
+ routers - Vec<SessionRoute>, Debug/test/bench builds only; omitted by official release binaries. The router is a list of nodes that the payment will go through.
  We store in the payment session and then will use it to track the payment history.
  If the payment adapted MPP (multi-part payment), the routers will be a list of nodes.
  For example:
@@ -7763,7 +7816,7 @@ The status of a payment, will update as the payment progresses.
 
  Created - Initial status. A payment session is created, but no HTLC has been dispatched.
  Inflight - The first hop AddTlc is sent successfully and waiting for the response.
- Success - The payment is finished. All related HTLCs are successfully settled.
+ Success - A payment TLC was successfully claimed and its preimage is known. Other attempts may still be pending.
  Failed - The payment session has terminated.
 *
 
@@ -8009,7 +8062,7 @@ See Payment Lifecycle for details on how the fee budget works.
 
 ### Partial Payment Delivered
 
-Symptom: A multi-path payment (MPP) shows Inflight with no progress — some parts have succeeded while others are stuck or failed.
+Symptom: An MPP payment remains Inflight while attempts are retrying or outstanding TLCs are unresolved. In 0.10.1, a claimed TLC and learned preimage establish Success, even while other attempts are clearing.
 
 Possible causes:
 - Some routes have sufficient liquidity while others do not.
@@ -8054,7 +8107,7 @@ See Multi-Hop Payments for a full explanation of error handling and retry behavi
 
 ### Channel Stuck in Awaiting State
 
-Symptom: Channel remains in AwaitingLockin or similar state after opening.
+Symptom: Channel remains in AwaitingChannelReady after opening.
 
 Possible causes:
 - The funding transaction has not been confirmed on-chain yet.
@@ -8070,13 +8123,27 @@ Symptom: open_channel fails immediately.
 
 Possible causes:
 - You are not connected to the target peer.
-- Insufficient CKB balance for the funding amount plus channel reserve (99 CKB per side).
+- Insufficient CKB for funding and transaction fees. A standard V2 CKB contribution includes its 100 CKB reserve; a UDT channel requires separate CKB reserve (181 CKB per side for a 32-byte-args token such as RUSD).
+- The peers use incompatible channel versions: 0.10.x cannot open a new channel with a pre-0.10 peer.
 - The peer has rejected the channel opening request.
 
 Solutions:
 - Connect to the peer first using connectpeer.
 - Verify your CKB balance is sufficient.
 - Check the peer's autoaccept configuration.
+
+The peer compares openchannelautoacceptminckbfundingamount with the spendable amount sent in OpenChannel, after deducting your reserve. A 150 CKB V2 contribution sends 50 CKB of spendable funding, so it does not meet a 100 CKB auto-accept minimum. Fund at least 200 CKB for that default policy or arrange manual acceptance.
+
+For external funding that stalls after signed submission, use the conflicting-input or force-close recovery procedure. Increasing a timeout or calling abandonchannel will not cancel that phase.
+
+### Peer Listed but Cooperative Close Reports Offline
+
+After restarting a node, listpeers can show a connected session before the
+channel's reestablishment exchange finishes. If shutdownchannel reports
+Cannot cooperatively shutdown channel ... while peer is offline, keep the
+node running and retry after the channel reconnects. Preserve its current
+database; a peer-session entry alone does not prove the channel is ready to
+close cooperatively.
 
 ### One-Way Channel Cannot Be Public
 
@@ -8329,7 +8396,7 @@ Use Run a Fiber Node for installation and startup steps. This page focuses on co
 | Channel | Open a UDT channel | Channel initiator / funder | fnn-cli channel openchannel --pubkey  --funding-amount  --funding-udt-type-script '' |
 | Channel | List all channels | Node whose local channel state you want | fnn-cli channel listchannels |
 | Channel | List pending opens only | Node whose local pending channel state you want | fnn-cli channel listchannels --only-pending true |
-| Channel | Close a channel | Either channel participant; caller initiates close | fnn-cli channel shutdownchannel --channel-id  --force true |
+| Channel | Close a channel cooperatively | Either participant; both peers online | fnn-cli channel shutdownchannel --channel-id  |
 | Channel | Update channel config | Node whose local forwarding config you want to change | fnn-cli channel updatechannel --channel-id  --tlc-minimum-value  |
 
 ### Invoice & Payment
@@ -8403,7 +8470,7 @@ The default RPC endpoint is http://127.0.0.1:8227. All calls use JSON-RPC 2.0.
 | Closed | Channel is fully settled on-chain |
 | Stale | Restored channel state may be outdated and must be passively audited with its peer before normal operation resumes |
 
-  Use fnn-cli channel listchannels to check the state of your channels. JSON-RPC returns states as {"statename":"ChannelReady"} and similar PascalCase names. Each side must reserve 99 CKB (98 for commitment lock + 1 for shutdown fee).
+  Use fnn-cli channel listchannels to check the state of your channels. JSON-RPC returns states as {"statename":"ChannelReady"} and similar PascalCase names. Each side must reserve 100 CKB for a standard V2 CKB channel (99 for commitment-cell capacity + 1 for shutdown fee).
 
 ## Payment Lifecycle
 
@@ -8432,7 +8499,7 @@ Example: With tlcfeeproportional_millionths = 1000 (0.1%), forwarding 1,000 CKB 
 
 | Parameter | Purpose | Default / Typical Value |
 |-----------|---------|------------------------|
-| Reserved CKB | Channel reserve for lock and fees | 100 CKB for new Fiber v0.10.0 channels |
+| Reserved CKB | Channel reserve for lock and fees | 100 CKB for a standard V2 CKB channel (99 commitment + 1 shutdown fee) |
 | tlcfeeproportionalmillionths | Forwarding fee rate | 1000 (= 0.1%) |
 | tlcminvalue | Minimum TLC value to forward | 0 (any amount) |
 | tlcexpirydelta | TLC expiry window (milliseconds) | 14400000 (4 hours) |
@@ -8441,8 +8508,8 @@ Example: With tlcfeeproportional_millionths = 1000 (0.1%), forwarding 1,000 CKB 
 | maxtlcnumberinflight | Max number of TLCs in flight | 125 |
 | pendingchannelsnumberlimit | Global max pending channel openings | 100 |
 | tobeacceptedchannelsnumberlimit | Max pending channel openings from one peer | 20 |
-| openchannelautoacceptminckbfundingamount | Min CKB funding for auto-accept | Built-in default: 10000000000 (100 CKB); public nodes commonly require 499 CKB funding |
-| autoacceptchannelckbfunding_amount | Auto-accept contribution | Built-in default: 9900000000 (99 CKB); public nodes commonly contribute 25000000000 (250 CKB) |
+| openchannelautoacceptminckbfundingamount | Minimum spendable CKB contribution for auto-accept | Built-in default: 10000000000 (100 CKB), after the opener's reserve is deducted; at least 200 CKB total for a standard V2 channel |
+| autoacceptchannelckbfunding_amount | Auto-accept contribution | Built-in default: 10000000000 (100 CKB); public nodes commonly contribute 25000000000 (250 CKB) |
 
 ## Capacity Formula
 
@@ -8450,9 +8517,9 @@ For CKB channels, each side must reserve CKB for on-chain operations:
 
 [code block]
 
-Example: Fund 500 CKB on Fiber v0.10.0 → 500 − 100 = 400 CKB available for off-chain payments.
+Example: Fund 500 CKB → 500 − 100 = 400 CKB available for off-chain payments.
 
-  The settlement reserve is per side. In a two-party CKB channel, both sides must reserve this amount. This reserve is not available for CKB payments — it covers the commitment transaction lock and the shutdown transaction fee. For UDT channels, the channel balance is in token base units, but the funding transaction still needs enough CKB capacity and fees.
+  The 100 CKB V2 reserve is per side. In a two-party CKB channel, both sides must reserve this amount. This reserve is not available for CKB payments — it covers the commitment transaction lock and the shutdown transaction fee. For UDT channels, the channel balance is in token base units, but the funding transaction still needs enough CKB capacity and fees.
 
 ## Testnet Resources
 
@@ -8468,8 +8535,8 @@ Example: Fund 500 CKB on Fiber v0.10.0 → 500 − 100 = 400 CKB available for o
 
 | Name | Pubkey | Auto-accept CKB | Auto-accept UDT |
 |------|--------|------------------|------------------|
-| fiber-testnet-public-bottle | 02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71 | ≥ 499 CKB | RUSD ≥ 20 |
-| fiber-testnet-public-bracer | 0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc | ≥ 499 CKB | RUSD ≥ 20 |
+| fiber-testnet-public-bottle | 02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71 | ≥ 500 CKB | RUSD ≥ 20 |
+| fiber-testnet-public-bracer | 0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc | ≥ 500 CKB | RUSD ≥ 20 |
 
 ## Common Patterns
 
@@ -8632,15 +8699,15 @@ The watchtower service is an essential component of Fiber Network, responsible f
 
 ## Current Progress and Future Plans
 
-We have currently completed a prototype of Fiber Network, implementing basic functions of opening, updating, and closing channels between two nodes, and also verifying cross-chain functionality with the Bitcoin Lightning Network. The project code can be found in the following GitHub repositories:
+Fiber 0.10.1 provides native and browser WASM nodes, V2 payment channels, multi-hop and trampoline routing, multi-part payments, hold invoices, watchtower integration, and a Cross-Chain Hub for Lightning interoperability. The project code can be found in the following GitHub repositories:
 
 1. https://github.com/nervosnetwork/fiber
 
 2. https://github.com/nervosnetwork/fiber-scripts
 
-Our next steps include completing multi-hop routing and watchtower services, as well as improving the RPC interface and SDK to facilitate easier access for developers to Fiber Network.
+Multi-hop routing and watchtower services are implemented. Ongoing work includes runtime reliability, safer recovery, SDK integration, and liquidity management.
 
-The multi-hop routing protocol is based on the Dijkstra algorithm to search for payment paths, thereby reducing routing fees and improving the success rate of multi-hop path payments. After Fiber Network goes live, we will optimize the routing algorithm based on network traffic and operational conditions. We expect to provide 2 or 3 path search strategies to adapt to users' different routing preferences and needs. Fiber Network will also introduce multi-path payment strategies, dividing larger payment amounts into multiple parts, each transmitted through different paths, further increasing the probability of successful payments.
+The routing implementation searches the network graph using a probability-weighted cost model. MPP can split a payment across multiple available paths. These features improve route selection but do not create missing liquidity or guarantee that every payment succeeds.
 
 The watchtower service will be provided by some nodes in Fiber Network. These nodes will stay online, monitor abnormal situations in the network, and help protect assets in channels. The monitoring service will also track the cross-chain hub service. Even if users are offline for a period, the monitoring service can ensure successful exchanges with the Lightning Network.
 
@@ -8651,6 +8718,12 @@ Additionally, we will consider adding more features to Fiber Network, such as im
 ## Fiber Architecture & Module
 
 Source: https://www.fiber.world/docs/res/high-level
+
+## 0.10.1 Implementation Notes
+
+The actor-model discussion below includes historical source snapshots. Current implementations live under crates/fiber-lib, with shared wire and state types in fiber-types. New channels use V2 nonce sessions and durable replay; the historical CommitmentSigned/RevokeAndAck diagrams do not describe the V2 wire fields.
+
+Native and WASM runtimes, MPP, hold invoices, and watchtower integration are implemented in 0.10.1. See Toolchain, Payment Lifecycle, and Backup and Restore for current behavior.
 
 ## Overview
 
@@ -8837,7 +8910,7 @@ Watchtower's penalty mechanism ensures that old commitment transactions are not 
 
 ## Other Technical Decisions
 
-- Storage: We use RocksDB as the storage layer, leveraging its scheme-less storage design to simplify encoding and decoding structs with serde. Data migration remains a challenge, which we address by this standalone program.
+- Storage: We use RocksDB as the storage layer, leveraging its scheme-less storage design to simplify encoding and decoding structs with serde. Migration is built into native fnn; only pre-v0.8.x stores need the archived v0.8.x migration tool first. See Backup and Restore.
 - Serialization: Messages between nodes are serialized and deserialized using Molecule, bringing efficiency, compatibility, and security advantages. It ensures determinism, meaning the same message serializes identically on all nodes, which is crucial for signature generation and verification.
 
 ## Future Prospects
@@ -8846,7 +8919,7 @@ Fiber is still in the early stages of active development. Looking ahead, we plan
 
 - Fix unhandled corner cases to enhance overall robustness;
 - Improve the cross-chain hub (currently in the prototype verification stage) by introducing payment session functionality to make cross-chain transactions more user-friendly;
-- Refine the payment routing algorithm, potentially introducing multi-path feature and other path-finding strategies to accommodate diverse user preferences and needs;
+- Refine the payment routing algorithm, improving the existing multi-part payment and path-finding strategies to accommodate diverse user preferences and needs;
 - Expand contract functionality, including version-based revocation mechanisms and more secure Point Time-Locked Contracts.
 
 ---
@@ -8946,197 +9019,57 @@ Yunwen Liu is a cryptographer at Cryptape. She completed her Ph.D at COSIC, KU L
 
 Source: https://www.fiber.world/docs/res/p2p-message
 
-This document describes the protocol between nodes of the fiber network on CKB, used to establish payment channels, construct transactions, close channels, and perform payment operations. Essentially, it is an adaptation and simplification of [BOLT 02] to suit the transaction structure of CKB.
+Fiber 0.10.x introduces V2 channel messaging. New channels require both peers to support V2. Existing V1 channels keep their legacy messages and remain usable in 0.10.1; upstream plans to remove V1 support in the next major release.
 
-Please note that BOLT 02 uses HTLC (Hashed Time Locked Contract) for payment operations, and many message definitions use HTLC as field names and descriptions. In this document, we will use TLC instead of HTLC to facilitate future support for PTLC (Point Time Locked Contract). Additionally, this protocol will use [Molecule] to define message formats, making it easier to integrate with CKB.
+The definitions below come from the 0.10.1 Molecule schema. This schema is the wire-format source of truth. Fiber is inspired by BOLT 02, but its Molecule messages are not Lightning wire messages.
 
-This document is a work in progress and may be updated at any time.
+## V2 Capability and Channel Features
 
-## Channel Establishment
+Init.features advertises CHANNELV2 through feature bits 6/7. The official 0.10.1 node advertises CHANNELV2OPTIONAL. The persisted channel feature byte is 0x1 for V2 and 0x0 for Legacy V1.
 
-We use a protocol similar to BOLTS 02 Channel Establishment v2 to establish payment channels, an example process is as follows:
+V2 separates commitment-owner, revocation, and closing nonce sessions. It uses full 32-byte payment hashes in settlement witnesses and 58-byte commitment-lock args, including the feature byte. Legacy channels retain 20-byte on-chain payment-hash prefixes and 57-byte args. The configured commitment contract must support the V2 layout before a node advertises this capability.
 
-[code block]
-### OpenChannel
+## Establishing a V2 Channel
 
-OpenChannel is sent by the initiator of the channel to the receiver of the channel to request the establishment of a payment channel.
+The initiator sends OpenChannelV2; the acceptor replies with AcceptChannelV2. The peers collaborate on the funding transaction with TxUpdate and TxCompleteV2, exchange initial commitment signatures and funding TxSignatures, and wait for on-chain confirmation before exchanging ChannelReadyV2.
 
-[code block]
+For CKB channels, wire fundingamount is the spendable amount after the local reserve is deducted from the RPC contribution. reservedckbamount carries that reserve separately. For UDT channels, funding_amount is the raw token amount and CKB reserve is additional.
 
-- chainhash: Chain genesis block hash
-- channelid: The ID of the channel, which is a temporary ID derived from the tlcbasepoint before the channel is officially established. After the channel is established, it will be replaced with the actual channel ID, derived from a blake2b hash of the sorted tlcbasepoints of both parties.
-- fundingtypescript: Specifies the asset type of the channel. If empty, it indicates using CKB native token as the asset.
-- fundingamount: The amount of assets the channel initiator wants to contribute.
-- fundingfeerate: Funding transaction fee rate, in shannons per kilo-bytes.
-- commitmentfeerate: Commitment transaction fee rate, in shannons per kilo-bytes.
-- maxtlcvalueinflight: The maximum total value of unconfirmed TLCs (Time Locked Contracts) that the channel initiator can accept in this channel.
-- maxtlcnumberinflight: The maximum number of unconfirmed TLCs that the channel initiator can accept in this channel.
-- mintlcvalue: The minimum value of TLCs that the channel initiator can accept.
-- toselfdelay: The delay time for the channel initiator to unlock the outputs from the commitment transaction, in EpochNumberWithFraction.
-- fundingpubkey: The pubkey of the channel initiator, used for generating 2-2 multisig contracts.
-- tlcbasepoint: The master key used to derive child keys required for tlcs, we will use the same method as lightning network to derive these keys, see [Secret Derivations] for more details.
-- firstpercommitmentpoint:
-- secondpercommitmentpoint:
-- nextlocalnonce: Used for generating partial signatures for unlocking 2-2 Schnorr multisig.
-- channelflags: Channel flags, currently only using one bit to indicate whether to broadcast this channel information on the P2P network.
+## V2 Message Definitions
 
-### AcceptChannel
+Pubkey is 33 bytes, PubNonce is 66 bytes, and PubNonceOpt is an optional public nonce. Script, ScriptOpt, Transaction, integer types, and byte vectors are defined by the imported CKB/Fiber Molecule schemas.
 
-AcceptChannel is sent by the receiver of the channel to the initiator of the channel to accept the establishment of a payment channel.
+[text code block]
 
-[code block]
+## Shared Transport, Funding, and TLC Messages
 
-- channelid: The ID of the channel, must match the channelid in OpenChannel.
-- fundingamount: The amount of assets the channel receiver wants to contribute, can be 0, indicating no contribution.
-- maxtlcvalueinflight: The maximum total value of unconfirmed TLCs that the channel receiver can accept in this channel.
-- maxtlcnumberinflight: The maximum number of unconfirmed TLCs that the channel receiver can accept in this channel.
-- mintlcvalue: The minimum value of TLCs that the channel receiver can accept.
-- toselfdelay: The delay time for the channel receiver to unlock the outputs from the commitment transaction, in EpochNumberWithFraction.
-- fundingpubkey: The pubkey of the channel receiver, used for generating 2-2 multisig contracts.
-- tlcbasepoint: See the description in OpenChannel message.
-- firstpercommitmentpoint:
-- secondpercommitmentpoint:
-- nextlocalnonce: Used for generating partial signatures for unlocking 2-2 Schnorr multisig.
+V2 retains the shared Init, transaction collaboration, TLC add/remove, and forwarding-policy messages below. A channel's negotiated version determines which commitment, acknowledgement, readiness, reestablishment, and close variants surround them.
 
-### CommitmentSigned
+[text code block]
 
-After both parties establish the funding transaction and complete the signing of the commitment transaction in the Transaction Collaboration process, they will send CommitmentSigned messages to each other.
+## Commitment and Acknowledgement Rules
 
-[code block]
+V2 binds nonce advertisements and partial signatures to numbered commitment sessions. Add/remove updates remain pending until the outgoing commitment save records their TLC IDs, contents, counters, and replay log together. Updates are then sent in order before the corresponding CommitmentSignedV2.
 
-The meaning of each field is as follows:
+On reconnection, ReestablishChannelV2 exchanges the next commitment and acknowledgement counters with the advertised local nonce. Reconciliation replays the durable log in its original order. A current store can replay its saved signing intent; an older restored V2 backup cannot establish safe nonce use and remains quarantined as Stale.
 
-- partialsignature: The partial signature for unlocking the 2-2 Schnorr multisig.
-- nextlocalnonce: Used for generating the next commitment transaction partial signature.
+## Closing and Recovery
 
-### TxSignatures
+Cooperative closing exchanges fresh ShutdownV2 closing nonces and ClosingSignedV2 partial signatures. Pending TLCs finish acknowledgement and balance application before the close transaction is fixed. The durable closing session retains the exact transaction, signing context, and partial responses so a reconnect can replay the same close safely.
 
-After both parties have signed the commitment transaction and verified the correctness of each other's signatures, they need to send TxSignatures messages to each other to complete the signing of the funding transaction.
+A peer that withholds a required acknowledgement or close response can trigger the bounded watchdog. Duplicate messages and live reconnects do not extend the persisted peer-wait deadline. Force closing uses the latest usable saved commitment transaction and supersedes cooperative publication.
 
-[code block]
+For externally funded openings, signed submission disables ordinary time-based cancellation. See External Funding for conflicting-input and force-close recovery.
 
-Here, txhash is the hash of the corresponding funding transaction, and witnesses corresponds to the signed witnesses of all inputs of the contributor. If a party's contribution is 0 (i.e., no inputs), an empty witnesses message should also be sent to complete the message exchange.
+## Further Reading
 
-In addition, in order to simplify the message interaction process, we defined that the party with the lesser amount of funding must send the
-TxSignatures message first, in the case of the same amount, the one with the smaller fundingpubkey must send the TxSignatures message first. This avoids deadlocks caused by both parties waiting for the other party's TxSignatures message at the same time.
+- V2 capability and durable close
+- V2 commitment rounds
+- V2 reestablishment replay research (proposal)
+- Channel lifecycle
+- Backup and restore
 
-### ChannelReady
-
-After completing the signing and broadcasting the funding transaction, both parties send ChannelReady messages to each other to indicate the channel is ready.
-
-[code block]
-
-## Transaction Collaboration
-
-In the fiber network, the channel initiator begins the transaction construction protocol using the TxUpdate message. The responder replies with either TxUpdate or TxComplete messages. The transaction construction process is completed when both nodes have sent and received consecutive TxComplete messages.
-
-Here is the Dual Funding example, A initially funds part of the channel (2 inputs), then B adds their contribution (1 input). A replies with TxComplete, and B responds with TxComplete, completing the transaction construction process.
-
-[code block]
-
-Since CKB's transaction structure is more complex than Bitcoin's, the message structure is simplified compared to BOLT 02 interactive transaction construction. We use the full CKB transaction structure for transaction collaboration, without defining separate messages like txaddinput, txaddoutput, txremoveinput, and txremoveoutput. Nodes are required to parse the inputs of the transactions and do not need to provide previous tx in the messages. The specific message definitions are as follows:
-
-### TxUpdate
-
-The TxUpdate message is used by the channel initiator to start the transaction construction protocol.
-
-[code block]
-
-Both parties must save the funding tx field of the previous message to compare it with the latest message field. They must also mark which inputs/outputs belong to their side. If a TxUpdate message from the other party removes or modifies inputs/outputs from their side, it is considered an illegal operation, and the entire process should be terminated.
-
-### TxComplete
-
-After successfully exchanging TxComplete messages, both parties should have constructed the transaction and move to the next part of the protocol to exchange signatures for the commitment transaction.
-
-[code block]
-
-### TxAbort
-
-During the transaction collaboration process, a node can send a TxAbort message to terminate the collaboration before sending the TxSignatures message.
-
-[code block]
-
-### TxInitRbf
-
-After broadcasting the funding transaction, if the channel initiator finds that the fee is insufficient, they can send a TxInitRbf message to request the other party's cooperation in performing RBF (Replace-By-Fee) operation to increase the fee and rebroadcast the funding transaction.
-
-[code block]
-
-### TxAckRbf
-
-Upon receiving a TxInitRbf message, the channel responder can send a TxAckRbf message to agree to the RBF operation.
-
-[code block]
-
-After receiving the TxAckRbf message from the other party, the channel initiator can restart the process of funding transaction collaboration with the new fee rate. It should be noted that the new funding transaction must have overlapping inputs with the previous funding transaction to ensure it meets the RBF rules.
-
-## Channel Closing
-
-Nodes can negotiate to close a channel mutually, unlike a unilateral close, which allows nodes to immediately obtain funds. The process of closing a channel is as follows:
-
-[code block]
-
-### Shutdown
-
-Any node can send a Shutdown message to request the closure of the channel.
-
-[code block]
-
-The closescript specifies the lock script to which the assets will be sent when the channel is closed.
-
-### ClosingSigned
-
-After completing all pending Time Locked Contracts (TLCs) in the channel, either party can send a ClosingSigned message to sign the close transaction.
-
-[code block]
-
-If the receiver verified the correctness of the signature, they will respond with a ClosingSigned message, completing the channel closure.
-
-## Payment Operation
-
-After establishing a channel, nodes can perform payment operations by sending AddTlc messages for payment requests and then updating the commitment transactions through CommitmentSigned and RevokeAndAck messages. Here is an example process:
-
-[code block]
-
-### AddTlc
-
-Either node can send an AddTlc message to the other party to initiate a payment operation. This message can also be used to forward payment requests from other nodes.
-
-[code block]
-
-- channelid: ID of the channel.
-- tlcid: ID of the TLC (Time Locked Contract), used to uniquely identify a TLC. The first TLC in the channel has an ID of 0, and subsequent IDs increment by 1.
-- amount: Amount of assets requested for payment.
-- paymenthash: Hash value used to identify the payment request for subsequent payment verification.
-- expiry: Expiry time of the payment request, specified as an absolute timestamp. When forwarding a payment request, this field should be decremented appropriately.
-
-## RevokeAndAck
-
-Upon receiving the CommitmentSigned message and verifying the signature, the node may reveal the previous commitment transaction secret to the other party by sending a RevokeAndAck message.
-
-[code block]
-
-- percommitmentsecret: Secret used to generate the revocation secret key for the previous commitment transaction.
-- nextpercommitmentpoint: Point used to generate the next revocation public key.
-- nextlocalnonce: Used for generating the partial signature for the next commitment transaction.
-
-Upon receiving the RevokeAndAck message, the node should update the remote commitment transaction.
-
-## RemoveTlc
-
-To simplify the implementation, only the recipient of the AddTkc message can remove the TLC.
-
-[code block]
-
-- channelid: ID of the channel.
-- tlcid: ID of the TLC being removed.
-- reason: Reason for removing the TLC, which can be either RemoveTlcFulfill or RemoveTlcFail.
-    - RemoveTlcFulfill: Contains the paymentpreimage required to fulfill the payment.
-    - RemoveTlcFail: Contains an errorcode indicating the reason for failure.
-
-[BOLT 02]: https://github.com/lightning/bolts/blob/master/02-peer-protocol.md#channel-establishment-v2
-[Molecule]: https://github.com/nervosnetwork/molecule
-[Secret Derivations]: https://github.com/lnbook/lnbook/blob/54453c7b1cf82186614ab929b80876ba18bdc65d/07paymentchannels.asciidoc#revocationsidebar
+Legacy V1 message definitions remain in the same tagged schema. Use those definitions when maintaining an existing V1 channel.
 
 ---
 
@@ -9544,7 +9477,7 @@ Actions distinguish between permanent and transient failures:
 
 ### Order Pruning
 
-Final orders (Success or Failed) are kept in the database for 21 days (configurable via PRUNEDELAYSECONDS in the scheduler) and then automatically deleted. This prevents unbounded database growth.
+Final orders (Success or Failed) are kept in the database for 21 days (PRUNEDELAYSECONDS, a compile-time scheduler constant rather than a config.yml option) and then automatically deleted. This prevents unbounded database growth.
 
 ## Error Reference
 
@@ -9584,6 +9517,8 @@ Both basefeesats and feeratepermillionsats are exposed via the CCH operator's co
 ### Wrapped BTC Discovery
 
 The CCH response includes wrappedbtctypescript. If you are building a wallet that pays CCH-generated Fiber invoices, verify that the invoice's udttypescript matches a known wrapped BTC token. Do not blindly pay invoices with unknown type scripts.
+
+In 0.10.1, CCH binds invoice events to the incoming payment source: a matching hash alone must not let an unrelated local invoice advance an order. Keep the incoming Fiber and Lightning legs associated with their order and source when observing payment events.
 
 ## Source Code Pointers
 
@@ -9625,7 +9560,7 @@ PTLC will replace the SHA-256 hash lock with Schnorr adaptor signatures. Until t
 
 ## Fiber RPC API Reference
 
-Source: https://github.com/nervosnetwork/fiber/blob/v0.9.1/crates/fiber-lib/src/rpc/README.md
+Source: https://github.com/nervosnetwork/fiber/blob/v0.10.1/crates/fiber-lib/src/rpc/README.md
 
 The complete RPC API is maintained in the Fiber GitHub repository. See the link above for the latest version.
 

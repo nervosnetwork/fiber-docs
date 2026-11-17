@@ -1,3 +1,4 @@
+import { createTestnetFiberFactory } from './fiber-testnet-runtime';
 import type { FiberBrowserNode } from '@fiber-pay/sdk/browser';
 
 export const bottle = {
@@ -29,7 +30,7 @@ function profile() {
 export async function startFiber() {
   const { FiberBrowserNode, RawKeyCredentialProvider } = await import('@fiber-pay/sdk/browser');
   const keys = profile();
-  const node = new FiberBrowserNode({
+  const node = new FiberBrowserNode({wasmFactory:await createTestnetFiberFactory(),
     network: 'testnet',
     credential: new RawKeyCredentialProvider(keys.fiberKey, keys.ckbKey, keys.identifier),
     nodeConfig: { bootnodes: [], logLevel: 'info' },

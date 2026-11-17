@@ -1,0 +1,1760 @@
+{
+  "version": "0.10.1",
+  "date": "2026-11-17",
+  "scope": {
+    "included": "content/docs/**/*.mdx，共 75 篇；关联教程组件、源码与 9 个下载 ZIP",
+    "excluded": [
+      "content/blog/**",
+      "content/pulse/**"
+    ],
+    "review_method": "逐篇核对，按正式 0.10.1 二进制实测结果、当前包类型和 v0.10.1 源码修改；每篇的 evidence 指向相关实测或源码组，实测组不代表全文每一分支均执行"
+  },
+  "summary": {
+    "reviewed": 75,
+    "updated_documents": 51,
+    "reviewed_without_text_change": 24,
+    "download_archives_updated": 9
+  },
+  "limitations": [
+    "Docker Desktop 引擎不可连接；镜像文档按官方发布和配置核对，未运行 0.10.1 容器，manifest 请求也未完成。",
+    "未运行 Windows、Android、iOS 或 FFI 构建；FFI 上游依赖仍为 fnn v0.9.0-rc2，文档已明确该限制。",
+    "浏览器扩展尚未完成 0.10.1 Blob worker/CSP 适配，未加载扩展实测。",
+    "CCH/Lightning 完整双向跨链互换、Watchtower 惩罚交易、profiling 及完整 Biscuit 权限矩阵仅源码核对，未运行。",
+    "公共 Testnet 已完成水龙头充值、CKB 开关通道、普通付款、Hold、MPP、公共中继多跳/trampoline，以及 WASM 与实际互动页面付款；UDT 和外部签名冲突实验仍只在隔离 devnet 验证。",
+    "公开 RUSD 付款、加密交付和验证结果等所有教程的完整逐屏流程未全部执行；已实跑主要开通道付款页面及底层支付协议，逐篇 evidence 不代表每个 UI 分支都运行。",
+    "旧版数据库升级路径按源码核对；已运行的是 0.10.1 自身备份与恢复，未用生产旧库迁移。",
+    "@fiber-pay/sdk 0.3.1 仍声明 fiber-js ~0.9.0；本站固定 0.10.1、配置 npm peer override，并在浏览器工厂中修正旧 Testnet CKB Auth 依赖。公开测试结果只覆盖记录中的流程，不代表上游全面兼容保证。",
+    "公共 Testnet 协议与互动页面实测在原审计工作区完成。之后基于最新 master 整合，保留其会话锁、恢复与多跳界面；整合分支重新完成构建、125 项回归、10 个示例类型检查和下载一致性校验，未重新执行所有公共 Testnet 页面流程。"
+  ],
+  "checks": {
+    "site_build": {
+      "command": "pnpm build",
+      "passed": true,
+      "next_version": "16.4.1",
+      "static_pages": 111,
+      "details": "最新 master 整合后的默认 Turbopack 构建、TypeScript 和页面生成通过。首次构建在编译成功后被 Next.js 安全升级提醒中止；原命令重试退出 0。",
+      "warnings": [
+        "Next.js CLI reports an existing security advisory for the version inherited from master; framework upgrades are outside this Fiber audit.",
+        "middleware file convention is deprecated."
+      ]
+    },
+    "typecheck": {
+      "command": "pnpm exec tsc --noEmit",
+      "passed": true
+    },
+    "whitespace": {
+      "command": "git diff --check",
+      "passed": true
+    },
+    "rpc_examples": {
+      "passed": true,
+      "complete_request_examples": 33,
+      "details": "可解析 JSON 的请求，method 为字符串、params 为数组；含占位符的示例不作 JSON 运行验证。"
+    },
+    "rpc_method_coverage": {
+      "passed": true,
+      "upstream_methods": 42,
+      "additional_manual_reference": [
+        "Admin.backup"
+      ]
+    },
+    "download_consistency": {
+      "passed": true,
+      "archives": 9,
+      "details": "逐文件比较 ZIP 与各自源项目，包含公开图标与打包共享模块；固定 fiber-js 0.10.1 和 fiber-pay 0.3.1。加密支付下载使用最新 master 的 example/encrypted-data-payment。",
+      "results": [
+        {
+          "archive": "public/downloads/fiber-connect-wasm-node.zip",
+          "source": "examples/tutorials/connect-wasm-node",
+          "files": 11,
+          "passed": true
+        },
+        {
+          "archive": "public/downloads/fiber-channel-payment.zip",
+          "source": "examples/tutorials/open-channel-payment",
+          "files": 18,
+          "passed": true
+        },
+        {
+          "archive": "public/downloads/fiber-multi-hop-invoice.zip",
+          "source": "examples/tutorials/multi-hop-invoice",
+          "files": 27,
+          "passed": true
+        },
+        {
+          "archive": "public/downloads/fiber-unidirectional-channel.zip",
+          "source": "examples/tutorials/unidirectional-channel",
+          "files": 12,
+          "passed": true
+        },
+        {
+          "archive": "public/downloads/fiber-hold-invoice.zip",
+          "source": "examples/tutorials/hold-invoice",
+          "files": 10,
+          "passed": true
+        },
+        {
+          "archive": "public/downloads/fiber-verified-result-payment.zip",
+          "source": "examples/tutorials/verified-result-payment",
+          "files": 13,
+          "passed": true
+        },
+        {
+          "archive": "public/downloads/fiber-rusd-payment.zip",
+          "source": "examples/tutorials/rusd-payment",
+          "files": 9,
+          "passed": true
+        },
+        {
+          "archive": "public/downloads/fiber-close-channel.zip",
+          "source": "examples/tutorials/close-channel",
+          "files": 10,
+          "passed": true
+        },
+        {
+          "archive": "public/downloads/fiber-encrypted-data-payment.zip",
+          "source": "example/encrypted-data-payment",
+          "files": 17,
+          "passed": true,
+          "overlays": {
+            "lib/progress.ts": "components/tutorials/encrypted-data-session.ts",
+            "lib/node-session.ts": "components/tutorials/browser-node-session.ts",
+            "lib/payment-submission.ts": "components/tutorials/encrypted-payment-submission.ts"
+          }
+        }
+      ]
+    },
+    "payment_regressions": {
+      "passed": true,
+      "tests": 125,
+      "command": "node --test components/tutorials/*.test.mjs test/fiber-payment-balance.test.mjs examples/tutorials/verified-result-payment/lib/job.test.mjs example/encrypted-data-payment/payment.test.mjs"
+    },
+    "historical_site_build": {
+      "command": "pnpm build --webpack",
+      "passed": true,
+      "details": "最终生产构建、TypeScript 检查和 108 个页面生成通过；使用真实 Google Fonts 下载。",
+      "default_turbopack": {
+        "command": "pnpm build",
+        "passed": false,
+        "error": "next/font/google queries have exactly one entry",
+        "note": "最终尝试遇到 Google Fonts 的 URL 解析错误；保留默认构建脚本与字体源码，使用 Webpack 完成最终构建验证。"
+      },
+      "scope": "原审计工作区，Next.js 16.2.6；不代表当前 PR 分支的构建结果。"
+    },
+    "example_typechecks": {
+      "passed": true,
+      "projects": [
+        {
+          "project": "examples/tutorials/close-channel",
+          "passed": true,
+          "output": ""
+        },
+        {
+          "project": "examples/tutorials/connect-wasm-node",
+          "passed": true,
+          "output": ""
+        },
+        {
+          "project": "examples/tutorials/encrypted-data-payment",
+          "passed": true,
+          "output": ""
+        },
+        {
+          "project": "examples/tutorials/hold-invoice",
+          "passed": true,
+          "output": ""
+        },
+        {
+          "project": "examples/tutorials/multi-hop-invoice",
+          "passed": true,
+          "output": ""
+        },
+        {
+          "project": "examples/tutorials/open-channel-payment",
+          "passed": true,
+          "output": ""
+        },
+        {
+          "project": "examples/tutorials/rusd-payment",
+          "passed": true,
+          "output": ""
+        },
+        {
+          "project": "examples/tutorials/unidirectional-channel",
+          "passed": true,
+          "output": ""
+        },
+        {
+          "project": "examples/tutorials/verified-result-payment",
+          "passed": true,
+          "output": ""
+        },
+        {
+          "project": "example/encrypted-data-payment",
+          "passed": true,
+          "output": ""
+        }
+      ],
+      "details": "为未构建的示例生成 Next.js 标准 next-env.d.ts 后逐项目运行 tsc --noEmit；生成文件未提交。"
+    }
+  },
+  "evidence": {
+    "native": {
+      "environment": "macOS arm64；官方 fnn/fnn-cli 0.10.1；独立 Testnet 测试目录",
+      "checks": [
+        {
+          "check": "node_info v0.10.1 and V2",
+          "passed": true
+        },
+        {
+          "check": "default auto-accept is 100 CKB",
+          "passed": true
+        },
+        {
+          "check": "list_peers",
+          "passed": true
+        },
+        {
+          "check": "list_channels",
+          "passed": true
+        },
+        {
+          "check": "graph_nodes",
+          "passed": true
+        },
+        {
+          "check": "graph_channels",
+          "passed": true
+        },
+        {
+          "check": "list_payments",
+          "passed": true
+        },
+        {
+          "check": "connect public bottle",
+          "passed": true
+        },
+        {
+          "check": "connect public bracer",
+          "passed": true
+        },
+        {
+          "check": "public Testnet relay announcements",
+          "passed": null
+        },
+        {
+          "check": "new_invoice generates preimage",
+          "passed": true
+        },
+        {
+          "check": "parse_invoice",
+          "passed": true
+        },
+        {
+          "check": "get_invoice Open",
+          "passed": true
+        },
+        {
+          "check": "cancel_invoice",
+          "passed": true
+        },
+        {
+          "check": "get_invoice Cancelled",
+          "passed": true
+        },
+        {
+          "check": "final expiry 160 minutes accepted (SDK comment is wrong)",
+          "passed": true
+        },
+        {
+          "check": "final expiry below 160 minutes rejected",
+          "passed": true
+        },
+        {
+          "check": "reject new_invoice for another network",
+          "passed": true
+        },
+        {
+          "check": "admin disabled by default",
+          "passed": true
+        },
+        {
+          "check": "CLI info",
+          "passed": true
+        },
+        {
+          "check": "CLI peer list_peers",
+          "passed": true
+        },
+        {
+          "check": "CLI channel list_channels",
+          "passed": true
+        },
+        {
+          "check": "CLI invoice new_invoice",
+          "passed": true
+        }
+      ],
+      "version": "fnn Fiber v0.10.1 (d9b6bbd 2026-11-14)",
+      "binary_sha256": "0ce71ba0ed58892e971fe3496d372bf95ed6efc21e6dec305f3f0ec0731c90c5"
+    },
+    "devnet": {
+      "environment": "官方 CKB 0.202.0 隔离 devnet；三个官方 fnn 0.10.1；一次性测试账户及测试合约",
+      "checks": [
+        {
+          "check": "three official v0.10.1 nodes started with synchronous store writes",
+          "passed": true
+        },
+        {
+          "check": "connect_peer and list_peers",
+          "passed": true
+        },
+        {
+          "check": "open_channel response uses temporary id",
+          "passed": true
+        },
+        {
+          "check": "channel reaches ChannelReady",
+          "passed": true
+        },
+        {
+          "check": "V2 CKB reserve is 100 CKB per side: 500 funding gives 400 local",
+          "passed": true
+        },
+        {
+          "check": "direct invoice payment succeeds",
+          "passed": true
+        },
+        {
+          "check": "ordinary invoice auto-settles without settle_invoice",
+          "passed": true
+        },
+        {
+          "check": "open_channel response uses temporary id",
+          "passed": true
+        },
+        {
+          "check": "channel reaches ChannelReady",
+          "passed": true
+        },
+        {
+          "check": "gossip multi-hop payment succeeds",
+          "passed": null,
+          "note": "旧断言只证明付款 Success，不能单独证明多跳或拆分；已由 2026-11-17 isolated_payments 的拓扑及余额断言替代。"
+        },
+        {
+          "check": "trampoline multi-hop payment succeeds",
+          "passed": true
+        },
+        {
+          "check": "hold invoice reaches Received",
+          "passed": true
+        },
+        {
+          "check": "hold invoice settles with matching preimage",
+          "passed": true
+        },
+        {
+          "check": "open_channel response uses temporary id",
+          "passed": true
+        },
+        {
+          "check": "channel reaches ChannelReady",
+          "passed": true
+        },
+        {
+          "check": "build_router circular route",
+          "passed": true
+        },
+        {
+          "check": "manual circular rebalance with custom_records succeeds",
+          "passed": true
+        },
+        {
+          "check": "dry_run builds circular route without sending",
+          "passed": true
+        },
+        {
+          "check": "cancel test hold invoice reaches Received",
+          "passed": true
+        },
+        {
+          "check": "cancel_invoice releases held payment and sender reports Failed",
+          "passed": true
+        },
+        {
+          "check": "open_channel response uses temporary id",
+          "passed": true
+        },
+        {
+          "check": "channel reaches ChannelReady",
+          "passed": true
+        },
+        {
+          "check": "open_channel response uses temporary id",
+          "passed": true
+        },
+        {
+          "check": "channel reaches ChannelReady",
+          "passed": true
+        },
+        {
+          "check": "MPP invoice payment succeeds",
+          "passed": null,
+          "note": "旧断言只证明付款 Success，不能单独证明多跳或拆分；已由 2026-11-17 isolated_payments 的拓扑及余额断言替代。"
+        },
+        {
+          "check": "release get_payment omits debug-only routers",
+          "passed": true
+        },
+        {
+          "check": "open_channel response uses temporary id",
+          "passed": true
+        },
+        {
+          "check": "channel reaches ChannelReady",
+          "passed": true
+        },
+        {
+          "check": "one_way private channel opens",
+          "passed": true
+        },
+        {
+          "check": "admin backup returns null",
+          "passed": true
+        },
+        {
+          "check": "cooperative shutdown confirms",
+          "passed": true
+        },
+        {
+          "check": "cooperative shutdown confirms",
+          "passed": true
+        },
+        {
+          "check": "cooperative shutdown confirms",
+          "passed": true
+        },
+        {
+          "check": "cooperative shutdown confirms",
+          "passed": true
+        },
+        {
+          "check": "cooperative shutdown confirms",
+          "passed": true
+        },
+        {
+          "check": "cooperative shutdown confirms",
+          "passed": true
+        },
+        {
+          "check": "cooperative shutdown confirms",
+          "passed": true
+        },
+        {
+          "check": "cooperative shutdown confirms",
+          "passed": true
+        },
+        {
+          "check": "cooperative shutdown confirms",
+          "passed": true
+        },
+        {
+          "check": "cooperative shutdown confirms",
+          "passed": true
+        },
+        {
+          "check": "cooperative shutdown confirms",
+          "passed": true
+        },
+        {
+          "check": "cooperative shutdown confirms",
+          "passed": true
+        },
+        {
+          "check": "cooperative shutdown confirms",
+          "passed": true
+        },
+        {
+          "check": "cooperative shutdown confirms",
+          "passed": true
+        },
+        {
+          "check": "all test channels closed",
+          "passed": true
+        }
+      ]
+    },
+    "external": {
+      "environment": "同一隔离 devnet；CCC 外部签名；仅测试账户",
+      "checks": [
+        {
+          "check": "external funding prepares frozen transaction: normal",
+          "passed": true
+        },
+        {
+          "check": "signed external funding submission succeeds: normal",
+          "passed": true
+        },
+        {
+          "check": "externally funded channel reaches ChannelReady",
+          "passed": true
+        },
+        {
+          "check": "externally funded channel closes cooperatively",
+          "passed": true
+        },
+        {
+          "check": "external funding prepares frozen transaction: conflict",
+          "passed": true
+        },
+        {
+          "check": "signed external funding submission succeeds: conflict",
+          "passed": true
+        },
+        {
+          "check": "abandon_channel refused after signed submission",
+          "passed": true
+        },
+        {
+          "check": "v0.10.1 detects confirmed conflicting input and aborts external funding",
+          "passed": true
+        }
+      ]
+    },
+    "udt": {
+      "environment": "隔离 devnet TEST_UDT，type args 长度 32 字节",
+      "checks": [
+        {
+          "check": "open_channel response uses temporary id",
+          "passed": true
+        },
+        {
+          "check": "channel reaches ChannelReady",
+          "passed": true
+        },
+        {
+          "check": "V2 32-byte-args UDT reserves 181 CKB each side",
+          "passed": true
+        },
+        {
+          "check": "UDT invoice payment succeeds",
+          "passed": true
+        },
+        {
+          "check": "UDT receiver invoice is Paid",
+          "passed": true
+        },
+        {
+          "check": "UDT cooperative close confirms",
+          "passed": true
+        }
+      ]
+    },
+    "ccc": {
+      "packages": {
+        "@ckb-ccc/fiber": "0.0.0-canary-20260505020844",
+        "@fiber-pay/sdk": "0.3.1"
+      },
+      "checks": [
+        {
+          "check": "CCC getNodeInfo",
+          "passed": true
+        },
+        {
+          "check": "CCC methods are top-level",
+          "passed": true
+        },
+        {
+          "check": "CCC newInvoice",
+          "passed": true
+        },
+        {
+          "check": "CCC parseInvoice",
+          "passed": true
+        },
+        {
+          "check": "CCC getInvoice object overload",
+          "passed": true
+        },
+        {
+          "check": "CCC cancelInvoice",
+          "passed": true
+        },
+        {
+          "check": "CCC listChannels",
+          "passed": true
+        },
+        {
+          "check": "CCC listPeers",
+          "passed": true
+        },
+        {
+          "check": "fiber-pay 0.3.1 RPC nodeInfo with fnn 0.10.1",
+          "passed": true
+        },
+        {
+          "check": "fiber-pay 0.3.1 listChannels",
+          "passed": true
+        }
+      ]
+    },
+    "wasm": {
+      "environment": "真实 headless Chrome；官方 @nervosnetwork/fiber-js 0.10.1；COOP/COEP；独立临时浏览器 profile",
+      "bottle": [
+        {
+          "check": "official WASM 0.10.1 starts",
+          "passed": true
+        },
+        {
+          "check": "newInvoice and parseInvoice",
+          "passed": true
+        },
+        {
+          "check": "public WSS peer connected",
+          "passed": true
+        },
+        {
+          "check": "public relay announcement",
+          "passed": null,
+          "note": "未观察到公共 gossip 公告，不作为成功断言；WSS 连接和开通道协商单独验证。"
+        },
+        {
+          "check": "zero-balance public 499 CKB negotiation probe",
+          "passed": true
+        },
+        {
+          "check": "zero-balance public 500 CKB negotiation probe",
+          "passed": true
+        },
+        {
+          "check": "zero-balance public 599 CKB negotiation probe",
+          "passed": true
+        },
+        {
+          "check": "zero-balance public 600 CKB negotiation probe",
+          "passed": true
+        },
+        {
+          "check": "graceful stop resolves",
+          "passed": true
+        },
+        {
+          "check": "IndexedDB persists invoice across stop and new instance",
+          "passed": true
+        }
+      ],
+      "bracer": [
+        {
+          "check": "official WASM 0.10.1 starts",
+          "passed": true
+        },
+        {
+          "check": "newInvoice and parseInvoice",
+          "passed": true
+        },
+        {
+          "check": "public WSS peer connected",
+          "passed": true
+        },
+        {
+          "check": "public relay announcement",
+          "passed": null,
+          "note": "未观察到公共 gossip 公告，不作为成功断言；WSS 连接和开通道协商单独验证。"
+        },
+        {
+          "check": "zero-balance public 499 CKB negotiation probe",
+          "passed": true
+        },
+        {
+          "check": "zero-balance public 500 CKB negotiation probe",
+          "passed": true
+        },
+        {
+          "check": "graceful stop resolves",
+          "passed": true
+        },
+        {
+          "check": "IndexedDB persists invoice across stop and new instance",
+          "passed": true
+        }
+      ],
+      "observations": {
+        "499_CKB": "临时 ID 不变，未接受（扣除储备后 399 CKB）",
+        "500_CKB": "接受，永久 ID 产生，本地 400 CKB，对方 150 CKB；没有广播资金交易",
+        "restart": "stop 完成后使用新 Fiber 实例，相同 key/database prefix 保留发票"
+      }
+    },
+    "ui": {
+      "checks": [
+        "actual tutorial WASM startup",
+        "actual tutorial public WSS peer connection"
+      ],
+      "passed": true,
+      "route": "/docs/build/connect-wasm-node"
+    },
+    "restore": {
+      "checks": [
+        {
+          "check": "backup RPC returns null and creates timestamped backup",
+          "passed": true
+        },
+        {
+          "check": "restore into existing initialized test node and restart",
+          "passed": true
+        },
+        {
+          "check": "fnn --check-validate",
+          "passed": true,
+          "output": "Current database version: [20260925120000], latest db version: [20260925120000]\ndb validate success"
+        },
+        {
+          "check": "restored V2 channel remains Stale/quarantined",
+          "passed": true,
+          "log_excerpt": "Backup-restored V2 channel is quarantined: freshness is unknown"
+        }
+      ]
+    },
+    "installer": {
+      "passed": true,
+      "command": "INSTALL_REF=v0.10.1 FNN_VERSION=0.10.1 INSTALL_DIR=<temporary-directory> NETWORK=testnet bash bootstrap.sh",
+      "scope": "官方 Unix bootstrap 下载解压；没有运行后续用户钱包设置"
+    },
+    "game": {
+      "command": "pnpm@10.34.5 --dir example/simple-game build",
+      "status": "passed"
+    },
+    "unit": {
+      "command": "node --test examples/tutorials/verified-result-payment/lib/job.test.mjs",
+      "passed": true,
+      "tests": 37
+    },
+    "source": {
+      "release": "https://github.com/nervosnetwork/fiber/releases/tag/v0.10.1",
+      "tag": "v0.10.1",
+      "commit": "d9b6bbd",
+      "rpc": "crates/fiber-lib/src/rpc/README.md；42 个生成方法及自定义 Admin 说明逐项核对",
+      "types": "crates/fiber-json-types；生成类型清单比对",
+      "protocol": "crates/fiber-types/src/schema/fiber.mol、invoice.mol 及 shared types",
+      "ffi_dependency": "https://github.com/joii2020/fiber-ffi/blob/master/Cargo.toml"
+    },
+    "isolated_payments": {
+      "date": "2026-11-17",
+      "reason": "复核时发现旧自动寻路和 MPP 测试复用了旧通道，付款 Success 本身不足以证明经过中间节点或拆分；本轮隔离拓扑并核对逐通道余额。",
+      "funding": "使用本地 CKB devnet；在 genesis.issued_cells 为三个一次性账户各分配 1,000,000 CKB，不使用公共水龙头；通过 generate_block 确认本地资金交易。",
+      "environment": "官方 fnn 0.10.1 / CKB 0.202.0；原测试目录重启后先断言所有节点不存在 ChannelReady 通道，再建立本轮通道。",
+      "topology": {
+        "multi_hop": "仅 A-B、B-C 两条可用通道，无 A-C；发送 1 CKB，同时断言发送 Success、接收 Paid、两跳余额变化。",
+        "mpp": "关闭原 A-B；只新建两条各有 100 CKB 可用余额的 A-B 通道，发送 150 CKB；断言两条均扣款且合计 150 CKB。"
+      },
+      "checks": [
+        {
+          "check": "no pre-existing ChannelReady channels on any of the three nodes",
+          "passed": true
+        },
+        {
+          "check": "open_channel response uses temporary id",
+          "passed": true
+        },
+        {
+          "check": "channel reaches ChannelReady",
+          "passed": true
+        },
+        {
+          "check": "open_channel response uses temporary id",
+          "passed": true
+        },
+        {
+          "check": "channel reaches ChannelReady",
+          "passed": true
+        },
+        {
+          "check": "isolated channel topology is exactly A-B-C, with no A-C channel",
+          "passed": true
+        },
+        {
+          "check": "gossip isolated A-B-C sender Success",
+          "passed": true
+        },
+        {
+          "check": "gossip isolated A-B-C receiver Paid",
+          "passed": true
+        },
+        {
+          "check": "gossip payment changes both A-B and B-C channel balances",
+          "passed": true
+        },
+        {
+          "check": "trampoline isolated A-B-C sender Success",
+          "passed": true
+        },
+        {
+          "check": "trampoline isolated A-B-C receiver Paid",
+          "passed": true
+        },
+        {
+          "check": "trampoline payment changes both A-B and B-C channel balances",
+          "passed": true
+        },
+        {
+          "check": "original A-B channel closed before MPP test",
+          "passed": true
+        },
+        {
+          "check": "open_channel response uses temporary id",
+          "passed": true
+        },
+        {
+          "check": "channel reaches ChannelReady",
+          "passed": true
+        },
+        {
+          "check": "open_channel response uses temporary id",
+          "passed": true
+        },
+        {
+          "check": "channel reaches ChannelReady",
+          "passed": true
+        },
+        {
+          "check": "MPP topology has only two 100-CKB A-B channels; neither can carry 150 CKB",
+          "passed": true
+        },
+        {
+          "check": "isolated MPP sender Success",
+          "passed": true
+        },
+        {
+          "check": "isolated MPP receiver Paid",
+          "passed": true
+        },
+        {
+          "check": "MPP demonstrably splits 150 CKB across both channels",
+          "passed": true
+        },
+        {
+          "check": "isolated test channel cooperatively closed",
+          "passed": true
+        },
+        {
+          "check": "isolated test channel cooperatively closed",
+          "passed": true
+        },
+        {
+          "check": "isolated test channel cooperatively closed",
+          "passed": true
+        }
+      ],
+      "balance_proofs": [
+        {
+          "check": "gossip payment changes both A-B and B-C channel balances",
+          "passed": true,
+          "result": {
+            "payment_hash": "0xae79dc3434b11ade90e111ad782ccbbf0526b58de4f8567c2cb04c72dd9ce9bd",
+            "before": {
+              "ab": 40000000000,
+              "bc": 40000000000
+            },
+            "after": {
+              "ab": 39899900000,
+              "bc": 39900000000
+            },
+            "sender_status": "Success",
+            "receiver_status": "Paid",
+            "fee": "0x186a0"
+          }
+        },
+        {
+          "check": "trampoline payment changes both A-B and B-C channel balances",
+          "passed": true,
+          "result": {
+            "payment_hash": "0x634dd0a748aadc4f1a2747006a311c145f10b41ea7a69874fa6e665d1c3486fe",
+            "before": {
+              "ab": 39899900000,
+              "bc": 39900000000
+            },
+            "after": {
+              "ab": 39799400000,
+              "bc": 39800000000
+            },
+            "sender_status": "Success",
+            "receiver_status": "Paid",
+            "fee": "0x7a120"
+          }
+        },
+        {
+          "check": "MPP demonstrably splits 150 CKB across both channels",
+          "passed": true,
+          "result": {
+            "payment_hash": "0x1d0194e7dd07fd660a748cbe7032fe236331ed80f0f4fcdf2d1fd6f92e2f72ae",
+            "before": {
+              "0x3ed509042a342fca36aadda9eae1755758654295a287fd90a180a26792e0bfd3": 10000000000,
+              "0x7d06d0cf0465ec2a8955538340bf92332fdbc6bf4f8989a66fdf767fb2299214": 10000000000
+            },
+            "after": {
+              "0x3ed509042a342fca36aadda9eae1755758654295a287fd90a180a26792e0bfd3": 0,
+              "0x7d06d0cf0465ec2a8955538340bf92332fdbc6bf4f8989a66fdf767fb2299214": 5000000000
+            },
+            "debits": {
+              "0x3ed509042a342fca36aadda9eae1755758654295a287fd90a180a26792e0bfd3": 10000000000,
+              "0x7d06d0cf0465ec2a8955538340bf92332fdbc6bf4f8989a66fdf767fb2299214": 5000000000
+            },
+            "sender_status": "Success",
+            "receiver_status": "Paid"
+          }
+        }
+      ],
+      "script_sha256": "175080ba1430170bf278e732a96d765e41539e72226ff12de4a4a88a611616d6"
+    },
+    "public_testnet": {
+      "date": "2026-11-17",
+      "report": "verification/fiber-v0.10.1-public-testnet.json",
+      "faucet_ckb": 30000,
+      "wallets": 3,
+      "scope": "正式 0.10.1 原生/WASM 节点；公共 CKB Aggron 链；有资金的直接/多跳/MPP/Hold 与实际互动页面。",
+      "private_keys": "测试私钥和节点数据库均在仓库外，未写入证据文件。"
+    }
+  },
+  "pages": [
+    {
+      "path": "content/docs/api-reference/channels/channel.mdx",
+      "title": "Module `Channel`",
+      "status": "updated",
+      "evidence": [
+        "native",
+        "devnet",
+        "external",
+        "public_testnet"
+      ],
+      "note": "与 0.10.1 Channel RPC 逐项比对；修正接收方向的 TLC 限额和协作关闭默认参数；实测开关通道和外部签名。",
+      "sha256": "ba0bb82ca622e8f0ebdf5a545b0abacd1649c7e620242bc85d6d628f1bb456d7"
+    },
+    {
+      "path": "content/docs/api-reference/cross-chain/cch.mdx",
+      "title": "Module `Cch`",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "source"
+      ],
+      "note": "与 0.10.1 CCH RPC 比对，方法和字段无需调整；未运行完整 Lightning 互换。",
+      "sha256": "dc422a1710ca705c0112e0fd643cfbad62c86e7c18d4a42e4f9bff55e380dec7"
+    },
+    {
+      "path": "content/docs/api-reference/dev-tooling/dev.mdx",
+      "title": "Module `Dev`",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "source"
+      ],
+      "note": "与 0.10.1 Dev RPC 比对，方法和参数一致；未执行破坏性的开发接口。",
+      "sha256": "212ccb6d65c3cd0c94ba115e67e0dfb603e9af8a6c994a6734e64f14ff265dbf"
+    },
+    {
+      "path": "content/docs/api-reference/dev-tooling/prof.mdx",
+      "title": "Module `Prof`",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "source"
+      ],
+      "note": "与 0.10.1 Prof RPC 和特性开关比对；未启动 profiling 构建。",
+      "sha256": "501a26f1359d669ecf6bad990e611f6d05a2fffa3a244cf527ae39cdb5f6f296"
+    },
+    {
+      "path": "content/docs/api-reference/dev-tooling/watchtower.mdx",
+      "title": "Module `Watchtower`",
+      "status": "updated",
+      "evidence": [
+        "source"
+      ],
+      "note": "补充 create_watch_channel 必填 channel_features，区分 V1 和 V2。",
+      "sha256": "b85b3669aaee900347ad45d2d48cb94468c2bf51c0e624fad149d81ca04a9e3d"
+    },
+    {
+      "path": "content/docs/api-reference/index.mdx",
+      "title": "RPC Overview",
+      "status": "updated",
+      "evidence": [
+        "native",
+        "source"
+      ],
+      "note": "修正 0.10.1 node_info 示例、默认出资、权限和模块说明；移除未支持的 Unix socket 建议。",
+      "sha256": "be57935353702784ca98051b6a01acd5fbfeb980ce9754497fc56443b8caeaf4"
+    },
+    {
+      "path": "content/docs/api-reference/network/graph.mdx",
+      "title": "Module `Graph`",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "native",
+        "devnet",
+        "public_testnet"
+      ],
+      "note": "逐项核对图查询参数；实测 graph_nodes、graph_channels 及本地 gossip 路由。",
+      "sha256": "c3307e20249165706a91c28bcec88b626854b893ceb7866c583cb6eb92b63303"
+    },
+    {
+      "path": "content/docs/api-reference/node/admin.mdx",
+      "title": "Module `Admin`",
+      "status": "updated",
+      "evidence": [
+        "devnet",
+        "restore"
+      ],
+      "note": "更新版本和 backup 权限；实测返回 null、备份生成和数据库校验。",
+      "sha256": "1da47393858b1ddcec600c79fcf7d55ebff24daecaba3c554c73b5855ab9b416"
+    },
+    {
+      "path": "content/docs/api-reference/node/info.mdx",
+      "title": "Module `Info`",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "native",
+        "public_testnet"
+      ],
+      "note": "node_info 字段与正式二进制响应一致，正文无需改动。",
+      "sha256": "6db8d2f8d123baeb3edb31d2257f7692c48342f4d2a4f40b63e020113d316606"
+    },
+    {
+      "path": "content/docs/api-reference/node/peer.mdx",
+      "title": "Module `Peer`",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "native",
+        "devnet",
+        "wasm",
+        "public_testnet"
+      ],
+      "note": "核对参数，实测原生连接和浏览器 WSS 连接，接口说明无需改动。",
+      "sha256": "0e1ce119b7b6ef082baebe4eac2d2f696d02d6a2ac3f71edc75d44019735ade6"
+    },
+    {
+      "path": "content/docs/api-reference/payments/invoice.mdx",
+      "title": "Module `Invoice`",
+      "status": "updated",
+      "evidence": [
+        "native",
+        "devnet",
+        "public_testnet"
+      ],
+      "note": "修正 final_expiry_delta 最小值为 160 分钟及取消状态；实测创建、解析、取消、hold 和结算。",
+      "sha256": "5b9f71d2da95ad79fd837c4aac3fa56e182c9f1ff6723168e32966a597123720"
+    },
+    {
+      "path": "content/docs/api-reference/payments/payment.mdx",
+      "title": "Module `Payment`",
+      "status": "updated",
+      "evidence": [
+        "devnet",
+        "public_testnet"
+      ],
+      "note": "更新 Success 语义和 release 不返回 routers 的说明；实测普通、多跳、MPP、trampoline、手动路由。",
+      "sha256": "cb30222896d91af38d127e14082d2ff6396aa871845276ae8bf291194540caba"
+    },
+    {
+      "path": "content/docs/api-reference/types/types.mdx",
+      "title": "Types Reference",
+      "status": "updated",
+      "evidence": [
+        "native",
+        "devnet",
+        "restore",
+        "source",
+        "public_testnet"
+      ],
+      "note": "补充 ChannelFeatures；更新 Success、Stale 和 debug-only routers。",
+      "sha256": "97919d3329797263e3d98da1be4146a261956d1b7e424a3c3243be38e336811d"
+    },
+    {
+      "path": "content/docs/build/browser-extension/index.mdx",
+      "title": "Using fiber-js in a Browser Extension",
+      "status": "updated",
+      "evidence": [
+        "source"
+      ],
+      "note": "更新 0.10.1 依赖；明确 Blob worker 与示例 CSP 的适配要求，未将普通浏览器结果宣称为扩展实测。",
+      "sha256": "1c72c34f4e12e5e0d82ce263c3e811dab8a0e9d65d4a97fa57c407e9801d4c94"
+    },
+    {
+      "path": "content/docs/build/close-channel.mdx",
+      "title": "Close a Fiber Channel and Recover Funds",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "devnet",
+        "public_testnet"
+      ],
+      "note": "页面正文是教程入口；核查其组件和下载包，更新 500 CKB 及公钥比较，协作关闭在本地链实测。",
+      "sha256": "2d1176e6a264085bb20f88a8a82b0acabcfa1bb67ec49d7e141878aef4c0e450"
+    },
+    {
+      "path": "content/docs/build/community-sdk/fiber-checkout.mdx",
+      "title": "fiber-checkout",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "source"
+      ],
+      "note": "核查固定社区版本及现有 0.7.x peer 警告；无需改写为支持 0.10.1，未运行 checkout 集成。",
+      "sha256": "22924658030c7bb9e7d3d6ab7b11e179a9478f15ed16a45bb5be582dade7c16f"
+    },
+    {
+      "path": "content/docs/build/community-sdk/fiber-pay.mdx",
+      "title": "fiber-pay",
+      "status": "updated",
+      "evidence": [
+        "ccc",
+        "wasm",
+        "ui",
+        "public_testnet"
+      ],
+      "note": "说明 SDK 0.3.1 的 0.9.x peer 范围；提供 0.10.1 的 Testnet 配置修正，并用实际页面验证启动、开通道、付款、余额及状态恢复；不宣称上游全面兼容。",
+      "sha256": "60cb1284b451fc1ef320f3f13c1dffc8ed0626debb2d1708bd8da5e39e3b5e7d"
+    },
+    {
+      "path": "content/docs/build/community-sdk/index.mdx",
+      "title": "Overview",
+      "status": "updated",
+      "evidence": [
+        "ccc",
+        "source"
+      ],
+      "note": "更新版本背景及社区 SDK 兼容范围说明。",
+      "sha256": "9f44b471e0a2cc88d9d20cdf0bb14bfa24c16e096dc4ea8fcdbbe98fe735740b"
+    },
+    {
+      "path": "content/docs/build/connect-wasm-node.mdx",
+      "title": "Tutorial: Run a Fiber WASM Node in Your Browser",
+      "status": "updated",
+      "evidence": [
+        "wasm",
+        "ui",
+        "public_testnet"
+      ],
+      "note": "实际 WASM/页面启动与 WSS 验证；固定 0.10.1 和 SDK 0.3.1，提供 npm peer override 及 Testnet CKB Auth 配置工厂，九个下载包均同步。",
+      "sha256": "81d7544533752613aedcf9595ed2c3f26ff8b5435b3c8d291ba7b9e9d741b7cd"
+    },
+    {
+      "path": "content/docs/build/encrypted-data-payment.mdx",
+      "title": "Unlock Encrypted Data with a Fiber Payment",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "devnet",
+        "source"
+      ],
+      "note": "入口文字无需改动；组件和下载示例更新金额、公钥比较及依赖；底层支付和 custom_records 实测，未逐屏验证加解密流程。",
+      "sha256": "c9c3bc856dbcc20253f96a0dd172ec50d17fa1655f38c529a0510c0f042ff8ba"
+    },
+    {
+      "path": "content/docs/build/ffi/android-native-integration.mdx",
+      "title": "Android Native Integration",
+      "status": "updated",
+      "evidence": [
+        "source"
+      ],
+      "note": "指出上游 fnn 仍固定 v0.9.0-rc2，需维护者升级核心和复验 ABI/V2；未运行 Android。",
+      "sha256": "fffd4002aab8396465f0f32b7d51fcb46f883872323e265f757ddede609d943e"
+    },
+    {
+      "path": "content/docs/build/ffi/ffi-user-guide.mdx",
+      "title": "Fiber FFI User Guide",
+      "status": "updated",
+      "evidence": [
+        "source"
+      ],
+      "note": "核对上游 Cargo.toml 并补充旧核心版本限制；未声称 FFI 已升级到 0.10.1。",
+      "sha256": "03a939d844cb696825715072de231d9eafb9a9968e7e4b97c85f47ef44dc41f9"
+    },
+    {
+      "path": "content/docs/build/ffi/ios-native-integration.mdx",
+      "title": "iOS Native Integration",
+      "status": "updated",
+      "evidence": [
+        "source"
+      ],
+      "note": "补充上游旧核心依赖及升级前提；未运行 iOS。",
+      "sha256": "9994e45b39ab7a1a1df1b23f1843412a9970b73741243e708ac71058f3342bdb"
+    },
+    {
+      "path": "content/docs/build/gaming/payment-patterns.mdx",
+      "title": "Game Payment Patterns",
+      "status": "updated",
+      "evidence": [
+        "devnet",
+        "source"
+      ],
+      "note": "按 0.10.1 支付终态说明更新 Success 文案；核对游戏结算模式。",
+      "sha256": "40e3591b67e6df4b3b3cac481444c1a5a1009a443d5b703e1ad91ad131eaeccc"
+    },
+    {
+      "path": "content/docs/build/gaming/simple-game.mdx",
+      "title": "Tutorial: Build a Game",
+      "status": "updated",
+      "evidence": [
+        "ccc",
+        "game"
+      ],
+      "note": "修正 CCC ChannelReady 状态和异步支付轮询；更新双边可用余额所需出资，示例 TypeScript/Vite 构建通过。",
+      "sha256": "8597f49b9ae9ba3b6492b31a764729eec066986c09c4ed52ddbb44603a2c544e"
+    },
+    {
+      "path": "content/docs/build/hold-invoice.mdx",
+      "title": "Build a Conditional Payment with a Hold Invoice",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "devnet",
+        "public_testnet"
+      ],
+      "note": "入口文字无需改动；同步组件、下载包、公共节点开通道金额；实测 Received、settle 和 cancel。",
+      "sha256": "94e2977e02c94d62bea9e4f0863ca9ae0b86cae57ad9e9f1ca0505f86040cc07"
+    },
+    {
+      "path": "content/docs/build/interactive-tutorials.mdx",
+      "title": "Interactive tutorials",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "source"
+      ],
+      "note": "教程入口正文无需改动；关联九个项目已固定 0.10.1、修正 Testnet 配置并重新打包，主要开通道付款互动页面完成公共 Testnet 实跑。",
+      "sha256": "b1285457e94085a02a8d780cb76e13bc067ac315e3c5bb41264b265db9f9d49b"
+    },
+    {
+      "path": "content/docs/build/multi-hop-invoice.mdx",
+      "title": "Send a Multi-Hop Invoice Payment",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "devnet",
+        "public_testnet"
+      ],
+      "note": "入口文字无需改动；更新组件、下载包和 500 CKB；实测本地三节点 gossip 多跳支付。",
+      "sha256": "40aea34bc7c0d621e56b31c80b77e093d55f96f6ba47dfc1c67a76c667c1c1dc"
+    },
+    {
+      "path": "content/docs/build/open-channel-payment.mdx",
+      "title": "Tutorial: Open a Fiber Channel and Send a Payment",
+      "status": "updated",
+      "evidence": [
+        "devnet",
+        "wasm",
+        "public_testnet"
+      ],
+      "note": "实际公共 Testnet 页面跑通 500 CKB 开通道及付款；修正 AwaitingChannelReady 误判、SDK Testnet 旧依赖、Success 早于余额更新时的回执；余额刷新失败保留已确认支付状态。",
+      "sha256": "fd390eefe43e6bf6d6a05f57ebc961b04e30aa2bf65a9ffb43bf1f7c7c8dd83b"
+    },
+    {
+      "path": "content/docs/build/rusd-payment.mdx",
+      "title": "Pay with RUSD over Fiber",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "udt",
+        "source"
+      ],
+      "note": "入口文字无需改动；更新依赖和公钥比较；用 32 字节 args 的本地测试 UDT 验证 181 CKB 储备、支付和关闭，未动用公共 RUSD。",
+      "sha256": "a8169e77d52b91bf112bae4008680ed18e6dc2f5c3cdbc4d2e311c49de0c0671"
+    },
+    {
+      "path": "content/docs/build/sdk/js.mdx",
+      "title": "JavaScript SDK",
+      "status": "updated",
+      "evidence": [
+        "ccc",
+        "devnet"
+      ],
+      "note": "修正顶层 SDK 方法、abandon 参数、普通发票自动结算、随机 preimage、通道 ID 变化和异步支付结果。",
+      "sha256": "3a7deaa982fc5278cc39b7ab406ea7cc0ace644ed8c24bd448ce23cd05830ff7"
+    },
+    {
+      "path": "content/docs/build/sdk/wasm-node.mdx",
+      "title": "WASM Node",
+      "status": "updated",
+      "evidence": [
+        "wasm",
+        "external",
+        "public_testnet"
+      ],
+      "note": "更新 0.10.1、停止/重启生命周期、500 CKB 和外部签名恢复规则。",
+      "sha256": "5357d6f491988e1035c96cfa7fa7a7a7ef25f5171a46a876dfeab46ed95b8b03"
+    },
+    {
+      "path": "content/docs/build/toolchain.mdx",
+      "title": "Toolchain Overview",
+      "status": "updated",
+      "evidence": [
+        "native",
+        "wasm",
+        "source"
+      ],
+      "note": "更新当前二进制和 WASM 版本；保留历史迁移版本，标明 FFI 的旧核心限制。",
+      "sha256": "0c255eaf7ce0996be10a079b6cb949a21fc6e2ded4aeb1aa3cd87ed19cda1cef"
+    },
+    {
+      "path": "content/docs/build/unidirectional-channel.mdx",
+      "title": "Open a Unidirectional Fiber Channel",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "devnet"
+      ],
+      "note": "入口文字无需改动；同步组件和下载包；实测 one_way 私有通道。",
+      "sha256": "736969b57181dfe54afc90a3c78abdde3fa561806b99230c7e65802757498ad1"
+    },
+    {
+      "path": "content/docs/build/verified-result-payment.mdx",
+      "title": "Pay for a Verified Result",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "devnet",
+        "unit"
+      ],
+      "note": "入口文字无需改动；同步依赖、500 CKB、公钥比较；既有业务逻辑 37 项测试通过，未逐屏验证完整结果交付。",
+      "sha256": "857fe3b29b5ca2ec14c384455df1d3d84fb922bbd4b58f1c5241ce80ef14c1ab"
+    },
+    {
+      "path": "content/docs/concept/channels/channel-lifecycle.mdx",
+      "title": "Channel Lifecycle",
+      "status": "updated",
+      "evidence": [
+        "devnet",
+        "restore",
+        "source",
+        "public_testnet"
+      ],
+      "note": "补充新通道 V2 兼容边界、恢复隔离以及生命周期状态；核对正式响应。",
+      "sha256": "6c6a05c81abc02d69774e7c87e4c1f6d8e5b1c650d03c413affa576947257350"
+    },
+    {
+      "path": "content/docs/concept/channels/channel-rebalancing.mdx",
+      "title": "Channel Rebalancing",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "devnet"
+      ],
+      "note": "核对循环路由、dry_run 及 send_payment_with_router；本地运行通过，无需改正文。",
+      "sha256": "de695371530d98df7d6870a1d82d7334e60bd882a0a6917c8b5fdf9a43c007d9"
+    },
+    {
+      "path": "content/docs/concept/channels/external-funding.mdx",
+      "title": "External Funding",
+      "status": "updated",
+      "evidence": [
+        "external"
+      ],
+      "note": "实测外部钱包只填 witnesses 的正常路径和冲突输入确认后 FUNDING_ABORTED；补充签名提交后禁止手工放弃。",
+      "sha256": "0d79dc8edaa8c30ebc6069aa94ae91e59c89622632b649417cf510def1065601"
+    },
+    {
+      "path": "content/docs/concept/channels/unidirectional-channel.mdx",
+      "title": "Unidirectional Channel",
+      "status": "updated",
+      "evidence": [
+        "devnet"
+      ],
+      "note": "修正 V2 100 CKB 储备和默认自动接受出资；实测 one_way。",
+      "sha256": "8ac18d25fd5d5aee005f8381f756517a20c217e26f969f99d14588979dd6e1ef"
+    },
+    {
+      "path": "content/docs/concept/liquidity/concept-labs.mdx",
+      "title": "Liquidity Concept Labs",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "source"
+      ],
+      "note": "流动性实验导航不依赖节点协议，入口无需调整。",
+      "sha256": "273f85a78b4f8ec83ebd7a48a10d6ded963d4d97b7dabcd13a31c919ab8d58b0"
+    },
+    {
+      "path": "content/docs/concept/liquidity/directional-liquidity.mdx",
+      "title": "Explore Directional Channel Liquidity",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "source"
+      ],
+      "note": "逐项核对教学模型；模拟数值不作为真实 V2 储备，正文无需调整。",
+      "sha256": "c88a83e73562219232b2b7cc041d39bb0f5ff6d28aba5c3efc61b11d5d0f83fb"
+    },
+    {
+      "path": "content/docs/concept/liquidity/overview.mdx",
+      "title": "Understanding Fiber Liquidity",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "devnet",
+        "source"
+      ],
+      "note": "核对流动性与付款方向概念，本地支付观察一致，正文无需调整。",
+      "sha256": "3eb424ca8e58cb70d7a25be7aa75231225cfc9d0474399a46dc7a9663196acb4"
+    },
+    {
+      "path": "content/docs/concept/liquidity/rebalance-liquidity.mdx",
+      "title": "Rebalance a Fiber Routing Node",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "devnet",
+        "source"
+      ],
+      "note": "核对教学模拟和真实循环再平衡的区分；本地循环支付通过，模拟数值保持。",
+      "sha256": "cd6d9db167ebeb3bf1aefdec94394faa0c9de097d3d7be35567d2bcf2cf36eb9"
+    },
+    {
+      "path": "content/docs/concept/liquidity/route-liquidity.mdx",
+      "title": "Find a Route's Liquidity Bottleneck",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "devnet",
+        "source"
+      ],
+      "note": "核对瓶颈示例和路由约束，本地多跳/MPP 观察一致，正文无需调整。",
+      "sha256": "0696cd1bccff5a9539916398ff4762e2f1eddb3c49582b1193c289f753b48bec"
+    },
+    {
+      "path": "content/docs/concept/payments/hold-invoice.mdx",
+      "title": "Hold Invoice",
+      "status": "updated",
+      "evidence": [
+        "devnet",
+        "public_testnet"
+      ],
+      "note": "修正 hash/preimage 创建、SHA256 命令、结算/取消权限表述；实测成功结算和取消导致发送失败。",
+      "sha256": "ae7dc57b78629a41534f7f84f45605e4e50c542b5032834201e3f296c4765f35"
+    },
+    {
+      "path": "content/docs/concept/payments/invoice-guide.mdx",
+      "title": "Invoice",
+      "status": "updated",
+      "evidence": [
+        "native",
+        "devnet",
+        "public_testnet"
+      ],
+      "note": "修正 Hold Invoice、160 分钟、JSON-RPC 参数形状和返回结果；普通发票自动结算实测。",
+      "sha256": "3a995a4612863284b577da1e1da18e10abf16909eb1e88b06b4eb024c2fbb681"
+    },
+    {
+      "path": "content/docs/concept/payments/payment-lifecycle.mdx",
+      "title": "Payment Lifecycle",
+      "status": "updated",
+      "evidence": [
+        "devnet",
+        "source",
+        "public_testnet"
+      ],
+      "note": "按 0.10.1 更新 Success 和待完成 TLC 的关系，移除将所有尝试结束作为成功前提的描述。",
+      "sha256": "0dd5a494d66e4a4b257181888869bbd6f91d2fab8a1d1389dc06bb9daaec078f"
+    },
+    {
+      "path": "content/docs/concept/routing/multi-hop.mdx",
+      "title": "Multi-Hop Payments",
+      "status": "updated",
+      "evidence": [
+        "devnet",
+        "public_testnet"
+      ],
+      "note": "更新 MPP 名称、fee 字段、100 CKB 储备及公共节点 500 CKB 门槛；实测多跳和 MPP。",
+      "sha256": "02d59ef3712adddd155e8b54bb77d0f336ecd05d4d498baa710380a63b308d10"
+    },
+    {
+      "path": "content/docs/concept/routing/trampoline-routing.mdx",
+      "title": "Trampoline Routing",
+      "status": "updated",
+      "evidence": [
+        "devnet",
+        "public_testnet"
+      ],
+      "note": "更新示例和费用字段；三节点 trampoline 支付实测通过。",
+      "sha256": "d0a26a56aa1d83e80a2f46cf38a1de4dcf2e81be2b6ddc233f373a6535537e6c"
+    },
+    {
+      "path": "content/docs/concept/security/biscuit-auth.mdx",
+      "title": "Biscuit Authentication in Fiber",
+      "status": "updated",
+      "evidence": [
+        "source"
+      ],
+      "note": "与 0.10.1 权限规则比对，补充 backup 的 write(node)，更新示例到期时间与源码链接；未运行完整 token 权限矩阵。",
+      "sha256": "ef8aa3e66bc66d555b30846ab84306fb9c9c333f71e83c7f92431ecfd038fcdc"
+    },
+    {
+      "path": "content/docs/concept/security/watchtower.mdx",
+      "title": "Watchtower",
+      "status": "updated",
+      "evidence": [
+        "source"
+      ],
+      "note": "补充 V2 channel_features 和正确配置层级；核对 watchtower 源码，未模拟惩罚交易。",
+      "sha256": "4ccb25485fbea69398ddc2e557bbd60a1ae35ccbe00da0641b72e069747dbeb8"
+    },
+    {
+      "path": "content/docs/faq/troubleshooting.mdx",
+      "title": "Troubleshooting",
+      "status": "updated",
+      "evidence": [
+        "native",
+        "devnet",
+        "restore",
+        "public_testnet"
+      ],
+      "note": "补充 V2 版本边界、储备、自动接受净额、AwaitingChannelReady 和支付终态排错说明。 公共重启测试还验证 peer-session 就绪早于 channel reestablishment，补充协作关闭重试说明。",
+      "sha256": "67f4cbd4f3bc5ea451495c9ece3a4976b418db3a155c5747d0c1f6d2ab5d4ac2"
+    },
+    {
+      "path": "content/docs/how-it-works.mdx",
+      "title": "How Fiber Network Works",
+      "status": "updated",
+      "evidence": [
+        "devnet",
+        "source"
+      ],
+      "note": "更新通道储备和支付流程措辞，与实际 V2 余额和结算行为一致。",
+      "sha256": "89ed42316a14b62cb52d22e607759825c0dd59e5a779bc83256ac7abbc2f03eb"
+    },
+    {
+      "path": "content/docs/index.mdx",
+      "title": "What is Fiber Network?",
+      "status": "updated",
+      "evidence": [
+        "native",
+        "wasm",
+        "devnet"
+      ],
+      "note": "更新当前已实现能力、V2 兼容及路线图，避免把 WASM、MPP、条件支付仍写成未来功能。",
+      "sha256": "a618fa433021b20e7c7d1a93344ac3c627b439271b0ac779307cf1a3c651bbb1"
+    },
+    {
+      "path": "content/docs/operate/backup.mdx",
+      "title": "Fiber Node Backup",
+      "status": "updated",
+      "evidence": [
+        "restore",
+        "devnet",
+        "source"
+      ],
+      "note": "更新版本、权限和恢复说明；已执行备份、原目录恢复、数据库验证并观察 V2 Stale 隔离；旧版本迁移仅按源码核对。",
+      "sha256": "c3db5c9240c33a66dfdde99aea785723c22b36f56022397c0f2c14c00fdaf254"
+    },
+    {
+      "path": "content/docs/operate/config-reference.mdx",
+      "title": "Configuration Reference",
+      "status": "updated",
+      "evidence": [
+        "native",
+        "devnet",
+        "source"
+      ],
+      "note": "比对完整配置；补充 listening_addrs、store_sync_writes 和环境变量，修正默认自动接受出资；节点按这些选项启动成功。",
+      "sha256": "f1677bb211fde59a9ed6ee26815863cfae5b15b87ff9593b45786bf94dcaa90d"
+    },
+    {
+      "path": "content/docs/operate/connect-nodes.mdx",
+      "title": "Connect Public Nodes",
+      "status": "updated",
+      "evidence": [
+        "native",
+        "wasm",
+        "public_testnet"
+      ],
+      "note": "更新公共节点开通道门槛；原生连接和浏览器 WSS 已实测。",
+      "sha256": "5e82b54013bb48d96ab5bbba996dcf56ebd0c392da4bc743698a28360dbfe785"
+    },
+    {
+      "path": "content/docs/quick-start/basic-transfer.mdx",
+      "title": "Basic Transfer Example",
+      "status": "updated",
+      "evidence": [
+        "native",
+        "devnet",
+        "public_testnet"
+      ],
+      "note": "更新 0.10.1 版本、100 CKB 储备及密钥导出单行命令；隔离链完成收付款。",
+      "sha256": "b6fb5d1ee98eefbc15ea1066e26fce5e175429ff30dccde0c069cce919506473"
+    },
+    {
+      "path": "content/docs/quick-start/multi-hop-transfer.mdx",
+      "title": "Multi-hop Transfers",
+      "status": "updated",
+      "evidence": [
+        "devnet",
+        "public_testnet"
+      ],
+      "note": "公共 Testnet 完成经 bottle/bracer 的 gossip 和 trampoline 支付，校验 Paid 与两端余额；补充公共路径/流动性前提、同中继基线及接收端确认。",
+      "sha256": "1683a47e650263c46f82dcebb0862d784fc46111f646ac12fcaf7111635c8983"
+    },
+    {
+      "path": "content/docs/quick-start/network-resources.mdx",
+      "title": "Network Resources",
+      "status": "updated",
+      "evidence": [
+        "wasm",
+        "source",
+        "public_testnet"
+      ],
+      "note": "实测 bottle 和 bracer 499 CKB 不接受、500 CKB 接受的无资金协商，更新公开参数与余额说明。",
+      "sha256": "0767392f46fd67182c51900bb1f75d01a502e2b87b20635015c640e5cf185d44"
+    },
+    {
+      "path": "content/docs/quick-start/run-a-node/docker.mdx",
+      "title": "Run a Native Node (Docker)",
+      "status": "updated",
+      "evidence": [
+        "source"
+      ],
+      "note": "固定镜像 0.10.1、修正密钥导出；Docker Desktop 引擎不可连接，未运行容器且未确认 manifest。",
+      "sha256": "53f28948b5e37e599aa35e0d3ea4464d62b2a3f69b8ca6bd5a517bf5316abb73"
+    },
+    {
+      "path": "content/docs/quick-start/run-a-node/fiberjs.mdx",
+      "title": "Run a WASM Node",
+      "status": "updated",
+      "evidence": [
+        "wasm",
+        "public_testnet"
+      ],
+      "note": "更新 WASM 0.10.1、停止重启行为和 500 CKB 示例；真实 Chrome 验证启动、WSS、IndexedDB 持久化。",
+      "sha256": "dc338cb558442cededddd79b830ddf3ac4d5e2dee9a45edd9408f0bdb7d9b64a"
+    },
+    {
+      "path": "content/docs/quick-start/run-a-node/index.mdx",
+      "title": "Overview",
+      "status": "updated",
+      "evidence": [
+        "native",
+        "wasm"
+      ],
+      "note": "更新当前版本及选择说明；原生和浏览器分别运行。",
+      "sha256": "b62e3efdd53b70d698635ef4098893bfb60b0183edf9d95d4f1520eceb945c75"
+    },
+    {
+      "path": "content/docs/quick-start/run-a-node/rust.mdx",
+      "title": "Run a Native Node",
+      "status": "updated",
+      "evidence": [
+        "native",
+        "installer",
+        "public_testnet"
+      ],
+      "note": "更新正式二进制下载、安装器、储备与密钥导出；官方 Unix bootstrap 固定 0.10.1 安装成功。",
+      "sha256": "8508d86098561a916fd8521409897f22fb865c92219b8dde1511a9c04d2d8b1b"
+    },
+    {
+      "path": "content/docs/quick-start/transfer-stablecoin.mdx",
+      "title": "Transfer Stablecoins",
+      "status": "updated",
+      "evidence": [
+        "udt",
+        "source"
+      ],
+      "note": "修正标准 UDT 的 181 CKB 储备和示例；本地同尺寸 args 的测试 UDT 支付通过，未运行公共 RUSD 付款。",
+      "sha256": "5c272b149875c5443bdb17fac8810c145f5e7bb0384f451fef951a7db23d8dda"
+    },
+    {
+      "path": "content/docs/res/cheat-code.mdx",
+      "title": "Fiber Cheat Code",
+      "status": "updated",
+      "evidence": [
+        "native",
+        "devnet"
+      ],
+      "note": "逐项核对 CLI、JSON-RPC 和金额；修正参数数组、支付 fee、储备及最小出资。",
+      "sha256": "fed7ad4c6b4c360dfcdaa8adb5c7e45951f4c0134c63ab09a0004548530ba8fa"
+    },
+    {
+      "path": "content/docs/res/cross-chain-htlc.mdx",
+      "title": "Cross-Chain HTLC",
+      "status": "updated",
+      "evidence": [
+        "source"
+      ],
+      "note": "与 0.10.1 CCH 源码比对并修正 JSON-RPC params；未启动 Lightning 完整互换。",
+      "sha256": "583a3707576f5e1b9db9ef267afc38ff1e4762097c016c68679c82df59364cb5"
+    },
+    {
+      "path": "content/docs/res/glossary.mdx",
+      "title": "Fiber Network Glossary",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "source"
+      ],
+      "note": "逐项核对术语，现有定义不因 0.10.1 改变，正文无需改动。",
+      "sha256": "361e74ab6d77fe0c18323ca4c443cef95aebd8f6d4ad4b0222166c821313a362"
+    },
+    {
+      "path": "content/docs/res/gossip-protocol.mdx",
+      "title": "Gossip Protocol",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "devnet",
+        "source"
+      ],
+      "note": "核对 actor、cursor 和协议定义；本地 gossip 多跳通过，文档描述仍适用。",
+      "sha256": "b5419328a66e33a757a081a1aa86d5dbed294856f8806ce6d6c816c79efc0dc3"
+    },
+    {
+      "path": "content/docs/res/high-level.mdx",
+      "title": "Fiber Architecture & Module",
+      "status": "updated",
+      "evidence": [
+        "source"
+      ],
+      "note": "增加当前 crates 结构/V2 实现说明，明确历史源码图范围；更新迁移及已实现 MPP 的措辞。",
+      "sha256": "d107dc2d01e7a07f831af87e3ccfd2deea50ea2b128e8eee22d392622f1668b9"
+    },
+    {
+      "path": "content/docs/res/index.mdx",
+      "title": "Resources",
+      "status": "updated",
+      "evidence": [
+        "source"
+      ],
+      "note": "核对资源导航，修复失效的网络资源链接。",
+      "sha256": "28a52048158cf160360a4931736750a8107fd19dc93fddda006c2ee60f5edc0f"
+    },
+    {
+      "path": "content/docs/res/invoice-protocol.mdx",
+      "title": "Fiber Invoice Protocol",
+      "status": "updated",
+      "evidence": [
+        "native",
+        "source"
+      ],
+      "note": "对照 invoice.mol 和实际响应，修正签名、Hold/MPP、64 位 expiry、feature 向量、payment_secret 及毫秒单位。",
+      "sha256": "53b023e2e3f5cdef8e43347e52c4a0f41a4021d39b2ae0856c6ebf022014e00a"
+    },
+    {
+      "path": "content/docs/res/light-paper.mdx",
+      "title": "Fiber Network Light Paper",
+      "status": "updated",
+      "evidence": [
+        "source"
+      ],
+      "note": "核对当前实现，更新原型阶段与 MPP/浏览器/Watchtower 已实现能力的描述。",
+      "sha256": "9a4b4a6093e8efa759f3ad3d6808137a4aa0ca96bf4a9d4ab2ec7df78faf3424"
+    },
+    {
+      "path": "content/docs/res/p2p-message.mdx",
+      "title": "Fiber P2P Message Protocol",
+      "status": "updated",
+      "evidence": [
+        "source"
+      ],
+      "note": "逐字段对照 0.10.1 Molecule 协议，重写 V2 消息和共享字段，保留 V1 兼容边界，标明研究提案不等于已实现功能。",
+      "sha256": "5b232ebbded269d53facf8277c8d8c02467c312b1cf1ecc53e98556f5bb05049"
+    },
+    {
+      "path": "content/docs/res/payment-channel.mdx",
+      "title": "What is Payment Channel Network",
+      "status": "reviewed_no_change",
+      "evidence": [
+        "source"
+      ],
+      "note": "逐段核对支付通道基础理论，与 0.10.1 不冲突，正文无需改动。",
+      "sha256": "119006a08c729ac9827fba4b66bd37859920ca1c301cc8fc26d8f42597e9b46b"
+    }
+  ],
+  "last_verified": "2026-11-17",
+  "integration": {
+    "base_commit": "93833234e03fc01a602fe2a824d8084f3dd2f3c7",
+    "branch": "codex/fiber-0.10.1-docs",
+    "source_audit_commit": "f02d491",
+    "preserved_upstream_features": [
+      "browser node session locks",
+      "saved-node and payment restoration",
+      "multi-hop receiving-liquidity restoration",
+      "standalone encrypted-data starter"
+    ],
+    "public_testnet_evidence_scope": "此前审计工作区的真实公共 Testnet 记录；整合后代码校验另见 checks。"
+  }
+}

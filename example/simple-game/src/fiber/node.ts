@@ -32,6 +32,15 @@ export class FiberNode {
     }
 
     async sendPayment(invoice: string) {
-        return await this.sdk.sendPayment({ invoice });
+        const submitted = await this.sdk.sendPayment({ invoice });
+        let payment = submitted;
+        while (payment.status === "Created" || payment.status === "Inflight") {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            payment = await this.sdk.getPayment({ paymentHash: submitted.paymentHash });
+        }
+        if (payment.status !== "Success") {
+            throw new Error(payment.failedError ?? "Payment failed");
+        }
+        return payment;
     }
 }

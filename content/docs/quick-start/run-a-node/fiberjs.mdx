@@ -1,11 +1,11 @@
 ---
 title: "Run a WASM Node"
 description: "Run a Fiber node directly in your browser app"
-date: 2026-08-17
+date: 2026-11-16
 dependencies:
   - name: Fiber JS
-    minVersion: "0.10.0"
-    link: "https://www.npmjs.com/package/@nervosnetwork/fiber-js/v/0.10.0"
+    minVersion: "0.10.1"
+    link: "https://www.npmjs.com/package/@nervosnetwork/fiber-js/v/0.10.1"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -53,7 +53,7 @@ The lab stores one Testnet identity in the current browser so the funding addres
 |---|---|---|
 | **Runtime** | Native binary | Browser |
 | **Deployment** | Server or local machine | Embedded in web app |
-| **Public IP required** | Yes | No, use outbound `/ws/` or `/wss/` peers |
+| **Public IP required** | Only for publicly reachable nodes | No, use outbound `/ws/` or `/wss/` peers |
 | **Storage** | File system (SQLite/RocksDB) | IndexedDB (via WASM worker) |
 | **Use case** | Production node operators | Browser wallets, web games, client-side dApps |
 
@@ -69,18 +69,18 @@ The examples below use `npm`. If your project already uses `pnpm`, use the equiv
 ## Installation
 
 ```bash
-npm install @nervosnetwork/fiber-js@0.10.0
+npm install @nervosnetwork/fiber-js@0.10.1
 # or
-pnpm add @nervosnetwork/fiber-js@0.10.0
+pnpm add @nervosnetwork/fiber-js@0.10.1
 ```
 
-Download the v0.10.0 Testnet config (the same template included in the native release archives) and serve it from your app:
+Download the v0.10.1 Testnet config (the same template included in the native release archives) and serve it from your app:
 
 ```bash
 mkdir -p public/fiber-config
 curl --fail --location \
   --output public/fiber-config/testnet.yml \
-  https://raw.githubusercontent.com/nervosnetwork/fiber/v0.10.0/config/testnet/config.yml
+  https://raw.githubusercontent.com/nervosnetwork/fiber/v0.10.1/config/testnet/config.yml
 ```
 
 The native template contains TCP bootnodes, which browsers cannot reach. Edit the existing `fiber` fields in `testnet.yml` to use browser-reachable WSS peers and avoid announcing a browser-local address. For example:
@@ -146,7 +146,7 @@ console.log("Node started:", info);
 console.log("Connected peers:", await fiber.listPeers());
 ```
 
-> **Expected Output:** The node initializes, connects to a configured `/ws/` or `/wss/` peer, and starts syncing. `nodeInfo()` returns your node's pubkey, `version: "0.10.0"`, and chain info; `listPeers()` should report at least one peer when the selected public node is reachable.
+> **Expected Output:** The node initializes, connects to a configured `/ws/` or `/wss/` peer, and starts syncing. `nodeInfo()` returns your node's pubkey, `version: "0.10.1"`, and chain info; `listPeers()` should report at least one peer when the selected public node is reachable.
 
 ## Common Workflows
 

@@ -1,14 +1,14 @@
 ---
 title: JavaScript SDK
 description: TypeScript/JavaScript SDK for Fiber Network — channels, invoices, payments, and more
-date: 2026-08-17
+date: 2026-11-16
 dependencies:
   - name: "@ckb-ccc/fiber"
     minVersion: "0.0.0-canary-20260505020844"
     link: "https://www.npmjs.com/package/@ckb-ccc/fiber"
   - name: Fiber Node
-    minVersion: "0.9.1"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.1"
+    minVersion: "0.10.1"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.10.1"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -27,7 +27,7 @@ Fiber payment channels are inherently **two-party**: one side opens a channel, t
 ## Installation
 
 ```bash
-npm install @ckb-ccc/fiber
+npm install @ckb-ccc/fiber@0.0.0-canary-20260505020844
 ```
 
 <Callout type="info">
@@ -57,23 +57,16 @@ From here, the same `sdk` handles everything — see the [User Stories](#user-st
 
 ## Architecture
 
-`FiberSDK` is the main class. It composes five API domains (Channel, Invoice, Payment, Info, Peer) into a single object. Most methods are available directly on the `sdk` instance, while a few are accessed through domain sub-objects:
+`FiberSDK` exposes channel, invoice, payment, node-info, and peer methods directly on the client. The pinned package composes these APIs using class mixins; it does not expose `sdk.channel` or `sdk.invoice` sub-objects.
 
 ```typescript
-// Top-level (most methods)
 await sdk.openChannel({ ... });
+await sdk.acceptChannel({ ... });
 await sdk.newInvoice({ ... });
+await sdk.settleInvoice({ ... }); // hold invoices only
 await sdk.sendPayment({ ... });
 await sdk.shutdownChannel({ ... });
-
-// Domain sub-object (specific methods)
-await sdk.channel.acceptChannel({ ... });
-await sdk.invoice.settleInvoice({ ... });
 ```
-
-<Callout type="info">
-  `acceptChannel` and `settleInvoice` are on sub-objects because they represent the counterparty's side of a two-party handshake — `sdk.channel.acceptChannel()` and `sdk.invoice.settleInvoice()`.
-</Callout>
 
 ## Two-Party Interaction Model
 
@@ -156,6 +149,9 @@ await alice.connectPeer({
   save: true,
 });
 
+// Record existing IDs because the temporary ID changes after acceptance.
+const existingIds = new Set((await alice.listChannels()).map((ch) => ch.channelId));
+
 // 2. Open a channel funded with 500 CKB
 const tempChannelId = await alice.openChannel({
   pubkey:
@@ -170,7 +166,12 @@ let channelId;
 while (!channelId) {
   await new Promise((r) => setTimeout(r, 2000));
   const channels = await alice.listChannels();
-  const ch = channels.find((c) => c.channelId === tempChannelId);
+  const ch = channels.find((c) =>
+    !existingIds.has(c.channelId) &&
+    c.pubkey.replace(/^0x/, "") ===
+      "03827ccddf3fdf59808fa6baea647d93bd6f6105309d3b20e1fc0d9e40495865cc" &&
+    c.state.stateName === "ChannelReady",
+  );
   if (ch?.state.stateName === "ChannelReady") {
     channelId = ch.channelId;
     console.log("Channel ready:", channelId);
@@ -185,14 +186,16 @@ while (!channelId) {
 <Tab value="Bob (accepts channel)">
 
 ```typescript
-// Bob: accept the incoming channel from Alice
+// Bob: for manual acceptance, start Bob with
+// fiber.auto_accept_channel_ckb_funding_amount: 0 in config.yml.
+// Otherwise a qualifying channel is auto-accepted. Fund Bob with CKB first.
 
 // The temporary channel ID comes from Alice (share it out-of-band)
 const tempChannelId = "0x..."; // from Alice's console above
 
-const channelId = await bob.channel.acceptChannel({
+const channelId = await bob.acceptChannel({
   temporaryChannelId: tempChannelId,
-  fundingAmount: "0x0", // Bob contributes 0; only Alice funds this channel
+  fundingAmount: "0x2540be400", // Bob contributes 100 CKB for the V2 reserve
 });
 console.log("Accepted channel:", channelId);
 ```
@@ -204,86 +207,45 @@ console.log("Accepted channel:", channelId);
 <Callout type="info">
   `openChannel` returns a **temporary channel ID**. Once both parties accept and the funding transaction confirms on-chain, the temporary ID is replaced by a permanent `channelId` and the channel state becomes `ChannelReady`.
 
-If you want to cancel before the channel is ready, either party can call `sdk.abandonChannel({ temporaryChannelId, reason: "..." })`.
+Before funding is committed, either party can call `sdk.abandonChannel({ channelId })` with the current channel ID from `listChannels()` (initially the temporary ID). After a signed external funding transaction has been submitted, abandonment is refused; see [external funding](/docs/concept/channels/external-funding).
 </Callout>
 
 ---
 
 ### 3. Receive a Payment
 
-**Goal:** Bob wants to receive a payment from Alice. He creates an invoice, Alice pays it, and Bob settles to finalize.
-
-**Flow:** Bob creates an invoice → Bob shares the `invoiceAddress` with Alice → Alice pays the invoice → Bob detects the payment → Bob settles with the preimage.
-
-<Tabs items={["Bob (creates invoice & settles)", "Alice (pays invoice)"]}>
-
-<Tab value="Bob (creates invoice & settles)">
+**Goal:** Bob creates an ordinary invoice and Alice pays it. Bob's node already knows the preimage and settles automatically.
 
 ```typescript
-// Bob: create an invoice for Alice to pay
-
-// 1. Generate a preimage — keep this secret until payment arrives
-const paymentPreimage = "0x" + "01".repeat(32);
-
-// 2. Create the invoice
+// Bob: create a fresh preimage for each invoice.
+const paymentPreimage = "0x" + Array.from(
+  crypto.getRandomValues(new Uint8Array(32)),
+  (byte) => byte.toString(16).padStart(2, "0"),
+).join("");
 const { invoiceAddress, invoice } = await bob.newInvoice({
-  amount: "0x5f5e100", // 1 CKB in shannons
+  amount: "0x5f5e100", // 1 CKB
   currency: "Fibt",
   paymentPreimage,
   description: "Payment for services",
   expiry: "0xe10", // 3600 seconds
-  finalExpiryDelta: "0x9283C0", // ~4 hours in ms
+  finalExpiryDelta: "0xdbba00", // 4 hours in milliseconds
 });
 
-// Share this with Alice (out-of-band — QR, copy-paste, API, etc.)
-console.log("Invoice address (send to Alice):");
-console.log(invoiceAddress);
-
-// 3. Poll until the invoice is paid
-let status = await bob.getInvoice(invoice.data.paymentHash);
-while (status.status === "Open") {
-  await new Promise((r) => setTimeout(r, 1000));
-  status = await bob.getInvoice(invoice.data.paymentHash);
-  console.log(`  Payment status: ${status.status}`);
+// Share invoiceAddress with Alice. Alice submits payment on her own node.
+const submitted = await alice.sendPayment({ invoice: invoiceAddress });
+let payment = submitted;
+while (payment.status === "Created" || payment.status === "Inflight") {
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  payment = await alice.getPayment({ paymentHash: submitted.paymentHash });
 }
-console.log("Invoice paid!");
+if (payment.status !== "Success") throw new Error(payment.failedError ?? "Payment failed");
 
-// 4. Settle — reveal the preimage to finalize the payment
-await bob.invoice.settleInvoice({
-  paymentHash: invoice.data.paymentHash,
-  paymentPreimage,
-});
-console.log("Invoice settled.");
+// Bob verifies the receiver-side receipt before fulfilling an order.
+const receipt = await bob.getInvoice({ paymentHash: invoice.data.paymentHash });
+console.log("Invoice status:", receipt.status); // Paid after settlement
 ```
 
-</Tab>
-
-<Tab value="Alice (pays invoice)">
-
-```typescript
-// Alice: pay Bob's invoice
-
-// The invoice address Bob shared with her
-const invoiceAddress = "fibt100000000001p...";
-
-// Send the payment
-const result = await alice.sendPayment({ invoice: invoiceAddress });
-console.log("Payment hash:", result.paymentHash);
-console.log("Status:", result.status);
-console.log("Fee:", result.fee);
-
-// Check final status
-const final = await alice.getPayment(result.paymentHash);
-console.log("Final status:", final.status);
-```
-
-</Tab>
-
-</Tabs>
-
-<Callout type="info">
-  **How settlement works:** When Alice pays, the funds flow through the channel but are not yet final — Bob's node holds them pending the preimage. When Bob calls `settleInvoice`, he reveals the preimage, which unlocks the funds cryptographically. This is the core Lightning-style trustless exchange: Alice knows Bob can only claim the funds if he knows the preimage, and Bob knows Alice can only reclaim after the expiry.
-</Callout>
+For an ordinary invoice, do not call `settleInvoice()`: providing `paymentPreimage` makes settlement automatic. To defer settlement, create a [hold invoice](/docs/concept/payments/hold-invoice) with only `paymentHash`, wait for `Received`, and then call `bob.settleInvoice({ paymentHash, paymentPreimage })`. If the SDK's pinned invoice type requires a preimage for creation, use the native JSON-RPC hold-invoice request rather than supplying both fields.
 
 ---
 
@@ -347,7 +309,7 @@ await alice.shutdownChannel({
   channelId: "0x...", // the permanent channel ID from ChannelReady state
   force: false, // cooperative close — fast, low fees
 });
-console.log("Channel closed cooperatively.");
+console.log("Cooperative close requested; wait for on-chain confirmation.");
 ```
 
 </Tab>
@@ -369,7 +331,7 @@ console.log("Channel force-closed. Funds unlock after the timelock.");
 
 | Close Type                   | When to Use                  | Speed                     | Counterparty Needed? |
 | ---------------------------- | ---------------------------- | ------------------------- | -------------------- |
-| Cooperative (`force: false`) | Both parties are online      | Immediate                 | Yes                  |
+| Cooperative (`force: false`) | Both parties are online      | After on-chain confirmation | Yes                  |
 | Force (`force: true`)        | Counterparty is unresponsive | After timelock (~4 hours) | No                   |
 
 <Callout type="warning">

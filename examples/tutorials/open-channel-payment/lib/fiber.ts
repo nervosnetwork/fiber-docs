@@ -1,3 +1,4 @@
+import { createTestnetFiberFactory } from './fiber-testnet-runtime';
 import { createBrowserNodeSession, PeerHandshakeTimeoutError } from './browser-node-session';
 import type { BrowserNodeState, FiberBrowserNode } from '@fiber-pay/sdk/browser';
 export const routerPubkey = '0x02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71';
@@ -21,7 +22,7 @@ export async function startFiber(onState: (state: BrowserNodeState) => void, ses
   await session.start(profileKey, async (track) => {
     const { FiberBrowserNode, RawKeyCredentialProvider } = await import('@fiber-pay/sdk/browser');
     const keys = profile();
-    const node = new FiberBrowserNode({ network: 'testnet', credential: new RawKeyCredentialProvider(keys.fiberKey, keys.ckbKey, keys.identifier), nodeConfig: { bootnodes: [], logLevel: 'info' } });
+    const node = new FiberBrowserNode({wasmFactory: await createTestnetFiberFactory(), network: 'testnet', credential: new RawKeyCredentialProvider(keys.fiberKey, keys.ckbKey, keys.identifier), nodeConfig: { bootnodes: [], logLevel: 'info' } });
     node.on('stateChange', onState);
     track(node);
     await node.start();
@@ -32,7 +33,7 @@ export async function startFiber(onState: (state: BrowserNodeState) => void, ses
 export async function connectToRouter(node: FiberBrowserNode) {
   await node.connectPeer({ address: routerAddress, pubkey: routerPubkey });
   for (let attempt = 0; attempt < 10; attempt += 1) {
-    if ((await node.listPeers()).peers.some((peer) => peer.pubkey === routerPubkey)) return;
+    if ((await node.listPeers()).peers.some((peer) => peer.pubkey.replace(/^0x/, '') === routerPubkey.replace(/^0x/, ''))) return;
     await new Promise((resolve) => setTimeout(resolve, 800));
   }
   throw new PeerHandshakeTimeoutError('Prepare browser node');

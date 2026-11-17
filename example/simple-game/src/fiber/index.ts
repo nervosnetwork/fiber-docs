@@ -30,8 +30,11 @@ export async function prepareNodes() {
         pubkey: playerNode.pubkey,
     });
     const activeChannel = channels.filter(
-        (channel: any) => channel.state.stateName === "CHANNEL_READY",
+        (channel) => channel.state.stateName === "ChannelReady",
     );
+    if (!activeChannel.length) {
+        throw new Error("Open a channel and wait for ChannelReady before starting the game");
+    }
     console.log("activeChannel", activeChannel);
     return { bossNode, playerNode };
 }

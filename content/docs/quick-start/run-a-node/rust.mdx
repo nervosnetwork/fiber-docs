@@ -1,30 +1,30 @@
 ---
 title: "Run a Native Node"
 description: "Install and run a native Fiber Network Node (FNN) on your local machine or server"
-date: 2026-09-14
+date: 2026-11-16
 dependencies:
   - name: Fiber Node
-    minVersion: "0.9.1"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.1"
+    minVersion: "0.10.1"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.10.1"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
 ## TL;DR
 
-Fiber v0.9.1 includes an installer that downloads the FNN release bundle and `ckb-cli`, prepares the selected network configuration, guides you through key setup, and creates a reusable startup script.
+Fiber v0.10.1 includes an installer that downloads the FNN release bundle and `ckb-cli`, prepares the selected network configuration, guides you through key setup, and creates a reusable startup script.
 
-<Callout type="info" title="Fiber v0.9.1 installer">
-The commands below pin both the installer source and the FNN release bundle to `v0.9.1`. This avoids depending on a moving branch and ensures the installed helper script remains on the same release.
+<Callout type="info" title="Fiber v0.10.1 installer">
+The commands below pin both the installer source and the FNN release bundle to `v0.10.1`. This avoids depending on a moving branch and ensures the installed helper script remains on the same release.
 </Callout>
 
 ## Choose an Installation Method
 
 | Method | Best for | Status |
 |--------|----------|--------|
-| [Automated installer](#automated-installer) | Fast guided setup on Testnet or Mainnet | Available in v0.9.1 |
-| [Manual installation](#manual-installation) | Custom directory layouts and source builds | Available in v0.9.1 |
-| [Docker](/docs/quick-start/run-a-node/docker) | Reproducible container deployments | Available in v0.9.1 |
+| [Automated installer](#automated-installer) | Fast guided setup on Testnet or Mainnet | Available in v0.10.1 |
+| [Manual installation](#manual-installation) | Custom directory layouts and source builds | Available in v0.10.1 |
+| [Docker](/docs/quick-start/run-a-node/docker) | Reproducible container deployments | Available in v0.10.1 |
 
 ## Automated Installer
 
@@ -35,11 +35,11 @@ The installer supports Linux, macOS, and 64-bit Windows. Linux and macOS release
 Run the bootstrap step:
 
 ```bash
-curl -sSfL https://raw.githubusercontent.com/nervosnetwork/fiber/v0.9.1/tools/install/install.sh \
-  | INSTALL_REF=v0.9.1 FNN_VERSION=0.9.1 bash
+curl -sSfL https://raw.githubusercontent.com/nervosnetwork/fiber/v0.10.1/tools/install/install.sh \
+  | INSTALL_REF=v0.10.1 FNN_VERSION=0.10.1 bash
 ```
 
-This non-interactive step installs the v0.9.1 release bundle and `ckb-cli` into `~/.fiber`, writes the Testnet configuration, and saves the pinned guided installer. It does not create or import your CKB key.
+This non-interactive step installs the v0.10.1 release bundle and `ckb-cli` into `~/.fiber`, writes the Testnet configuration, and saves the pinned guided installer. It does not create or import your CKB key.
 
 Run the guided step to set up the key and startup script:
 
@@ -61,11 +61,11 @@ cd ~/.fiber
 The Windows installer performs the guided setup in one pass. Use Windows PowerShell 5.1 or newer:
 
 ```powershell
-$env:INSTALL_REF = "v0.9.1"
-$env:FNN_VERSION = "0.9.1"
+$env:INSTALL_REF = "v0.10.1"
+$env:FNN_VERSION = "0.10.1"
 $env:NETWORK = "testnet"
 $env:INSTALL_DIR = "$HOME\.fiber"
-irm https://raw.githubusercontent.com/nervosnetwork/fiber/v0.9.1/tools/install/install.ps1 | iex
+irm https://raw.githubusercontent.com/nervosnetwork/fiber/v0.10.1/tools/install/install.ps1 | iex
 ```
 
 After stopping the node, restart it with:
@@ -116,24 +116,24 @@ Use this path when you need a custom installation layout or want to build FNN yo
 
 ### 1. Obtain the FNN Binary
 
-Download the archive for your operating system and CPU from the [v0.9.1 release](https://github.com/nervosnetwork/fiber/releases/tag/v0.9.1). The portable archives include `fnn`, `fnn-cli`, and the Mainnet and Testnet configuration templates.
+Download the archive for your operating system and CPU from the [v0.10.1 release](https://github.com/nervosnetwork/fiber/releases/tag/v0.10.1). The portable archives include `fnn`, `fnn-cli`, and the Mainnet and Testnet configuration templates.
 
 For example, on an Apple Silicon Mac:
 
 ```bash
 curl --fail --location --remote-name --retry 5 \
-  https://github.com/nervosnetwork/fiber/releases/download/v0.9.1/fnn_v0.9.1-aarch64-darwin-portable.tar.gz
-tar -xzf fnn_v0.9.1-aarch64-darwin-portable.tar.gz
+  https://github.com/nervosnetwork/fiber/releases/download/v0.10.1/fnn_v0.10.1-aarch64-darwin-portable.tar.gz
+tar -xzf fnn_v0.10.1-aarch64-darwin-portable.tar.gz
 ./fnn --version
 ./fnn-cli --version
 ```
 
-The expected versions are `fnn Fiber v0.9.1` and `fnn-cli 0.9.1`. Replace `aarch64-darwin` with the target matching your system; the release also provides archives for Intel macOS, x86-64 and ARM64 Linux, and x86-64 Windows.
+The expected versions are `fnn Fiber v0.10.1` and `fnn-cli 0.10.1`. Replace `aarch64-darwin` with the target matching your system; the release also provides archives for Intel macOS, x86-64 and ARM64 Linux, and x86-64 Windows.
 
 Alternatively, build the tagged source release:
 
 ```bash
-git clone --branch v0.9.1 --depth 1 https://github.com/nervosnetwork/fiber.git
+git clone --branch v0.10.1 --depth 1 https://github.com/nervosnetwork/fiber.git
 cd fiber
 cargo build --release
 ```
@@ -249,11 +249,15 @@ For a manual installation, rerun the original `fnn` command with the same data d
 
 ## Version Compatibility and Upgrades
 
-### Upgrade Safely to v0.9.1
+### Upgrade Safely to v0.10.1
+
+<Callout type="warning" title="V2 channel compatibility">
+The 0.10.x releases introduce V2 P2P messaging. Existing V1 channels continue to operate, but a 0.10.x node cannot open a new channel with a pre-0.10 node. Upgrade both peers before opening channels. Plan to close and settle existing V1 channels: upstream plans to remove V1 support in the next major release.
+</Callout>
 
 1. Stop the old node cleanly. Never run two FNN processes against the same data directory.
 2. Back up the complete node directory, including `ckb`, `fiber/store`, `fiber/sk`, and `config.yml`.
-3. Replace both `fnn` and `fnn-cli` with the v0.9.1 binaries.
+3. Replace both `fnn` and `fnn-cli` with the v0.10.1 binaries.
 4. Start FNN against the existing directory and review any migration confirmation before proceeding.
 
 Do **not** delete `fiber/store` during an upgrade. It contains channel state, and losing it can put funds at risk. See [Backup and Restore](/docs/operate/backup) for backup contents, validation, and recovery steps.
@@ -261,12 +265,12 @@ Do **not** delete `fiber/store` during an upgrade. It contains channel state, an
 ### RPC Changes Since v0.7.1
 
 <Callout type="warning" title="v0.8.0 breaking changes">
-The v0.8.0 release changed node identifiers from `peer_id` to `pubkey`, renamed the `node_info` identifier field, and changed several JSON enum formats. Integrations upgrading from v0.7.1 or earlier must update their RPC payloads before using v0.9.1.
+The v0.8.0 release changed node identifiers from `peer_id` to `pubkey`, renamed the `node_info` identifier field, and changed several JSON enum formats. Integrations upgrading from v0.7.1 or earlier must update their RPC payloads before using v0.10.1.
 </Callout>
 
 ### Storage Migration
 
-Storage migration has been integrated into `fnn` since v0.9.0-rc1. A v0.8.x database can be migrated when v0.9.1 starts; databases older than v0.8.x must first be upgraded with the matching v0.8.x `fnn-migrate` tool. Back up the full data directory first, and do not bypass an unexpected migration error by deleting the store.
+Storage migration has been integrated into `fnn` since v0.9.0-rc1. A v0.8.x database can be migrated when v0.10.1 starts; databases older than v0.8.x must first be upgraded with the matching v0.8.x `fnn-migrate` tool. Back up the full data directory first, and do not bypass an unexpected migration error by deleting the store.
 
 ## Next Steps
 

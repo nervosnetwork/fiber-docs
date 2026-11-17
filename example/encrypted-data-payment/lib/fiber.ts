@@ -1,3 +1,4 @@
+import { createTestnetFiberFactory } from './fiber-testnet-runtime';
 import { requireNewChannelFunding } from './channel-funding';
 import { encryptedBuyerProfile, encryptedSellerProfile, savedNodeIdentifier } from './progress';
 import type { Channel, FiberBrowserNode } from '@fiber-pay/sdk/browser';
@@ -44,6 +45,7 @@ export async function startRole(role: 'buyer' | 'seller', track: (node: FiberBro
   const { FiberBrowserNode, RawKeyCredentialProvider } = await import('@fiber-pay/sdk/browser');
   const keys = profile(role);
   const node = new FiberBrowserNode({
+    wasmFactory: await createTestnetFiberFactory(),
     network: 'testnet',
     credential: new RawKeyCredentialProvider(keys.fiberKey, keys.ckbKey, keys.identifier),
     nodeConfig: { bootnodes: [], logLevel: 'info' },

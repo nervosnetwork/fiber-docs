@@ -3,11 +3,11 @@ title: "Tutorial: Build a Game"
 description: "A simple JavaScript game example with Fiber micro-payments"
 author: Retric Su
 authorUrl: https://www.pingkey.xyz/p/ce6232feaec4e6d01a4e00daa3648030c42017bdf589e34b53744fc49c5cba8a
-date: 2026-08-17
+date: 2026-11-16
 dependencies:
   - name: Fiber Node
-    minVersion: "0.9.1"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.1"
+    minVersion: "0.10.1"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.10.1"
 ---
 
 ## Overview
@@ -33,6 +33,8 @@ Before getting started, make sure you have:
 ### 1. Prepare two Fiber Nodes
 
 You need to setup and running two fiber Testnet nodes locally, and make sure they have at least **500 CKB** liquidity in their **payment channels**.
+For 500 CKB of usable balance per side in a V2 channel, each side must contribute at least 600 CKB (including the 100 CKB reserve), plus on-chain fees. Configure the acceptor contribution or accept manually; the default automatic contribution supplies only the reserve.
+
 It is highly recommended to follow the [Run a Fiber Node](/docs/quick-start/run-a-node) and [Basic Transfer Example](/docs/quick-start/basic-transfer) guides to set up your nodes first.
 
 In this tutorial, we assume the info for the two nodes are:
@@ -114,8 +116,8 @@ pnpm add @ckb-ccc/fiber@0.0.0-canary-20260505020844
 
 <Callout type="info">
   Fiber Node and `@ckb-ccc/fiber` use independent version numbers. This
-  tutorial targets Fiber Node v0.9.1; the RPC SDK is currently published under
-  the canary version shown above rather than as `0.9.1`.
+  tutorial targets Fiber Node v0.10.1; the RPC SDK is currently published under
+  the canary version shown above rather than as `0.10.1`.
 </Callout>
 
 ### 2. Create the FiberNode Class
@@ -158,7 +160,14 @@ export class FiberNode {
   }
 
   async sendPayment(invoice: string) {
-    return await this.sdk.sendPayment({ invoice });
+    const submitted = await this.sdk.sendPayment({ invoice });
+    let payment = submitted;
+    while (payment.status === "Created" || payment.status === "Inflight") {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      payment = await this.sdk.getPayment({ paymentHash: submitted.paymentHash });
+    }
+    if (payment.status !== "Success") throw new Error(payment.failedError ?? "Payment failed");
+    return payment;
   }
 }
 ```
@@ -207,8 +216,9 @@ export async function prepareNodes() {
     pubkey: playerNode.pubkey,
   });
   const activeChannel = channels.filter(
-    (channel) => channel.state.stateName === "CHANNEL_READY",
+    (channel) => channel.state.stateName === "ChannelReady",
   );
+  if (!activeChannel.length) throw new Error("Wait for ChannelReady before starting the game");
   console.log("activeChannel", activeChannel);
   return { bossNode, playerNode };
 }

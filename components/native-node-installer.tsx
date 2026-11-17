@@ -5,14 +5,14 @@ import Link from 'next/link';
 import { useState } from 'react';
 import Section from './section';
 
-const UNIX_COMMAND = `curl -sSfL https://raw.githubusercontent.com/nervosnetwork/fiber/v0.9.1/tools/install/install.sh \\
-  | INSTALL_REF=v0.9.1 FNN_VERSION=0.9.1 bash`;
+const UNIX_COMMAND = `curl -sSfL https://raw.githubusercontent.com/nervosnetwork/fiber/v0.10.1/tools/install/install.sh \\
+  | INSTALL_REF=v0.10.1 FNN_VERSION=0.10.1 bash`;
 
-const WINDOWS_COMMAND = `$env:INSTALL_REF="v0.9.1"
-$env:FNN_VERSION="0.9.1"
+const WINDOWS_COMMAND = `$env:INSTALL_REF="v0.10.1"
+$env:FNN_VERSION="0.10.1"
 $env:NETWORK="testnet"
 $env:INSTALL_DIR="$HOME\\.fiber"
-irm https://raw.githubusercontent.com/nervosnetwork/fiber/v0.9.1/tools/install/install.ps1 | iex`;
+irm https://raw.githubusercontent.com/nervosnetwork/fiber/v0.10.1/tools/install/install.ps1 | iex`;
 
 type OperatingSystem = 'unix' | 'windows';
 type CopyStatus = 'idle' | 'copied' | 'failed';
@@ -129,7 +129,7 @@ export default function NativeNodeInstaller() {
               </span>
               <span className="hidden md:inline">
                 Target Version:{' '}
-                <span className="text-primary">0.9.1</span>
+                <span className="text-primary">0.10.1</span>
               </span>
             </div>
           </div>

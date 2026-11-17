@@ -1,5 +1,9 @@
 'use client';
 
+import { waitForChannelBalance } from './fiber-payment-balance';
+
+import { createTestnetFiberFactory } from './fiber-testnet-runtime';
+
 import { createBrowserNodeSession, PeerHandshakeTimeoutError } from './browser-node-session';
 
 import Image from 'next/image';
@@ -46,7 +50,8 @@ const codeFiles: CodeFile[] = [
     id: 'fiber',
     label: 'lib/fiber.ts',
     language: 'typescript',
-    code: `import type { FiberBrowserNode } from '@fiber-pay/sdk/browser';
+    code: `import { createTestnetFiberFactory } from './fiber-testnet-runtime';
+import type { FiberBrowserNode } from '@fiber-pay/sdk/browser';
 
 const routerAddress =
   '/dns4/bottle.fiber.channel/tcp/443/wss/p2p/' +
@@ -109,6 +114,7 @@ export async function startFiber(): Promise<FiberBrowserNode> {
     profile.identifier,
   );
   const node = new FiberBrowserNode({
+    wasmFactory: await createTestnetFiberFactory(),
     network: 'testnet',
     credential,
     nodeConfig: { bootnodes: [], logLevel: 'info' },
@@ -976,6 +982,7 @@ export function FiberChannelPaymentTutorial() {
             profile.identifier,
           );
           node = new FiberBrowserNode({
+            wasmFactory: await createTestnetFiberFactory(),
             network: 'testnet',
             credential,
             nodeConfig: { bootnodes: [], logLevel: 'info' },
@@ -1129,13 +1136,21 @@ export function FiberChannelPaymentTutorial() {
         `${result.status} · ${submittedAmount} CKB · ${shorten(result.payment_hash)}`,
         result.status === 'Success' ? 'success' : 'error',
       );
-      const refreshedChannels = await refreshState();
-      const refreshedChannel = refreshedChannels.find(
-        (channel) => channel.channel_id === (beforeChannel?.channel_id ?? activeChannelId),
-      );
-      setLocalBalanceAfter(
-        refreshedChannel ? BigInt(refreshedChannel.local_balance) : null,
-      );
+      try {
+        if (result.status === 'Success' && beforeChannel) {
+          const expected = BigInt(beforeChannel.local_balance)
+            - BigInt(ckbToHex(submittedAmount)) - BigInt(result.fee);
+          const settled = await waitForChannelBalance(node, beforeChannel.channel_id, expected);
+          setLocalBalanceAfter(settled ? BigInt(settled.local_balance) : null);
+          if (!settled) addPaymentLog('Payment succeeded; channel balance is still updating.', 'pending');
+        } else {
+          const { channels } = await node.listChannels();
+          const refreshed = channels.find((channel) => channel.channel_id === beforeChannel?.channel_id);
+          setLocalBalanceAfter(refreshed ? BigInt(refreshed.local_balance) : null);
+        }
+      } catch {
+        setError('The payment result is confirmed, but the channel balance could not be refreshed.');
+      }
     } catch (paymentError) {
       const message =
         paymentError instanceof Error
@@ -1704,7 +1719,7 @@ export function FiberChannelPaymentTutorial() {
               <div className={styles.stepLabel}><span>6</span> Pay and verify</div>
               <h2>Send and confirm the keysend payment</h2>
               <p><code>sendKeysend()</code> sends a direct payment without first requesting an invoice. Fiber calls this a keysend payment because it does not require the receiving peer to create an invoice. The function calls <code>sendPayment()</code> with the recipient pubkey, amount, and <code>keysend: true</code>.</p>
-              <p className={styles.followupParagraph}>If the response is still in flight, <code>waitForPayment()</code> waits for <code>Success</code> or <code>Failed</code>. The demo then shows the payment hash and the channel&apos;s local balance before and after. Use the copy icons for the full channel ID, payment hash, or funding-transaction explorer link. A tooltip confirms successful copying. The funding link appears once the node reports the transaction outpoint.</p>
+              <p className={styles.followupParagraph}>If the response is still in flight, <code>waitForPayment()</code> waits for <code>Success</code> or <code>Failed</code>. The receipt waits for the channel balance update after Success; a balance-refresh error does not change the confirmed payment status. Use the copy icons for the full channel ID, payment hash, or funding-transaction explorer link. A tooltip confirms successful copying. The funding link appears once the node reports the transaction outpoint.</p>
               <small className={styles.fileReference}>lib/payment.ts · lines 4–26</small>
             </section>
 

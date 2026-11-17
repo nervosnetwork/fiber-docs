@@ -11,6 +11,11 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+`pnpm build-kb` indexes this repository's content by default. To also index
+upstream Fiber documentation, explicitly set `FIBER_PROJECT_ROOT` to a checkout
+of the same release as `FIBER_DOCS_REF` (default: `v0.10.1`). This avoids labeling
+an unrelated local checkout's older text with current-release source links.
+
 ## Environment Variables
 
 For production deployment, you'll need to set up the following environment variables:
