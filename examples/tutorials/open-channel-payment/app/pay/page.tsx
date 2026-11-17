@@ -1,5 +1,7 @@
 'use client';
 
+import { waitForChannelBalance } from '../../lib/fiber-payment-balance';
+
 import { useEffect, useRef, useState } from 'react';
 import {
   scriptToAddress,
@@ -175,18 +177,28 @@ export default function PayPage() {
       const beforeChannels = (await node.current.listChannels()).channels;
       const readyChannel = beforeChannels.find((channel) => isChannelReady(channel.state.state_name));
       const result = await sendKeysend(node.current, routerPubkey, submittedAmount);
-      const afterChannels = (await node.current.listChannels()).channels;
-      const updatedChannel = afterChannels.find((channel) => channel.channel_id === readyChannel?.channel_id);
       setPaymentStatus(result.status);
-      setReceipt({
+      const receipt = {
         amount: submittedAmount,
         channelId: readyChannel?.channel_id ?? '',
         hash: result.payment_hash,
         localBalanceBefore: readyChannel ? BigInt(readyChannel.local_balance) : null,
-        localBalanceAfter: updatedChannel ? BigInt(updatedChannel.local_balance) : null,
+        localBalanceAfter: null as bigint | null,
         status: result.status,
-      });
+      };
+      setReceipt(receipt);
       addEvent('payment', `${result.status} · ${submittedAmount} CKB`);
+      if (result.status === 'Success' && readyChannel) {
+        try {
+          const expected = BigInt(readyChannel.local_balance)
+            - BigInt(ckbToHex(submittedAmount)) - BigInt(result.fee);
+          const settled = await waitForChannelBalance(node.current, readyChannel.channel_id, expected);
+          setReceipt({ ...receipt, localBalanceAfter: settled ? BigInt(settled.local_balance) : null });
+          if (!settled) addEvent('balance', 'Payment succeeded; channel balance is still updating.');
+        } catch {
+          setError('The payment succeeded, but the channel balance could not be refreshed.');
+        }
+      }
     } catch (paymentError) {
       setPaymentStatus('Failed');
       setError(paymentError instanceof Error ? paymentError.message : 'Unable to send the Testnet payment.');

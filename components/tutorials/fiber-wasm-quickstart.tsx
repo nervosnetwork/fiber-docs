@@ -1,5 +1,7 @@
 'use client';
 
+import { createTestnetFiberFactory } from './fiber-testnet-runtime';
+
 import { createBrowserNodeSession, PeerHandshakeTimeoutError } from './browser-node-session';
 
 import Image from 'next/image';
@@ -30,8 +32,8 @@ const routerPubkey =
   '0x02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71';
 const profileKey = 'fiber-docs:wasm-quickstart-profile-v1';
 const isolationReloadKey = 'fiber-docs:wasm-isolation-reload-v1';
-const sdkInstallCommand = `npm pkg set 'overrides.@fiber-pay/sdk.@nervosnetwork/fiber-js=0.10.0'
-npm install --save-exact @fiber-pay/sdk@0.3.1 @nervosnetwork/fiber-js@0.10.0`;
+const sdkInstallCommand = `npm pkg set 'overrides.@fiber-pay/sdk.@nervosnetwork/fiber-js=0.10.1'
+npm install --save-exact @fiber-pay/sdk@0.3.1 @nervosnetwork/fiber-js@0.10.1`;
 
 const currentTutorialIndex = tutorials.findIndex((tutorial) => tutorial.id === 'connect-wasm-node');
 
@@ -76,7 +78,8 @@ export default nextConfig;`,
     id: 'fiber',
     label: 'lib/fiber.ts',
     language: 'typescript',
-    code: `import type {
+    code: `import { createTestnetFiberFactory } from './fiber-testnet-runtime';
+import type {
   BrowserNodeState,
   FiberBrowserNode,
 } from '@fiber-pay/sdk/browser';
@@ -113,6 +116,7 @@ export async function startFiber(
   );
 
   const node = new FiberBrowserNode({
+    wasmFactory: await createTestnetFiberFactory(),
     network: 'testnet',
     credential,
     nodeConfig: {
@@ -565,6 +569,7 @@ export function FiberWasmQuickstart() {
           profile.identifier,
         );
         const node = new FiberBrowserNode({
+          wasmFactory: await createTestnetFiberFactory(),
           network: 'testnet',
           credential,
           nodeConfig: {
@@ -927,7 +932,7 @@ export function FiberWasmQuickstart() {
                 <code>@fiber-pay/sdk</code> provides the browser-facing APIs used
                 here to create the node, manage its identity, observe its state,
                 and connect it to peers. Set the SDK override and install both
-                packages to use Fiber JS 0.10.0 in an existing npm project:
+                packages to use Fiber JS 0.10.1 in an existing npm project:
               </p>
               <div className={styles.setupCodeBlock}>
                 <div className={styles.setupCodeHeader}>

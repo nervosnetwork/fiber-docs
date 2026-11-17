@@ -1,7 +1,7 @@
 ---
 title: Fiber Network Light Paper
 description: "Fiber Network: A Lightning Network Based on CKB"
-date: 2026-06-09
+date: 2026-11-16
 ---
 
 ## Overview
@@ -126,15 +126,15 @@ The watchtower service is an essential component of Fiber Network, responsible f
 
 ## Current Progress and Future Plans
 
-We have currently completed a prototype of Fiber Network, implementing basic functions of opening, updating, and closing channels between two nodes, and also verifying cross-chain functionality with the Bitcoin Lightning Network. The project code can be found in the following GitHub repositories:
+Fiber 0.10.1 provides native and browser WASM nodes, V2 payment channels, multi-hop and trampoline routing, multi-part payments, hold invoices, watchtower integration, and a Cross-Chain Hub for Lightning interoperability. The project code can be found in the following GitHub repositories:
 
 1. https://github.com/nervosnetwork/fiber
 
 2. https://github.com/nervosnetwork/fiber-scripts
 
-Our next steps include completing multi-hop routing and watchtower services, as well as improving the RPC interface and SDK to facilitate easier access for developers to Fiber Network.
+Multi-hop routing and watchtower services are implemented. Ongoing work includes runtime reliability, safer recovery, SDK integration, and liquidity management.
 
-The multi-hop routing protocol is based on the Dijkstra algorithm to search for payment paths, thereby reducing routing fees and improving the success rate of multi-hop path payments. After Fiber Network goes live, we will optimize the routing algorithm based on network traffic and operational conditions. We expect to provide 2 or 3 path search strategies to adapt to users' different routing preferences and needs. Fiber Network will also introduce multi-path payment strategies, dividing larger payment amounts into multiple parts, each transmitted through different paths, further increasing the probability of successful payments.
+The routing implementation searches the network graph using a probability-weighted cost model. MPP can split a payment across multiple available paths. These features improve route selection but do not create missing liquidity or guarantee that every payment succeeds.
 
 The watchtower service will be provided by some nodes in Fiber Network. These nodes will stay online, monitor abnormal situations in the network, and help protect assets in channels. The monitoring service will also track the cross-chain hub service. Even if users are offline for a period, the monitoring service can ensure successful exchanges with the Lightning Network.
 

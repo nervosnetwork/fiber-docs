@@ -1,7 +1,7 @@
 ---
 title: Cross-Chain HTLC
 description: Atomic cross-chain payments between CKB (Fiber) and Bitcoin (Lightning) networks — architecture, mechanics, and developer guide
-date: 2026-08-17
+date: 2026-11-16
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -236,10 +236,12 @@ Create a CCH order to pay a Lightning invoice from CKB.
 {
   "jsonrpc": "2.0",
   "method": "send_btc",
-  "params": {
-    "btc_pay_req": "lnbc100u1p...",
-    "currency": "Fibb"
-  },
+  "params": [
+    {
+      "btc_pay_req": "lnbc100u1p...",
+      "currency": "Fibb"
+    }
+  ],
   "id": 1
 }
 ```
@@ -252,9 +254,11 @@ Create a CCH order to receive BTC via a Fiber invoice.
 {
   "jsonrpc": "2.0",
   "method": "receive_btc",
-  "params": {
-    "fiber_pay_req": "fibb1000..."
-  },
+  "params": [
+    {
+      "fiber_pay_req": "fibb1000..."
+    }
+  ],
   "id": 1
 }
 ```
@@ -267,9 +271,11 @@ Poll an order by payment hash to monitor its status.
 {
   "jsonrpc": "2.0",
   "method": "get_cch_order",
-  "params": {
-    "payment_hash": "0xabcd1234..."
-  },
+  "params": [
+    {
+      "payment_hash": "0xabcd1234..."
+    }
+  ],
   "id": 1
 }
 ```
@@ -296,7 +302,7 @@ Actions distinguish between permanent and transient failures:
 
 ### Order Pruning
 
-Final orders (`Success` or `Failed`) are kept in the database for **21 days** (configurable via `PRUNE_DELAY_SECONDS` in the scheduler) and then automatically deleted. This prevents unbounded database growth.
+Final orders (`Success` or `Failed`) are kept in the database for **21 days** (`PRUNE_DELAY_SECONDS`, a compile-time scheduler constant rather than a `config.yml` option) and then automatically deleted. This prevents unbounded database growth.
 
 ## Error Reference
 
@@ -347,6 +353,8 @@ Both `base_fee_sats` and `fee_rate_per_million_sats` are exposed via the CCH ope
 ### Wrapped BTC Discovery
 
 The CCH response includes `wrapped_btc_type_script`. If you are building a wallet that pays CCH-generated Fiber invoices, verify that the invoice's `udt_type_script` matches a known wrapped BTC token. Do not blindly pay invoices with unknown type scripts.
+
+In 0.10.1, CCH binds invoice events to the incoming payment source: a matching hash alone must not let an unrelated local invoice advance an order. Keep the incoming Fiber and Lightning legs associated with their order and source when observing payment events.
 
 ## Source Code Pointers
 

@@ -1,7 +1,7 @@
 ---
 title: Invoice
 description: How to create, send, parse, and manage invoices in the Fiber network
-date: 2026-08-17
+date: 2026-11-16
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -26,7 +26,7 @@ Every Fiber invoice carries the following core fields:
 |-------|----------|-------------|
 | **Currency** | Yes | Network identifier: `fibb` (mainnet), `fibt` (testnet), or `fibd` (devnet) |
 | **Amount** | No | Payment amount in shannons (1 CKB = 10⁸ shannons). Omit for open-ended invoices (e.g., donations) |
-| **Payment hash** | Yes | A 32-byte cryptographic commitment. For regular invoices it's derived from a random preimage; for [hold invoices](/docs/concept/payments/hold-invoice), the recipient provides the preimage and the hash is computed from it |
+| **Payment hash** | Yes | A 32-byte cryptographic commitment. For regular invoices it's derived from a random preimage; for [hold invoices](/docs/concept/payments/hold-invoice), the recipient supplies only the hash at creation and keeps the preimage secret until settlement |
 | **Timestamp** | Yes | Invoice creation time in milliseconds since the UNIX epoch |
 | **Signature** | Yes | A secp256k1 recoverable signature over the invoice data, proving the invoice was created by the holder of the payee's private key |
 
@@ -77,7 +77,7 @@ The serialized invoice data contains the following fields:
 | # | Field | Required | Size | Description |
 |---|-------|----------|------|-------------|
 | 1 | `timestamp` | Yes | 128 bits | Milliseconds since the UNIX epoch |
-| 2 | `payment_hash` | Yes | 256 bits | Unique identifier of the invoice. Derived from `blake2b_256(preimage)` for hold invoices, or randomly generated for AMP invoices |
+| 2 | `payment_hash` | Yes | 256 bits | Unique identifier of the invoice. Computed with the selected `hash_algorithm` from the preimage; hold invoices supply the hash before revealing the preimage |
 | 3 | `expiry` | No | 64 bits | Validity period in seconds; `timestamp + expiry` gives the expiration time |
 | 4 | `description` | No | Variable | UTF-8 text (e.g., "a cup of coffee"), max 639 characters |
 | 5 | `final_expiry_delta` | No | 64 bits | Final TLC expiry delta in milliseconds |
@@ -176,7 +176,7 @@ All numeric fields in the RPC are hex-encoded. The `amount` is in shannons (`0x3
 | `payment_hash` | `Hash256` | No | Payment hash only (creates a [hold invoice](/docs/concept/payments/hold-invoice)). The caller supplies the hash; the preimage must be provided later via `settle_invoice`. Mutually exclusive with `payment_preimage` |
 | `expiry` | `u64` (hex) | No | Invoice validity period in seconds |
 | `fallback_address` | `string` | No | CKB on-chain fallback address |
-| `final_expiry_delta` | `u64` (hex) | No | Final TLC expiry delta in milliseconds (min ~160 minutes, max 14 days). `new_invoice` defaults to the minimum; v0.9.1 treats an externally encoded invoice that omits the attribute as 24 hours. |
+| `final_expiry_delta` | `u64` (hex) | No | Final TLC expiry delta in milliseconds (min ~160 minutes, max 14 days). `new_invoice` defaults to the minimum; v0.10.1 treats an externally encoded invoice that omits the attribute as 24 hours. |
 | `udt_type_script` | `Script` | No | CKB type script for UDT (non-CKB) assets |
 | `hash_algorithm` | `HashAlgorithm` | No | `ckb_hash` (default) or `sha256` |
 | `allow_mpp` | `bool` | No | Enable multi-part payments |
@@ -245,7 +245,7 @@ fnn-cli invoice parse_invoice --invoice "fibt1..."
 {
   "jsonrpc": "2.0",
   "method": "parse_invoice",
-  "params": ["fibt1..."],
+  "params": [{"invoice": "fibt1..."}],
   "id": 1
 }
 ```
@@ -293,7 +293,7 @@ fnn-cli invoice get_invoice --payment-hash 0x...
 {
   "jsonrpc": "2.0",
   "method": "get_invoice",
-  "params": ["0x..."],
+  "params": [{"payment_hash": "0x..."}],
   "id": 1
 }
 ```
@@ -316,7 +316,7 @@ fnn-cli invoice cancel_invoice --payment-hash 0x...
 {
   "jsonrpc": "2.0",
   "method": "cancel_invoice",
-  "params": ["0x..."],
+  "params": [{"payment_hash": "0x..."}],
   "id": 1
 }
 ```

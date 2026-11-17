@@ -1,7 +1,7 @@
 ---
 title: "Tutorial: Run a Fiber WASM Node in Your Browser"
 description: "Start a real Fiber node in the live demo and connect it to Testnet without local setup"
-date: 2026-09-04
+date: 2026-11-17
 full: true
 ---
 
@@ -26,13 +26,61 @@ node, and the node used an encrypted WebSocket connection to reach Fiber
 Testnet.
 
 `@fiber-pay/sdk` provides the browser-facing APIs used here to create the node,
-manage its identity, observe its state, and connect it to peers. The tutorial uses
-Fiber JS 0.10.0. To use this setup in an existing npm project, set the SDK override
-and install both packages:
+manage its identity, observe its state, and connect it to peers. For an existing
+TypeScript or JavaScript project, add this narrow npm override to `package.json`
+before installing, because SDK 0.3.1 still declares Fiber JS 0.9.x:
+
+```json
+{
+  "dependencies": {
+    "@fiber-pay/sdk": "0.3.1",
+    "@nervosnetwork/fiber-js": "0.10.1"
+  },
+  "overrides": {
+    "@fiber-pay/sdk": {
+      "@nervosnetwork/fiber-js": "$@nervosnetwork/fiber-js"
+    }
+  }
+}
+```
 
 ```bash
-npm pkg set 'overrides.@fiber-pay/sdk.@nervosnetwork/fiber-js=0.10.0'
-npm install --save-exact @fiber-pay/sdk@0.3.1 @nervosnetwork/fiber-js@0.10.0
+npm install
+```
+
+The downloadable project already includes these pins and the override for this tested combination. Keep the override when installing the example.
+
+### Testnet configuration for 0.10.1
+
+SDK 0.3.1 also contains an obsolete Testnet CKB Auth cell dependency. The
+downloaded projects include `lib/fiber-testnet-runtime.ts`, which supplies a
+`wasmFactory` that updates that dependency to the one in the official
+[0.10.1 Testnet config](https://github.com/nervosnetwork/fiber/blob/v0.10.1/config/testnet/config.yml).
+Keep this helper when copying the browser-node setup. It applies only to
+Testnet configuration and preserves the SDK's credential and storage handling.
+
+```ts
+import type { FiberWasmFactory } from '@fiber-pay/sdk/browser';
+
+export async function createTestnetFiberFactory(): Promise<FiberWasmFactory> {
+  const { Fiber } = await import('@nervosnetwork/fiber-js');
+  return () => {
+    const fiber = new Fiber();
+    return {
+      start: (config, ...args) => fiber.start(
+        /chain:\s*testnet\b/.test(config)
+          ? config.replaceAll(
+              '0x5a5288769cecde6451cb5d301416c297a6da43dc3ac2f3253542b4082478b19b',
+              '0x12c569a258dd9c5bd99f632bb8314b1263b90921ba31496467580d6b79dd14a7',
+            )
+          : config,
+        ...args,
+      ),
+      stop: () => fiber.stop(),
+      invokeCommand: (name, args) => fiber.invokeCommand(name, args),
+    };
+  };
+}
 ```
 
 On the interactive page, hover or focus the dotted-underlined terms—Web Worker,
@@ -89,6 +137,8 @@ create a credential and initialize a Fiber Testnet node with an empty
 `stateChange` listener before calling `node.start()` to receive startup updates.
 
 ```ts
+import { createTestnetFiberFactory } from './fiber-testnet-runtime';
+
 const {
   FiberBrowserNode,
   RawKeyCredentialProvider,
@@ -101,6 +151,7 @@ const credential = new RawKeyCredentialProvider(
 );
 
 const node = new FiberBrowserNode({
+  wasmFactory: await createTestnetFiberFactory(),
   network: 'testnet',
   credential,
   nodeConfig: {

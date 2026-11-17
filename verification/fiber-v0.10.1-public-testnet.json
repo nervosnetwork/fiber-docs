@@ -1,0 +1,1758 @@
+{
+  "version": "0.10.1",
+  "date": "2026-11-17",
+  "status": "completed",
+  "network": {
+    "name": "CKB public Testnet (Aggron)",
+    "invoice_currency": "Fibt",
+    "genesis_hash": "0x10639e0895502b5688a6be8cf69460d76541bfa4821629d86d62ba0aae3f9606",
+    "faucet": "https://faucet.nervos.org/"
+  },
+  "funding": {
+    "claimed_ckb": 30000,
+    "claims": [
+      {
+        "addressHash": "ckt1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsqvz2fpwg7vw54vapyanarqsk52zmlkte8s57uy9v",
+        "status": "processed",
+        "txHash": "0xfc0163b74fd0da0dfe03e7731342da8616c842a8c8fce8c3a2864f83b98f162f",
+        "txStatus": "committed",
+        "id": 707331,
+        "timestamp": 1794881526,
+        "fee": "0.00000464",
+        "capacity": "10000.0"
+      },
+      {
+        "addressHash": "ckt1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsq0ym373kqf3y39t62659esk07xn5tw8j5g455ry6",
+        "status": "processed",
+        "txHash": "0x92c858c72ebd70a936d55d51fb971bda0157a80e5c989289b4129a5e81aa909c",
+        "txStatus": "committed",
+        "id": 707330,
+        "timestamp": 1794880773,
+        "fee": "0.00000464",
+        "capacity": "10000.0"
+      },
+      {
+        "addressHash": "ckt1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsqv4ttu9uh88r4sgvm9cnlh4g6snw8qh74cmgj4aa",
+        "status": "processed",
+        "txHash": "0x1bb0b43d1fd2dc9a957a756dee9b62dcdd6fbf914bf05ae0d1366dfd6818b2d3",
+        "txStatus": "committed",
+        "id": 707329,
+        "timestamp": 1794880743,
+        "fee": "0.00000464",
+        "capacity": "10000.0"
+      }
+    ],
+    "wallets": [
+      {
+        "name": "node-a",
+        "port": 18427,
+        "pubkey": "02c478701900f0a8ed947b09a077ad270d2098377091b532544f557a14bf3faf5f",
+        "address": "ckt1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsqv4ttu9uh88r4sgvm9cnlh4g6snw8qh74cmgj4aa",
+        "version": "0.10.1",
+        "lock_script": {
+          "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+          "hash_type": "type",
+          "args": "0x955af85e5ce71d60866cb89fef546a1371c17f57"
+        }
+      },
+      {
+        "name": "node-b",
+        "port": 18437,
+        "pubkey": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+        "address": "ckt1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsq0ym373kqf3y39t62659esk07xn5tw8j5g455ry6",
+        "version": "0.10.1",
+        "lock_script": {
+          "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+          "hash_type": "type",
+          "args": "0xe4dc7d1b0131244abd2b542e6167f8d3a2dc7951"
+        }
+      },
+      {
+        "name": "wasm-node",
+        "address": "ckt1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsqvz2fpwg7vw54vapyanarqsk52zmlkte8s57uy9v",
+        "lock_script": {
+          "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+          "hash_type": "type",
+          "args": "0x825242e4798ea559d093b3e8c10b5142dfecbc9e"
+        }
+      }
+    ],
+    "note": "三个独立测试钱包各领取 10,000 CKB；互动页面测试复用了 WASM 测试钱包的链上资金，使用独立 Fiber 身份与 IndexedDB。"
+  },
+  "scope_notes": [
+    "原生直接付款、Hold、MPP 使用两个自有节点之间的公共 CKB 链通道；公共中继测试使用 A 的 bottle 通道和 B 的 bracer 通道，两端不存在自有直连通道。",
+    "公共中继多跳和 trampoline 均验证发送 Success、接收 Paid、两端公开通道余额变化。未把 devnet 结果计入本报告。",
+    "WASM 在真实 Chrome 中直接运行官方 fiber-js 0.10.1，使用公开 WSS、公开 CKB RPC、实际水龙头输出；包含原生经 bracer/bottle 向 WASM 的发票付款。",
+    "实际互动式开通道页面使用 SDK 0.3.1 和 fiber-js 0.10.1；测试覆盖准备、500 CKB 开通道、等待就绪、支付、成功回执及余额更新。",
+    "页面测试结束后先通过客户端导航触发 SDK stop，再使用相同密钥、相同 origin 和 /wasm-identifier 数据库前缀恢复当前状态并协作关闭；没有从旧备份恢复。",
+    "公开 RUSD/UDT、外部钱包签名、CCH/Lightning、移动端和全部教程逐屏流程没有在本轮全部执行；其原有验证边界见主报告。"
+  ],
+  "native": {
+    "checks": [
+      {
+        "check": "both public Testnet nodes are official 0.10.1",
+        "passed": true,
+        "time": "2026-11-17T02:02:31Z",
+        "result": [
+          {
+            "version": "0.10.1",
+            "commit_hash": "d9b6bbd 2026-11-14",
+            "pubkey": "02c478701900f0a8ed947b09a077ad270d2098377091b532544f557a14bf3faf5f",
+            "features": [
+              "GOSSIP_QUERIES_REQUIRED",
+              "BASIC_MPP_REQUIRED",
+              "TRAMPOLINE_ROUTING_REQUIRED",
+              "CHANNEL_V2_OPTIONAL"
+            ],
+            "node_name": "docs-0.10.1-node-a",
+            "addresses": [],
+            "chain_hash": "0x10639e0895502b5688a6be8cf69460d76541bfa4821629d86d62ba0aae3f9606",
+            "open_channel_auto_accept_min_ckb_funding_amount": "0x2540be400",
+            "auto_accept_channel_ckb_funding_amount": "0x2540be400",
+            "default_funding_lock_script": {
+              "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+              "hash_type": "type",
+              "args": "0x955af85e5ce71d60866cb89fef546a1371c17f57"
+            },
+            "tlc_expiry_delta": "0xdbba00",
+            "tlc_min_value": "0x0",
+            "tlc_fee_proportional_millionths": "0x3e8",
+            "channel_count": "0x0",
+            "pending_channel_count": "0x0",
+            "peers_count": "0x0",
+            "udt_cfg_infos": [
+              {
+                "name": "RUSD",
+                "script": {
+                  "code_hash": "0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a",
+                  "hash_type": "type",
+                  "args": "0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"
+                },
+                "auto_accept_amount": "0x3b9aca00",
+                "cell_deps": [
+                  {
+                    "type_id": {
+                      "code_hash": "0x00000000000000000000000000000000000000000000000000545950455f4944",
+                      "hash_type": "type",
+                      "args": "0x97d30b723c0b2c66e9cb8d4d0df4ab5d7222cbb00d4a9a2055ce2e5d7f0d8b0f"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "version": "0.10.1",
+            "commit_hash": "d9b6bbd 2026-11-14",
+            "pubkey": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+            "features": [
+              "GOSSIP_QUERIES_REQUIRED",
+              "BASIC_MPP_REQUIRED",
+              "TRAMPOLINE_ROUTING_REQUIRED",
+              "CHANNEL_V2_OPTIONAL"
+            ],
+            "node_name": "docs-0.10.1-node-b",
+            "addresses": [],
+            "chain_hash": "0x10639e0895502b5688a6be8cf69460d76541bfa4821629d86d62ba0aae3f9606",
+            "open_channel_auto_accept_min_ckb_funding_amount": "0x2540be400",
+            "auto_accept_channel_ckb_funding_amount": "0x2540be400",
+            "default_funding_lock_script": {
+              "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+              "hash_type": "type",
+              "args": "0xe4dc7d1b0131244abd2b542e6167f8d3a2dc7951"
+            },
+            "tlc_expiry_delta": "0xdbba00",
+            "tlc_min_value": "0x0",
+            "tlc_fee_proportional_millionths": "0x3e8",
+            "channel_count": "0x0",
+            "pending_channel_count": "0x0",
+            "peers_count": "0x0",
+            "udt_cfg_infos": [
+              {
+                "name": "RUSD",
+                "script": {
+                  "code_hash": "0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a",
+                  "hash_type": "type",
+                  "args": "0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"
+                },
+                "auto_accept_amount": "0x3b9aca00",
+                "cell_deps": [
+                  {
+                    "type_id": {
+                      "code_hash": "0x00000000000000000000000000000000000000000000000000545950455f4944",
+                      "hash_type": "type",
+                      "args": "0x97d30b723c0b2c66e9cb8d4d0df4ab5d7222cbb00d4a9a2055ce2e5d7f0d8b0f"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "check": "faucet deposits confirmed on public CKB Testnet",
+        "passed": true,
+        "time": "2026-11-17T02:02:34Z",
+        "result": [
+          {
+            "node": "node-a",
+            "address": "ckt1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsqv4ttu9uh88r4sgvm9cnlh4g6snw8qh74cmgj4aa",
+            "capacity_ckb": 10000.0,
+            "indexed_block": "0x1604d20"
+          },
+          {
+            "node": "node-b",
+            "address": "ckt1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsq0ym373kqf3y39t62659esk07xn5tw8j5g455ry6",
+            "capacity_ckb": 10000.0,
+            "indexed_block": "0x1604d20"
+          }
+        ]
+      },
+      {
+        "check": "open_channel submitted on public CKB Testnet",
+        "passed": true,
+        "time": "2026-11-17T02:02:37Z",
+        "result": {
+          "node": 18427,
+          "peer": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+          "amount_ckb": 500,
+          "response": {
+            "temporary_channel_id": "0xb0819acb1e33a3e87383eba99fb3e5f12ffaab5e7e53088acf4d29746efd4d5b"
+          }
+        }
+      },
+      {
+        "check": "public Testnet channel is ChannelReady",
+        "passed": true,
+        "time": "2026-11-17T02:04:37Z",
+        "result": {
+          "channels": [
+            {
+              "channel_id": "0x7130b49a22fb0e031f548e89d88de4026cee04f4ba1c1fbdf3b130e43b4e0e5f",
+              "pubkey": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+              "state": {
+                "state_name": "ChannelReady"
+              },
+              "channel_outpoint": "0xa5a072adfd2e76f3b658ef9338f52ffa954d5b6defc524a51569af3dd4569a6700000000",
+              "local_balance": "0x9502f9000",
+              "remote_balance": "0x0",
+              "shutdown_transaction_hash": null
+            }
+          ]
+        }
+      },
+      {
+        "check": "confirmed Testnet funding outpoint",
+        "passed": true,
+        "time": "2026-11-17T02:04:37Z",
+        "result": {
+          "node": 18427,
+          "channel_id": "0x7130b49a22fb0e031f548e89d88de4026cee04f4ba1c1fbdf3b130e43b4e0e5f",
+          "funding_outpoint": "0xa5a072adfd2e76f3b658ef9338f52ffa954d5b6defc524a51569af3dd4569a6700000000",
+          "local_balance": "0x9502f9000",
+          "remote_balance": "0x0"
+        }
+      },
+      {
+        "check": "direct 1 CKB submitted",
+        "passed": true,
+        "time": "2026-11-17T02:04:37Z",
+        "result": {
+          "payment_hash": "0xd723c33354ba392e1be1a4178f74b98523d23a97d23ef8fcc5a1c5b0124cd525",
+          "status": "Created",
+          "created_at": "0x1a1e73fc234",
+          "last_updated_at": "0x1a1e73fc234",
+          "failed_error": null,
+          "fee": "0x0",
+          "custom_records": null
+        }
+      },
+      {
+        "check": "direct 1 CKB sender terminal status",
+        "passed": true,
+        "time": "2026-11-17T02:04:40Z",
+        "result": {
+          "payment_hash": "0xd723c33354ba392e1be1a4178f74b98523d23a97d23ef8fcc5a1c5b0124cd525",
+          "status": "Success",
+          "created_at": "0x1a1e73fc234",
+          "last_updated_at": "0x1a1e73fc2fc",
+          "failed_error": null,
+          "fee": "0x0",
+          "custom_records": null
+        }
+      },
+      {
+        "check": "direct 1 CKB receiver Paid",
+        "passed": true,
+        "time": "2026-11-17T02:04:40Z",
+        "result": {
+          "currency": "Fibt",
+          "amount": "0x5f5e100",
+          "payment_hash": "0xd723c33354ba392e1be1a4178f74b98523d23a97d23ef8fcc5a1c5b0124cd525",
+          "status": "Paid"
+        }
+      },
+      {
+        "check": "public Testnet hold settle Received",
+        "passed": true,
+        "time": "2026-11-17T02:04:43Z",
+        "result": {
+          "currency": "Fibt",
+          "amount": "0x5f5e100",
+          "payment_hash": "0x2cd9e463f563e1dc3e7fefde4cda8bb0c6836388cde6b205686ffc7b66bfa286",
+          "status": "Received"
+        }
+      },
+      {
+        "check": "public Testnet hold settle sender Success",
+        "passed": true,
+        "time": "2026-11-17T02:04:47Z",
+        "result": {
+          "payment_hash": "0x2cd9e463f563e1dc3e7fefde4cda8bb0c6836388cde6b205686ffc7b66bfa286",
+          "status": "Success",
+          "created_at": "0x1a1e73fce54",
+          "last_updated_at": "0x1a1e73fdaaa",
+          "failed_error": null,
+          "fee": "0x0",
+          "custom_records": null
+        }
+      },
+      {
+        "check": "public Testnet hold cancel Received",
+        "passed": true,
+        "time": "2026-11-17T02:04:50Z",
+        "result": {
+          "currency": "Fibt",
+          "amount": "0x5f5e100",
+          "payment_hash": "0x8a6d24daf087f830427730a56447eeb32752bce71d959cc637654b6c2b1e7266",
+          "status": "Received"
+        }
+      },
+      {
+        "check": "public Testnet hold cancel sender Failed",
+        "passed": true,
+        "time": "2026-11-17T02:04:53Z",
+        "result": {
+          "payment_hash": "0x8a6d24daf087f830427730a56447eeb32752bce71d959cc637654b6c2b1e7266",
+          "status": "Failed",
+          "created_at": "0x1a1e73fe62a",
+          "last_updated_at": "0x1a1e73ff2a1",
+          "failed_error": "InvoiceCancelled",
+          "fee": "0x0",
+          "custom_records": null
+        }
+      },
+      {
+        "check": "public Testnet cooperative close confirms",
+        "passed": true,
+        "time": "2026-11-17T02:05:53Z",
+        "result": {
+          "channels": [
+            {
+              "channel_id": "0x7130b49a22fb0e031f548e89d88de4026cee04f4ba1c1fbdf3b130e43b4e0e5f",
+              "pubkey": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+              "state": {
+                "state_name": "Closed",
+                "state_flags": "COOPERATIVE"
+              },
+              "channel_outpoint": "0xa5a072adfd2e76f3b658ef9338f52ffa954d5b6defc524a51569af3dd4569a6700000000",
+              "local_balance": "0x94443ce00",
+              "remote_balance": "0xbebc200",
+              "shutdown_transaction_hash": "0x3b0253b2306c7f99b71de69b76569938e5c0ec6fb9b84f7f3cccc57ba1c1f703"
+            }
+          ]
+        }
+      },
+      {
+        "check": "open_channel submitted on public CKB Testnet",
+        "passed": true,
+        "time": "2026-11-17T02:05:53Z",
+        "result": {
+          "node": 18427,
+          "peer": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+          "amount_ckb": 200,
+          "response": {
+            "temporary_channel_id": "0x04e4fe0cefa79d236ec649a9bbaaad5de965751a93c7f643800b2462f64eb372"
+          }
+        }
+      },
+      {
+        "check": "public Testnet channel is ChannelReady",
+        "passed": true,
+        "time": "2026-11-17T02:07:41Z",
+        "result": {
+          "channels": [
+            {
+              "channel_id": "0x0949540e2efc341ddc50e36c5781b32aad2a3d3b32cdc75907f3d93ad28443d1",
+              "pubkey": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+              "state": {
+                "state_name": "ChannelReady"
+              },
+              "channel_outpoint": "0xe8f98e8c089294bc2d019858a8874cd868aef10cd23ee16102879b7267535f7100000000",
+              "local_balance": "0x2540be400",
+              "remote_balance": "0x0",
+              "shutdown_transaction_hash": null
+            }
+          ]
+        }
+      },
+      {
+        "check": "confirmed Testnet funding outpoint",
+        "passed": true,
+        "time": "2026-11-17T02:07:41Z",
+        "result": {
+          "node": 18427,
+          "channel_id": "0x0949540e2efc341ddc50e36c5781b32aad2a3d3b32cdc75907f3d93ad28443d1",
+          "funding_outpoint": "0xe8f98e8c089294bc2d019858a8874cd868aef10cd23ee16102879b7267535f7100000000",
+          "local_balance": "0x2540be400",
+          "remote_balance": "0x0"
+        }
+      },
+      {
+        "check": "open_channel submitted on public CKB Testnet",
+        "passed": true,
+        "time": "2026-11-17T02:07:41Z",
+        "result": {
+          "node": 18427,
+          "peer": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+          "amount_ckb": 200,
+          "response": {
+            "temporary_channel_id": "0x3c6dbde8f8eb35778c13c305725b628fbd66d4b9d797baa89296ff445269d414"
+          }
+        }
+      },
+      {
+        "check": "public Testnet channel is ChannelReady",
+        "passed": true,
+        "time": "2026-11-17T02:08:50Z",
+        "result": {
+          "channels": [
+            {
+              "channel_id": "0x91622725da6e369dce7c079c86c1ae6ac9e75172adc23a0fa89c32886cc52aa1",
+              "pubkey": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+              "state": {
+                "state_name": "ChannelReady"
+              },
+              "channel_outpoint": "0xe17ca65ec7074b167d9ae9ef026dbd44d5417ae598b5fa05f75a0585fa5ae12c00000000",
+              "local_balance": "0x2540be400",
+              "remote_balance": "0x0",
+              "shutdown_transaction_hash": null
+            },
+            {
+              "channel_id": "0x0949540e2efc341ddc50e36c5781b32aad2a3d3b32cdc75907f3d93ad28443d1",
+              "pubkey": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+              "state": {
+                "state_name": "ChannelReady"
+              },
+              "channel_outpoint": "0xe8f98e8c089294bc2d019858a8874cd868aef10cd23ee16102879b7267535f7100000000",
+              "local_balance": "0x2540be400",
+              "remote_balance": "0x0",
+              "shutdown_transaction_hash": null
+            }
+          ]
+        }
+      },
+      {
+        "check": "confirmed Testnet funding outpoint",
+        "passed": true,
+        "time": "2026-11-17T02:08:50Z",
+        "result": {
+          "node": 18427,
+          "channel_id": "0x91622725da6e369dce7c079c86c1ae6ac9e75172adc23a0fa89c32886cc52aa1",
+          "funding_outpoint": "0xe17ca65ec7074b167d9ae9ef026dbd44d5417ae598b5fa05f75a0585fa5ae12c00000000",
+          "local_balance": "0x2540be400",
+          "remote_balance": "0x0"
+        }
+      },
+      {
+        "check": "public Testnet MPP terminal status",
+        "passed": true,
+        "time": "2026-11-17T02:08:54Z",
+        "result": {
+          "payment_hash": "0x7ed3fe08d1d3ec17052b27e8d4c8a181d22d32e057c7865401eb743b85d4a087",
+          "status": "Success",
+          "created_at": "0x1a1e7439eaa",
+          "last_updated_at": "0x1a1e7439fe0",
+          "failed_error": null,
+          "fee": "0x0",
+          "custom_records": {
+            "0x10000": "0xc9c051136924707e9ebe9da298292a77efb3c925677e5c45be6a883a0c9eb13a00d6117e030000000000000000000000"
+          }
+        }
+      },
+      {
+        "check": "public Testnet MPP receiver Paid",
+        "passed": true,
+        "time": "2026-11-17T02:08:54Z",
+        "result": {
+          "currency": "Fibt",
+          "amount": "0x37e11d600",
+          "payment_hash": "0x7ed3fe08d1d3ec17052b27e8d4c8a181d22d32e057c7865401eb743b85d4a087",
+          "status": "Paid"
+        }
+      },
+      {
+        "check": "public Testnet MPP split proven by both channel balances",
+        "passed": true,
+        "time": "2026-11-17T02:08:54Z",
+        "result": {
+          "payment_hash": "0x7ed3fe08d1d3ec17052b27e8d4c8a181d22d32e057c7865401eb743b85d4a087",
+          "before": {
+            "0x0949540e2efc341ddc50e36c5781b32aad2a3d3b32cdc75907f3d93ad28443d1": 10000000000,
+            "0x91622725da6e369dce7c079c86c1ae6ac9e75172adc23a0fa89c32886cc52aa1": 10000000000
+          },
+          "after": {
+            "0x0949540e2efc341ddc50e36c5781b32aad2a3d3b32cdc75907f3d93ad28443d1": 5000000000,
+            "0x91622725da6e369dce7c079c86c1ae6ac9e75172adc23a0fa89c32886cc52aa1": 0
+          },
+          "debits": {
+            "0x0949540e2efc341ddc50e36c5781b32aad2a3d3b32cdc75907f3d93ad28443d1": 5000000000,
+            "0x91622725da6e369dce7c079c86c1ae6ac9e75172adc23a0fa89c32886cc52aa1": 10000000000
+          }
+        }
+      },
+      {
+        "check": "public Testnet cooperative close confirms",
+        "passed": true,
+        "time": "2026-11-17T02:09:33Z",
+        "result": {
+          "channels": [
+            {
+              "channel_id": "0x91622725da6e369dce7c079c86c1ae6ac9e75172adc23a0fa89c32886cc52aa1",
+              "pubkey": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+              "state": {
+                "state_name": "ChannelReady"
+              },
+              "channel_outpoint": "0xe17ca65ec7074b167d9ae9ef026dbd44d5417ae598b5fa05f75a0585fa5ae12c00000000",
+              "local_balance": "0x0",
+              "remote_balance": "0x2540be400",
+              "shutdown_transaction_hash": null
+            },
+            {
+              "channel_id": "0x0949540e2efc341ddc50e36c5781b32aad2a3d3b32cdc75907f3d93ad28443d1",
+              "pubkey": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+              "state": {
+                "state_name": "Closed",
+                "state_flags": "COOPERATIVE"
+              },
+              "channel_outpoint": "0xe8f98e8c089294bc2d019858a8874cd868aef10cd23ee16102879b7267535f7100000000",
+              "local_balance": "0x12a05f200",
+              "remote_balance": "0x12a05f200",
+              "shutdown_transaction_hash": "0x240d8936b4414216eba0f6908dbf459f7dfadae88a7e16e163dceb8c8d3ead1b"
+            },
+            {
+              "channel_id": "0x7130b49a22fb0e031f548e89d88de4026cee04f4ba1c1fbdf3b130e43b4e0e5f",
+              "pubkey": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+              "state": {
+                "state_name": "Closed",
+                "state_flags": "COOPERATIVE"
+              },
+              "channel_outpoint": "0xa5a072adfd2e76f3b658ef9338f52ffa954d5b6defc524a51569af3dd4569a6700000000",
+              "local_balance": "0x94443ce00",
+              "remote_balance": "0xbebc200",
+              "shutdown_transaction_hash": "0x3b0253b2306c7f99b71de69b76569938e5c0ec6fb9b84f7f3cccc57ba1c1f703"
+            }
+          ]
+        }
+      },
+      {
+        "check": "public Testnet cooperative close confirms",
+        "passed": true,
+        "time": "2026-11-17T02:11:15Z",
+        "result": {
+          "channels": [
+            {
+              "channel_id": "0x91622725da6e369dce7c079c86c1ae6ac9e75172adc23a0fa89c32886cc52aa1",
+              "pubkey": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+              "state": {
+                "state_name": "Closed",
+                "state_flags": "COOPERATIVE"
+              },
+              "channel_outpoint": "0xe17ca65ec7074b167d9ae9ef026dbd44d5417ae598b5fa05f75a0585fa5ae12c00000000",
+              "local_balance": "0x0",
+              "remote_balance": "0x2540be400",
+              "shutdown_transaction_hash": "0x5dbe96488dfc1b211ab89de458715dba1cd088349c11e57dbdf3f68ce446a3f7"
+            },
+            {
+              "channel_id": "0x0949540e2efc341ddc50e36c5781b32aad2a3d3b32cdc75907f3d93ad28443d1",
+              "pubkey": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+              "state": {
+                "state_name": "Closed",
+                "state_flags": "COOPERATIVE"
+              },
+              "channel_outpoint": "0xe8f98e8c089294bc2d019858a8874cd868aef10cd23ee16102879b7267535f7100000000",
+              "local_balance": "0x12a05f200",
+              "remote_balance": "0x12a05f200",
+              "shutdown_transaction_hash": "0x240d8936b4414216eba0f6908dbf459f7dfadae88a7e16e163dceb8c8d3ead1b"
+            },
+            {
+              "channel_id": "0x7130b49a22fb0e031f548e89d88de4026cee04f4ba1c1fbdf3b130e43b4e0e5f",
+              "pubkey": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+              "state": {
+                "state_name": "Closed",
+                "state_flags": "COOPERATIVE"
+              },
+              "channel_outpoint": "0xa5a072adfd2e76f3b658ef9338f52ffa954d5b6defc524a51569af3dd4569a6700000000",
+              "local_balance": "0x94443ce00",
+              "remote_balance": "0xbebc200",
+              "shutdown_transaction_hash": "0x3b0253b2306c7f99b71de69b76569938e5c0ec6fb9b84f7f3cccc57ba1c1f703"
+            }
+          ]
+        }
+      },
+      {
+        "check": "open_channel submitted on public CKB Testnet",
+        "passed": true,
+        "time": "2026-11-17T02:11:15Z",
+        "result": {
+          "node": 18427,
+          "peer": "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
+          "amount_ckb": 500,
+          "response": {
+            "temporary_channel_id": "0xbea2efd23f00e11eca6ace1836fe9454dde185d4677ad975ab66a4c7e896879c"
+          }
+        }
+      },
+      {
+        "check": "public Testnet channel is ChannelReady",
+        "passed": true,
+        "time": "2026-11-17T02:13:15Z",
+        "result": {
+          "channels": [
+            {
+              "channel_id": "0xcf82d1a1c52c32ac68063fbb29e0fda59b5021120fb1de793fac8346917d5f3a",
+              "pubkey": "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
+              "state": {
+                "state_name": "ChannelReady"
+              },
+              "channel_outpoint": "0x5889bdfac53f7761687cca3bbe9656dd8f083f6e8b496d1c75af62f640a23ab600000000",
+              "local_balance": "0x9502f9000",
+              "remote_balance": "0x37e11d600",
+              "shutdown_transaction_hash": null
+            }
+          ]
+        }
+      },
+      {
+        "check": "confirmed Testnet funding outpoint",
+        "passed": true,
+        "time": "2026-11-17T02:13:15Z",
+        "result": {
+          "node": 18427,
+          "channel_id": "0xcf82d1a1c52c32ac68063fbb29e0fda59b5021120fb1de793fac8346917d5f3a",
+          "funding_outpoint": "0x5889bdfac53f7761687cca3bbe9656dd8f083f6e8b496d1c75af62f640a23ab600000000",
+          "local_balance": "0x9502f9000",
+          "remote_balance": "0x37e11d600"
+        }
+      },
+      {
+        "check": "open_channel submitted on public CKB Testnet",
+        "passed": true,
+        "time": "2026-11-17T02:13:15Z",
+        "result": {
+          "node": 18437,
+          "peer": "0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc",
+          "amount_ckb": 500,
+          "response": {
+            "temporary_channel_id": "0xcb32a517a9b09c803cbf9d044cc508b75428510a1233582c17e36780d80728ce"
+          }
+        }
+      },
+      {
+        "check": "public Testnet channel is ChannelReady",
+        "passed": true,
+        "time": "2026-11-17T02:15:21Z",
+        "result": {
+          "channels": [
+            {
+              "channel_id": "0x65e8e3c9ccefd5074238c474a7c0ee572f4ca2679697597879964ea4d6eb2916",
+              "pubkey": "0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc",
+              "state": {
+                "state_name": "ChannelReady"
+              },
+              "channel_outpoint": "0xdea10b69c24e289c4629185e97b764b35a66a7b03be0d1b1763e3b8d27078d4b00000000",
+              "local_balance": "0x9502f9000",
+              "remote_balance": "0x37e11d600",
+              "shutdown_transaction_hash": null
+            }
+          ]
+        }
+      },
+      {
+        "check": "confirmed Testnet funding outpoint",
+        "passed": true,
+        "time": "2026-11-17T02:15:21Z",
+        "result": {
+          "node": 18437,
+          "channel_id": "0x65e8e3c9ccefd5074238c474a7c0ee572f4ca2679697597879964ea4d6eb2916",
+          "funding_outpoint": "0xdea10b69c24e289c4629185e97b764b35a66a7b03be0d1b1763e3b8d27078d4b00000000",
+          "local_balance": "0x9502f9000",
+          "remote_balance": "0x37e11d600"
+        }
+      },
+      {
+        "check": "public relay topology: A only funds bottle; B only funds bracer",
+        "passed": true,
+        "time": "2026-11-17T02:15:21Z",
+        "result": {
+          "A": [
+            {
+              "channel_id": "0xcf82d1a1c52c32ac68063fbb29e0fda59b5021120fb1de793fac8346917d5f3a",
+              "is_public": true,
+              "is_acceptor": false,
+              "is_one_way": false,
+              "channel_outpoint": "0x5889bdfac53f7761687cca3bbe9656dd8f083f6e8b496d1c75af62f640a23ab600000000",
+              "pubkey": "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
+              "funding_udt_type_script": null,
+              "state": {
+                "state_name": "ChannelReady"
+              },
+              "local_balance": "0x9502f9000",
+              "offered_tlc_balance": "0x0",
+              "remote_balance": "0x37e11d600",
+              "received_tlc_balance": "0x0",
+              "pending_tlcs": [],
+              "latest_commitment_transaction_hash": "0xbca9be9f06d57ea326408a3e0626e97825f260fb8d915231edb47f9e383a6388",
+              "created_at": "0x1a1e745d336",
+              "enabled": true,
+              "tlc_expiry_delta": "0xdbba00",
+              "tlc_fee_proportional_millionths": "0x3e8",
+              "shutdown_transaction_hash": null,
+              "failure_detail": null
+            }
+          ],
+          "B": [
+            {
+              "channel_id": "0x65e8e3c9ccefd5074238c474a7c0ee572f4ca2679697597879964ea4d6eb2916",
+              "is_public": true,
+              "is_acceptor": false,
+              "is_one_way": false,
+              "channel_outpoint": "0xdea10b69c24e289c4629185e97b764b35a66a7b03be0d1b1763e3b8d27078d4b00000000",
+              "pubkey": "0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc",
+              "funding_udt_type_script": null,
+              "state": {
+                "state_name": "ChannelReady"
+              },
+              "local_balance": "0x9502f9000",
+              "offered_tlc_balance": "0x0",
+              "remote_balance": "0x37e11d600",
+              "received_tlc_balance": "0x0",
+              "pending_tlcs": [],
+              "latest_commitment_transaction_hash": "0xa4fc7a2137358ed4c97734b311eac5aac22cb679ceebbae18bf0ffe7f3650d49",
+              "created_at": "0x1a1e747a916",
+              "enabled": true,
+              "tlc_expiry_delta": "0xdbba00",
+              "tlc_fee_proportional_millionths": "0x3e8",
+              "shutdown_transaction_hash": null,
+              "failure_detail": null
+            }
+          ]
+        }
+      },
+      {
+        "check": "public graph after funded channels",
+        "passed": true,
+        "time": "2026-11-17T02:15:33Z",
+        "result": {
+          "total_announced_channels": 519,
+          "note": "广告图不保证每条边的实时流动性；实际支付结果和两端余额另行断言。"
+        }
+      },
+      {
+        "check": "public gossip multi-hop submitted",
+        "passed": true,
+        "time": "2026-11-17T02:15:34Z",
+        "result": {
+          "payment_hash": "0x2c2cf839eaa1a3d4ebaf8c29bb5817a1e3ac65aab3d379955b0b695adf7ddd3a",
+          "status": "Created",
+          "created_at": "0x1a1e749c57a",
+          "last_updated_at": "0x1a1e749c57a",
+          "failed_error": null,
+          "fee": "0x30da4",
+          "custom_records": null
+        }
+      },
+      {
+        "check": "public gossip multi-hop sender terminal status",
+        "passed": true,
+        "time": "2026-11-17T02:15:37Z",
+        "result": {
+          "payment_hash": "0x2c2cf839eaa1a3d4ebaf8c29bb5817a1e3ac65aab3d379955b0b695adf7ddd3a",
+          "status": "Success",
+          "created_at": "0x1a1e749c57a",
+          "last_updated_at": "0x1a1e749d151",
+          "failed_error": null,
+          "fee": "0x30da4",
+          "custom_records": null
+        }
+      },
+      {
+        "check": "public gossip multi-hop receiver Paid",
+        "passed": true,
+        "time": "2026-11-17T02:15:37Z",
+        "result": {
+          "currency": "Fibt",
+          "amount": "0x5f5e100",
+          "payment_hash": "0x2c2cf839eaa1a3d4ebaf8c29bb5817a1e3ac65aab3d379955b0b695adf7ddd3a",
+          "status": "Paid"
+        }
+      },
+      {
+        "check": "public gossip multi-hop public edge balance proof",
+        "passed": true,
+        "time": "2026-11-17T02:15:37Z",
+        "result": {
+          "payment_hash": "0x2c2cf839eaa1a3d4ebaf8c29bb5817a1e3ac65aab3d379955b0b695adf7ddd3a",
+          "fee": "0x30da4",
+          "before": {
+            "sender_local": 40000000000,
+            "receiver_local": 40000000000
+          },
+          "after": {
+            "sender_local": 39899799900,
+            "receiver_local": 40100000000
+          },
+          "sender": "Success",
+          "receiver": "Paid"
+        }
+      },
+      {
+        "check": "public trampoline multi-hop submitted",
+        "passed": true,
+        "time": "2026-11-17T02:15:37Z",
+        "result": {
+          "payment_hash": "0xbb8221b011d8c22a35e058a167ec7094df7749b42f0129e7ea17d915c4335dd0",
+          "status": "Created",
+          "created_at": "0x1a1e749d4ca",
+          "last_updated_at": "0x1a1e749d4ca",
+          "failed_error": null,
+          "fee": "0x7a120",
+          "custom_records": null
+        }
+      },
+      {
+        "check": "public trampoline multi-hop sender terminal status",
+        "passed": true,
+        "time": "2026-11-17T02:15:47Z",
+        "result": {
+          "payment_hash": "0xbb8221b011d8c22a35e058a167ec7094df7749b42f0129e7ea17d915c4335dd0",
+          "status": "Success",
+          "created_at": "0x1a1e749d4ca",
+          "last_updated_at": "0x1a1e749edfb",
+          "failed_error": null,
+          "fee": "0x7a120",
+          "custom_records": null
+        }
+      },
+      {
+        "check": "public trampoline multi-hop receiver Paid",
+        "passed": true,
+        "time": "2026-11-17T02:15:47Z",
+        "result": {
+          "currency": "Fibt",
+          "amount": "0x5f5e100",
+          "payment_hash": "0xbb8221b011d8c22a35e058a167ec7094df7749b42f0129e7ea17d915c4335dd0",
+          "status": "Paid"
+        }
+      },
+      {
+        "check": "public trampoline multi-hop public edge balance proof",
+        "passed": true,
+        "time": "2026-11-17T02:15:47Z",
+        "result": {
+          "payment_hash": "0xbb8221b011d8c22a35e058a167ec7094df7749b42f0129e7ea17d915c4335dd0",
+          "fee": "0x7a120",
+          "before": {
+            "sender_local": 39899799900,
+            "receiver_local": 40100000000
+          },
+          "after": {
+            "sender_local": 39799299900,
+            "receiver_local": 40200000000
+          },
+          "sender": "Success",
+          "receiver": "Paid"
+        }
+      },
+      {
+        "check": "public Testnet cooperative close confirms",
+        "passed": true,
+        "time": "2026-11-17T02:17:14Z",
+        "result": {
+          "channels": [
+            {
+              "channel_id": "0xcf82d1a1c52c32ac68063fbb29e0fda59b5021120fb1de793fac8346917d5f3a",
+              "pubkey": "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
+              "state": {
+                "state_name": "Closed",
+                "state_flags": "COOPERATIVE"
+              },
+              "channel_outpoint": "0x5889bdfac53f7761687cca3bbe9656dd8f083f6e8b496d1c75af62f640a23ab600000000",
+              "local_balance": "0x944391f3c",
+              "remote_balance": "0x38a0846c4",
+              "shutdown_transaction_hash": "0x6b7f375fc37ece930cf8903c4d1f5ea30a0b749e1db56430931fa472c3056c74"
+            },
+            {
+              "channel_id": "0x91622725da6e369dce7c079c86c1ae6ac9e75172adc23a0fa89c32886cc52aa1",
+              "pubkey": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+              "state": {
+                "state_name": "Closed",
+                "state_flags": "COOPERATIVE"
+              },
+              "channel_outpoint": "0xe17ca65ec7074b167d9ae9ef026dbd44d5417ae598b5fa05f75a0585fa5ae12c00000000",
+              "local_balance": "0x0",
+              "remote_balance": "0x2540be400",
+              "shutdown_transaction_hash": "0x5dbe96488dfc1b211ab89de458715dba1cd088349c11e57dbdf3f68ce446a3f7"
+            },
+            {
+              "channel_id": "0x0949540e2efc341ddc50e36c5781b32aad2a3d3b32cdc75907f3d93ad28443d1",
+              "pubkey": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+              "state": {
+                "state_name": "Closed",
+                "state_flags": "COOPERATIVE"
+              },
+              "channel_outpoint": "0xe8f98e8c089294bc2d019858a8874cd868aef10cd23ee16102879b7267535f7100000000",
+              "local_balance": "0x12a05f200",
+              "remote_balance": "0x12a05f200",
+              "shutdown_transaction_hash": "0x240d8936b4414216eba0f6908dbf459f7dfadae88a7e16e163dceb8c8d3ead1b"
+            },
+            {
+              "channel_id": "0x7130b49a22fb0e031f548e89d88de4026cee04f4ba1c1fbdf3b130e43b4e0e5f",
+              "pubkey": "03d6559936e42a07e4e8ef5cb94f9f618b0dae62f60b39abd235880ef4de66ac03",
+              "state": {
+                "state_name": "Closed",
+                "state_flags": "COOPERATIVE"
+              },
+              "channel_outpoint": "0xa5a072adfd2e76f3b658ef9338f52ffa954d5b6defc524a51569af3dd4569a6700000000",
+              "local_balance": "0x94443ce00",
+              "remote_balance": "0xbebc200",
+              "shutdown_transaction_hash": "0x3b0253b2306c7f99b71de69b76569938e5c0ec6fb9b84f7f3cccc57ba1c1f703"
+            }
+          ]
+        }
+      },
+      {
+        "check": "public Testnet cooperative close confirms",
+        "passed": true,
+        "time": "2026-11-17T02:19:11Z",
+        "result": {
+          "channels": [
+            {
+              "channel_id": "0x65e8e3c9ccefd5074238c474a7c0ee572f4ca2679697597879964ea4d6eb2916",
+              "pubkey": "0291a6576bd5a94bd74b27080a48340875338fff9f6d6361fe6b8db8d0d1912fcc",
+              "state": {
+                "state_name": "Closed",
+                "state_flags": "COOPERATIVE"
+              },
+              "channel_outpoint": "0xdea10b69c24e289c4629185e97b764b35a66a7b03be0d1b1763e3b8d27078d4b00000000",
+              "local_balance": "0x9561dcfe0",
+              "remote_balance": "0x378239620",
+              "shutdown_transaction_hash": "0x4b96723d2f0f3a8c5b5e9ca3b3da2b306d3c4102c1e0e8a707820012ab2166c4"
+            },
+            {
+              "channel_id": "0x91622725da6e369dce7c079c86c1ae6ac9e75172adc23a0fa89c32886cc52aa1",
+              "pubkey": "02c478701900f0a8ed947b09a077ad270d2098377091b532544f557a14bf3faf5f",
+              "state": {
+                "state_name": "Closed",
+                "state_flags": "COOPERATIVE"
+              },
+              "channel_outpoint": "0xe17ca65ec7074b167d9ae9ef026dbd44d5417ae598b5fa05f75a0585fa5ae12c00000000",
+              "local_balance": "0x2540be400",
+              "remote_balance": "0x0",
+              "shutdown_transaction_hash": "0x5dbe96488dfc1b211ab89de458715dba1cd088349c11e57dbdf3f68ce446a3f7"
+            },
+            {
+              "channel_id": "0x0949540e2efc341ddc50e36c5781b32aad2a3d3b32cdc75907f3d93ad28443d1",
+              "pubkey": "02c478701900f0a8ed947b09a077ad270d2098377091b532544f557a14bf3faf5f",
+              "state": {
+                "state_name": "Closed",
+                "state_flags": "COOPERATIVE"
+              },
+              "channel_outpoint": "0xe8f98e8c089294bc2d019858a8874cd868aef10cd23ee16102879b7267535f7100000000",
+              "local_balance": "0x12a05f200",
+              "remote_balance": "0x12a05f200",
+              "shutdown_transaction_hash": "0x240d8936b4414216eba0f6908dbf459f7dfadae88a7e16e163dceb8c8d3ead1b"
+            },
+            {
+              "channel_id": "0x7130b49a22fb0e031f548e89d88de4026cee04f4ba1c1fbdf3b130e43b4e0e5f",
+              "pubkey": "02c478701900f0a8ed947b09a077ad270d2098377091b532544f557a14bf3faf5f",
+              "state": {
+                "state_name": "Closed",
+                "state_flags": "COOPERATIVE"
+              },
+              "channel_outpoint": "0xa5a072adfd2e76f3b658ef9338f52ffa954d5b6defc524a51569af3dd4569a6700000000",
+              "local_balance": "0xbebc200",
+              "remote_balance": "0x94443ce00",
+              "shutdown_transaction_hash": "0x3b0253b2306c7f99b71de69b76569938e5c0ec6fb9b84f7f3cccc57ba1c1f703"
+            }
+          ]
+        }
+      },
+      {
+        "check": "all public Testnet test channels closed; funds returned to test addresses",
+        "passed": true,
+        "time": "2026-11-17T02:19:11Z",
+        "result": true
+      }
+    ],
+    "final_state": [
+      {
+        "channels": [
+          {}
+        ]
+      },
+      {
+        "channels": [
+          {}
+        ]
+      }
+    ]
+  },
+  "wasm": {
+    "checks": [
+      {
+        "check": "WASM 0.10.1 starts on public Testnet",
+        "passed": true,
+        "result": {
+          "version": "0.10.1",
+          "commit_hash": "d9b6bbd 2026-11-14",
+          "pubkey": "02bf147136f7621d880dca39c2b58389588016f0837b62d3c50259c9d691461d71",
+          "features": [
+            "GOSSIP_QUERIES_REQUIRED",
+            "BASIC_MPP_REQUIRED",
+            "TRAMPOLINE_ROUTING_REQUIRED",
+            "CHANNEL_V2_OPTIONAL"
+          ],
+          "node_name": "docs-0.10.1-node-a",
+          "addresses": [],
+          "chain_hash": "0x10639e0895502b5688a6be8cf69460d76541bfa4821629d86d62ba0aae3f9606",
+          "open_channel_auto_accept_min_ckb_funding_amount": "0x2540be400",
+          "auto_accept_channel_ckb_funding_amount": "0x2540be400",
+          "default_funding_lock_script": {
+            "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+            "hash_type": "type",
+            "args": "0x825242e4798ea559d093b3e8c10b5142dfecbc9e"
+          },
+          "tlc_expiry_delta": "0xdbba00",
+          "tlc_min_value": "0x0",
+          "tlc_fee_proportional_millionths": "0x3e8",
+          "channel_count": "0x0",
+          "pending_channel_count": "0x0",
+          "peers_count": "0x0",
+          "udt_cfg_infos": [
+            {
+              "name": "RUSD",
+              "script": {
+                "code_hash": "0x1142755a044bf2ee358cba9f2da187ce928c91cd4dc8692ded0337efa677d21a",
+                "hash_type": "type",
+                "args": "0x878fcc6f1f08d48e87bb1c3b3d5083f23f8a39c5d5c764f253b55b998526439b"
+              },
+              "auto_accept_amount": "0x3b9aca00",
+              "cell_deps": [
+                {
+                  "type_id": {
+                    "code_hash": "0x00000000000000000000000000000000000000000000000000545950455f4944",
+                    "hash_type": "type",
+                    "args": "0x97d30b723c0b2c66e9cb8d4d0df4ab5d7222cbb00d4a9a2055ce2e5d7f0d8b0f"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "time": "2026-11-17T02:11:11.095Z"
+      },
+      {
+        "check": "WASM connects to bottle over WSS",
+        "passed": true,
+        "result": {
+          "peers": [
+            {
+              "pubkey": "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
+              "address": "/dns4/bottle.fiber.channel/tcp/443/wss/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo"
+            }
+          ]
+        },
+        "time": "2026-11-17T02:13:32.292Z"
+      },
+      {
+        "check": "WASM test wallet faucet deposit visible through browser CORS RPC",
+        "passed": true,
+        "result": {
+          "block_hash": "0x91ddafa38fa693f0210b40e09db160270bfc3abf51263eb9588fa97ab0b251bc",
+          "block_number": "0x1604d70",
+          "capacity": "0xe8d4a51000"
+        },
+        "time": "2026-11-17T02:13:33.597Z"
+      },
+      {
+        "check": "WASM opens funded 500 CKB channel to public bottle",
+        "passed": true,
+        "result": {
+          "temporary_channel_id": "0xc5603eb7bc2669151adce169990073829e854b5680d3759d7533bae2f5f008a5"
+        },
+        "time": "2026-11-17T02:13:33.609Z"
+      },
+      {
+        "check": "WASM public Testnet channel is ChannelReady",
+        "passed": true,
+        "result": {
+          "channels": [
+            {
+              "channel_id": "0x32e2df3e667775569b127e63714421538b1a8c03b20f9f94a5959dc95e30ee3f",
+              "pubkey": "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
+              "state": {
+                "state_name": "ChannelReady"
+              },
+              "channel_outpoint": "0x4d937bc4ff91003fa0dbb768413c71ab9e2b0eb623c5c5dca6f221dcebd371d100000000",
+              "local_balance": "0x9502f9000",
+              "remote_balance": "0x37e11d600"
+            }
+          ]
+        },
+        "time": "2026-11-17T02:15:43.840Z"
+      },
+      {
+        "check": "WASM keysend 1 CKB to public bottle submitted",
+        "passed": true,
+        "result": {
+          "payment_hash": "0x71f206376a44a39a2a8258cf32610677747b2837015def5e6b22dc37f9f2ee29",
+          "status": "Created",
+          "created_at": "0x1a1e749ebe6",
+          "last_updated_at": "0x1a1e749ebe6",
+          "fee": "0x0"
+        },
+        "time": "2026-11-17T02:15:43.894Z"
+      },
+      {
+        "check": "WASM public keysend terminal status",
+        "passed": true,
+        "result": {
+          "payment_hash": "0x71f206376a44a39a2a8258cf32610677747b2837015def5e6b22dc37f9f2ee29",
+          "status": "Success",
+          "created_at": "0x1a1e749ebe6",
+          "last_updated_at": "0x1a1e749efca",
+          "fee": "0x0"
+        },
+        "time": "2026-11-17T02:15:46.910Z"
+      },
+      {
+        "check": "WASM receiver invoice published for native public-relay test",
+        "passed": true,
+        "result": {
+          "payment_hash": "0x7a5f7ccb65cbe9b05196336089b934ff3f392d4615cb3a807a532029803d580e"
+        },
+        "time": "2026-11-17T02:15:46.919Z"
+      },
+      {
+        "check": "native to WASM public-relay invoice Paid",
+        "passed": true,
+        "result": {
+          "currency": "Fibt",
+          "amount": "0x5f5e100",
+          "payment_hash": "0x7a5f7ccb65cbe9b05196336089b934ff3f392d4615cb3a807a532029803d580e",
+          "status": "Paid"
+        },
+        "time": "2026-11-17T02:16:38.032Z"
+      },
+      {
+        "check": "WASM public channel cooperatively closed",
+        "passed": true,
+        "result": {
+          "channels": [
+            {
+              "channel_id": "0x32e2df3e667775569b127e63714421538b1a8c03b20f9f94a5959dc95e30ee3f",
+              "pubkey": "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
+              "state": {
+                "state_name": "Closed",
+                "state_flags": "COOPERATIVE"
+              },
+              "channel_outpoint": "0x4d937bc4ff91003fa0dbb768413c71ab9e2b0eb623c5c5dca6f221dcebd371d100000000",
+              "local_balance": "0x9502f9000",
+              "remote_balance": "0x37e11d600",
+              "shutdown_transaction_hash": "0x513fca1288e8e8fe4e040db304b88a0d7dc2e49ae247f426eaceee341af9b2f9"
+            }
+          ]
+        },
+        "time": "2026-11-17T02:18:23.531Z"
+      },
+      {
+        "check": "WASM stops cleanly after public-channel close",
+        "passed": true,
+        "result": true,
+        "time": "2026-11-17T02:18:23.547Z"
+      }
+    ],
+    "native_to_wasm": {
+      "passed": true,
+      "sender": "native node-b",
+      "receiver": "WASM 0.10.1",
+      "route": "node-b -> bracer -> public network -> bottle -> WASM",
+      "payment": {
+        "payment_hash": "0x7a5f7ccb65cbe9b05196336089b934ff3f392d4615cb3a807a532029803d580e",
+        "status": "Success",
+        "created_at": "0x1a1e74ab313",
+        "last_updated_at": "0x1a1e74abbaf",
+        "failed_error": null,
+        "fee": "0x7a120",
+        "custom_records": null
+      }
+    }
+  },
+  "interactive_ui": {
+    "initial_sdk_flow": {
+      "checks": [
+        {
+          "check": "actual interactive page opens 500 CKB and pays 1 CKB with SDK 0.3.1 / WASM 0.10.1",
+          "passed": true,
+          "result": "Fiber Docs\nTUTORIAL: OPEN A CHANNEL AND SEND A PAYMENT\nVIEW CODE WALKTHROUGH ↓\nDOWNLOAD PROJECT\nINTERACTIVE TUTORIAL · ABOUT 15 MINUTES\nOpen a Fiber Channel and Send a Payment\n\nFund your browser node, open a real Fiber Testnet channel, and send 1 CKB to a public peer. Testnet confirmations may take longer than the active tutorial time.\n\nNeed background on browser nodes? Review Connect to Fiber with a WASM Node.\n\n1\n\nPrepare node. Start and connect.\n\n2\n\nFund address. Receive Testnet CKB.\n\n3\n\nOpen channel. Commit the peer minimum on-chain.\n\n4\n\nSend payment. Send CKB to the peer.\n\nNODE\nNode running\nPEER\nPeer connected\nCHANNEL\nChannel ready\nPAYMENT\nPayment successful\n1\nPrepare browser node\nStart locally and connect over WSS. This does not move funds.\nNode running\n2\nFund the address\nckt1qzda0cr08m…te8s57uy9v\nBalance: 9499.99998544 CKB · auto-checks every 5s\nGet CKB ↗\nRefresh\n3\nOpen a 500 CKB channel\nCKB\nChannel ready\nOBSERVED CHANNEL LIFECYCLE\nNEGOTIATING_FUNDING\n→\nSIGNING_COMMITMENT\n→\nAWAITING_TX_SIGNATURES\n→\nAWAITING_CHANNEL_READY\n→\nCHANNEL_READY\n4\nSend CKB to the peer\nCKB\nSend payment\nPAYMENT RECEIPT\nSTATUS\nSuccess\nAMOUNT\n1 CKB\nCHANNEL ID\n0xbe650c673ef8…824fc4698c\nPAYMENT HASH\n0x43823e739113…fdfa9edac3\nLOCAL BALANCE\n400 CKB → 399 CKB\nRUNTIME EVENTS AND RESULTS\nNODE\nstate\nNode running\nPEER\nconnection\nConnected\nCH 01\nchannel_state\nNEGOTIATING_FUNDING\nCH 02\nchannel_state\nSIGNING_COMMITMENT\nCH 03\nchannel_state\nAWAITING_TX_SIGNATURES\nCH 04\nchannel_state\nAWAITING_CHANNEL_READY\nCH 05\nchannel_state\nCHANNEL_READY\n10:21:48\npayment\nSending 1 CKB with keysend…\n10:21:48\npayment\nSubmitted · 0x43823e739113…fdfa9edac3\n10:21:48\npayment\nWaiting for a terminal payment status…\n10:21:50\npayment\nSuccess · 1 CKB · 0x43823e739113…fdfa9edac3\nIMPLEMENTATION WALKTHROUGH\nBehind the scenes\n\nFollow the data and SDK calls that prepare the node, fund and open the channel, then confirm the payment.\n\nARCHITECTURE\nUnderstand the channel payment flow\n\nopenChannel() locks a chosen amount of Testnet CKB on-chain. Once the channel is ready, pay() can make multiple off-chain payments without creating a new CKB transaction for every small amount.\n\nYour browser node\nFiber WASM\n→ Fiber channel →\nPublic Fibe"
+        },
+        {
+          "check": "interactive node resumes from current IndexedDB with official 0.10.1 config",
+          "passed": true,
+          "result": {
+            "channels": [
+              {}
+            ]
+          }
+        },
+        {
+          "check": "interactive node resumes from current IndexedDB with official 0.10.1 config",
+          "passed": true,
+          "result": {
+            "channels": [
+              {}
+            ]
+          }
+        },
+        {
+          "check": "UI payment balance persists after browser node restart",
+          "passed": true,
+          "result": "0x94a39af00"
+        },
+        {
+          "check": "interactive test channel cooperatively closes on public Testnet",
+          "passed": true,
+          "result": {
+            "channel_id": "0xbe650c673ef8d4ab62f8ba6439bfa6dae0786415467506115c59f5824fc4698c",
+            "is_public": true,
+            "is_acceptor": false,
+            "is_one_way": false,
+            "channel_outpoint": "0x6eeea1ef5bc249e6f2f555b11584ecb2b7434517984577fa3d24d7429272565e00000000",
+            "pubkey": "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
+            "state": {
+              "state_name": "Closed",
+              "state_flags": "COOPERATIVE"
+            },
+            "local_balance": "0x94a39af00",
+            "offered_tlc_balance": "0x0",
+            "remote_balance": "0x38407b700",
+            "received_tlc_balance": "0x0",
+            "pending_tlcs": [],
+            "latest_commitment_transaction_hash": "0xf30209b9303da27cc424952fa5e964fef5e16571d170127bd19ea9992dca8dd3",
+            "created_at": "0x1a1e74ce7d4",
+            "enabled": true,
+            "tlc_expiry_delta": "0xdbba00",
+            "tlc_fee_proportional_millionths": "0x3e8",
+            "shutdown_transaction_hash": "0x3e157a7c4f62e6908f32a1097f7b1b8498e397130517e967889522c30fbee863"
+          }
+        },
+        {
+          "check": "interactive test node stops cleanly",
+          "passed": true,
+          "result": true
+        }
+      ]
+    },
+    "final_config_and_readiness_checks": [
+      {
+        "check": "final interactive SDK/WASM node prepares and recognizes funded Testnet wallet",
+        "passed": true,
+        "result": {
+          "text": "Fiber Docs\nTUTORIAL: OPEN A CHANNEL AND SEND A PAYMENT\nVIEW CODE WALKTHROUGH ↓\nDOWNLOAD PROJECT\nINTERACTIVE TUTORIAL · ABOUT 15 MINUTES\nOpen a Fiber Channel and Send a Payment\n\nFund your browser node, open a real Fiber Testnet channel, and send 1 CKB to a public peer. Testnet confirmations may take longer than the active tutorial time.\n\nNeed background on browser nodes? Review Connect to Fiber with a WASM Node.\n\n1\n\nPrepare node. Start and connect.\n\n2\n\nFund address. Receive Testnet CKB.\n\n3\n\nOpen channel. Commit the peer minimum on-chain.\n\n4\n\nSend payment. Send CKB to the peer.\n\nNODE\nNode running\nPEER\nPeer connected\nCHANNEL\nNot opened\nPAYMENT\nNot sent\n1\nPrepare browser node\nStart locally and connect over WSS. This does not move funds.\nNode running\n2\nFund the address\nckt1qzda0cr08m…te8s57uy9v\nBalance: 9998.99998016 CKB · auto-checks every 5s\nGet CKB ↗\nRefresh\n3\nOpen a 500 CKB channel\nCKB\nOpen channel\n4\nSend CKB to the peer\nCKB\nSend payment\nRUNTIME EVENTS AND RESULTS\nNODE\nstate\nNode running\nPEER\nconnection\nConnected\nChannel and payment events will appear here.\nIMPLEMENTATION WALKTHROUGH\nBehind the scenes\n\nFollow the data and SDK calls that prepare the node, fund and open the channel, then confirm the payment.\n\nARCHITECTURE\nUnderstand the channel payment flow\n\nopenChannel() locks a chosen amount of Testnet CKB on-chain. Once the channel is ready, pay() can make multiple off-chain payments without creating a new CKB transaction for every small amount.\n\nYour browser node\nFiber WASM\n→ Fiber channel →\nPublic Fiber peer\nReceives payment\nTestnet state is real\n\nPreparing the node starts it locally and connects it to the public peer. Opening the channel and sending payments are separate actions.\n\napp/pay/page.tsx · lines 39–48\n1\nPREPARE THE NODE\nStart the node and derive its funding address\n\nstart() starts the browser node and reveals the Testnet address that must be funded. It calls startFiber(), reads the node information, and uses scriptToAddress() to convert default_funding_lock_script into its Testnet address.\n\nThe demo combines startup and connectToRouter() into one preparation action. The downloaded source keeps the helpers separate, so an application can expose more control when needed.\n\napp/pay/page.tsx · lines 23–31\n2\nWATCH FUNDING\nDetect sufficient Testnet fundi",
+          "state": "Not opened",
+          "buttons": [
+            {
+              "text": "Search⌘K",
+              "disabled": false
+            },
+            {
+              "text": "TUTORIAL: OPEN A CHANNEL AND SEND A PAYMENT",
+              "disabled": false
+            },
+            {
+              "text": "VIEW CODE WALKTHROUGH ↓",
+              "disabled": false
+            },
+            {
+              "text": "Node running",
+              "disabled": true
+            },
+            {
+              "text": "Refresh",
+              "disabled": false
+            },
+            {
+              "text": "Open channel",
+              "disabled": false
+            },
+            {
+              "text": "Send payment",
+              "disabled": true
+            },
+            {
+              "text": "lib/fiber.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/balance.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/amounts.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/channel.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/payment.ts",
+              "disabled": false
+            },
+            {
+              "text": "app/pay/page.tsx",
+              "disabled": false
+            },
+            {
+              "text": "COPY FILE",
+              "disabled": false
+            }
+          ]
+        },
+        "time": "2026-11-17T02:30:31.484Z"
+      },
+      {
+        "check": "Send payment stays disabled during AwaitingChannelReady",
+        "passed": true,
+        "result": {
+          "text": "Fiber Docs\nTUTORIAL: OPEN A CHANNEL AND SEND A PAYMENT\nVIEW CODE WALKTHROUGH ↓\nDOWNLOAD PROJECT\nINTERACTIVE TUTORIAL · ABOUT 15 MINUTES\nOpen a Fiber Channel and Send a Payment\n\nFund your browser node, open a real Fiber Testnet channel, and send 1 CKB to a public peer. Testnet confirmations may take longer than the active tutorial time.\n\nNeed background on browser nodes? Review Connect to Fiber with a WASM Node.\n\n1\n\nPrepare node. Start and connect.\n\n2\n\nFund address. Receive Testnet CKB.\n\n3\n\nOpen channel. Commit the peer minimum on-chain.\n\n4\n\nSend payment. Send CKB to the peer.\n\nNODE\nNode running\nPEER\nPeer connected\nCHANNEL\nAWAITING_CHANNEL_READY\nPAYMENT\nNot sent\n1\nPrepare browser node\nStart locally and connect over WSS. This does not move funds.\nNode running\n2\nFund the address\nckt1qzda0cr08m…te8s57uy9v\nBalance: 9498.999975 CKB · auto-checks every 5s\nGet CKB ↗\nRefresh\n3\nOpen a 500 CKB channel\nCKB\nOpen channel\nOBSERVED CHANNEL LIFECYCLE\nNEGOTIATING_FUNDING\n→\nSIGNING_COMMITMENT\n→\nAWAITING_TX_SIGNATURES\n→\nAWAITING_CHANNEL_READY\n→\nCHANNEL_READY\n4\nSend CKB to the peer\nCKB\nSend payment\nRUNTIME EVENTS AND RESULTS\nNODE\nstate\nNode running\nPEER\nconnection\nConnected\nCH 01\nchannel_state\nNEGOTIATING_FUNDING\nCH 02\nchannel_state\nSIGNING_COMMITMENT\nCH 03\nchannel_state\nAWAITING_TX_SIGNATURES\nCH 04\nchannel_state\nAWAITING_CHANNEL_READY\nIMPLEMENTATION WALKTHROUGH\nBehind the scenes\n\nFollow the data and SDK calls that prepare the node, fund and open the channel, then confirm the payment.\n\nARCHITECTURE\nUnderstand the channel payment flow\n\nopenChannel() locks a chosen amount of Testnet CKB on-chain. Once the channel is ready, pay() can make multiple off-chain payments without creating a new CKB transaction for every small amount.\n\nYour browser node\nFiber WASM\n→ Fiber channel →\nPublic Fiber peer\nReceives payment\nTestnet state is real\n\nPreparing the node starts it locally and connects it to the public peer. Opening the channel and sending payments are separate actions.\n\napp/pay/page.tsx · lines 39–48\n1\nPREPARE THE NODE\nStart the node and derive its funding address\n\nstart() starts the browser node and reveals the Testnet address that must be funded. It calls startFiber(), reads the node information, and uses scriptToAddress() to convert default_funding_lock_script into its Testnet address",
+          "state": "AWAITING_CHANNEL_READY",
+          "buttons": [
+            {
+              "text": "Search⌘K",
+              "disabled": false
+            },
+            {
+              "text": "TUTORIAL: OPEN A CHANNEL AND SEND A PAYMENT",
+              "disabled": false
+            },
+            {
+              "text": "VIEW CODE WALKTHROUGH ↓",
+              "disabled": false
+            },
+            {
+              "text": "Node running",
+              "disabled": true
+            },
+            {
+              "text": "Refresh",
+              "disabled": false
+            },
+            {
+              "text": "Open channel",
+              "disabled": true
+            },
+            {
+              "text": "Send payment",
+              "disabled": true
+            },
+            {
+              "text": "lib/fiber.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/balance.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/amounts.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/channel.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/payment.ts",
+              "disabled": false
+            },
+            {
+              "text": "app/pay/page.tsx",
+              "disabled": false
+            },
+            {
+              "text": "COPY FILE",
+              "disabled": false
+            }
+          ]
+        },
+        "time": "2026-11-17T02:32:46.705Z"
+      },
+      {
+        "check": "final interactive 500 CKB public channel becomes ready",
+        "passed": true,
+        "result": {
+          "text": "Fiber Docs\nTUTORIAL: OPEN A CHANNEL AND SEND A PAYMENT\nVIEW CODE WALKTHROUGH ↓\nDOWNLOAD PROJECT\nINTERACTIVE TUTORIAL · ABOUT 15 MINUTES\nOpen a Fiber Channel and Send a Payment\n\nFund your browser node, open a real Fiber Testnet channel, and send 1 CKB to a public peer. Testnet confirmations may take longer than the active tutorial time.\n\nNeed background on browser nodes? Review Connect to Fiber with a WASM Node.\n\n1\n\nPrepare node. Start and connect.\n\n2\n\nFund address. Receive Testnet CKB.\n\n3\n\nOpen channel. Commit the peer minimum on-chain.\n\n4\n\nSend payment. Send CKB to the peer.\n\nNODE\nNode running\nPEER\nPeer connected\nCHANNEL\nChannel ready\nPAYMENT\nNot sent\n1\nPrepare browser node\nStart locally and connect over WSS. This does not move funds.\nNode running\n2\nFund the address\nckt1qzda0cr08m…te8s57uy9v\nBalance: 9498.999975 CKB · auto-checks every 5s\nGet CKB ↗\nRefresh\n3\nOpen a 500 CKB channel\nCKB\nChannel ready\nOBSERVED CHANNEL LIFECYCLE\nNEGOTIATING_FUNDING\n→\nSIGNING_COMMITMENT\n→\nAWAITING_TX_SIGNATURES\n→\nAWAITING_CHANNEL_READY\n→\nCHANNEL_READY\n4\nSend CKB to the peer\nCKB\nSend payment\nRUNTIME EVENTS AND RESULTS\nNODE\nstate\nNode running\nPEER\nconnection\nConnected\nCH 01\nchannel_state\nNEGOTIATING_FUNDING\nCH 02\nchannel_state\nSIGNING_COMMITMENT\nCH 03\nchannel_state\nAWAITING_TX_SIGNATURES\nCH 04\nchannel_state\nAWAITING_CHANNEL_READY\nCH 05\nchannel_state\nCHANNEL_READY\nIMPLEMENTATION WALKTHROUGH\nBehind the scenes\n\nFollow the data and SDK calls that prepare the node, fund and open the channel, then confirm the payment.\n\nARCHITECTURE\nUnderstand the channel payment flow\n\nopenChannel() locks a chosen amount of Testnet CKB on-chain. Once the channel is ready, pay() can make multiple off-chain payments without creating a new CKB transaction for every small amount.\n\nYour browser node\nFiber WASM\n→ Fiber channel →\nPublic Fiber peer\nReceives payment\nTestnet state is real\n\nPreparing the node starts it locally and connects it to the public peer. Opening the channel and sending payments are separate actions.\n\napp/pay/page.tsx · lines 39–48\n1\nPREPARE THE NODE\nStart the node and derive its funding address\n\nstart() starts the browser node and reveals the Testnet address that must be funded. It calls startFiber(), reads the node information, and uses scriptToAddress() to convert default_funding_lock_scrip",
+          "state": "Channel ready",
+          "buttons": [
+            {
+              "text": "Search⌘K",
+              "disabled": false
+            },
+            {
+              "text": "TUTORIAL: OPEN A CHANNEL AND SEND A PAYMENT",
+              "disabled": false
+            },
+            {
+              "text": "VIEW CODE WALKTHROUGH ↓",
+              "disabled": false
+            },
+            {
+              "text": "Node running",
+              "disabled": true
+            },
+            {
+              "text": "Refresh",
+              "disabled": false
+            },
+            {
+              "text": "Channel ready",
+              "disabled": true
+            },
+            {
+              "text": "Send payment",
+              "disabled": false
+            },
+            {
+              "text": "lib/fiber.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/balance.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/amounts.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/channel.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/payment.ts",
+              "disabled": false
+            },
+            {
+              "text": "app/pay/page.tsx",
+              "disabled": false
+            },
+            {
+              "text": "COPY FILE",
+              "disabled": false
+            }
+          ]
+        },
+        "time": "2026-11-17T02:32:49.713Z"
+      }
+    ],
+    "balance_fix_recheck": [
+      {
+        "check": "final page resumes the funded channel from current IndexedDB",
+        "passed": true,
+        "result": {
+          "text": "Fiber Docs\nTUTORIAL: OPEN A CHANNEL AND SEND A PAYMENT\nVIEW CODE WALKTHROUGH ↓\nDOWNLOAD PROJECT\nINTERACTIVE TUTORIAL · ABOUT 15 MINUTES\nOpen a Fiber Channel and Send a Payment\n\nFund your browser node, open a real Fiber Testnet channel, and send 1 CKB to a public peer. Testnet confirmations may take longer than the active tutorial time.\n\nNeed background on browser nodes? Review Connect to Fiber with a WASM Node.\n\n1\n\nPrepare node. Start and connect.\n\n2\n\nFund address. Receive Testnet CKB.\n\n3\n\nOpen channel. Commit the peer minimum on-chain.\n\n4\n\nSend payment. Send CKB to the peer.\n\nNODE\nNode running\nPEER\nPeer connected\nCHANNEL\nChannel ready\nPAYMENT\nNot sent\n1\nPrepare browser node\nStart locally and connect over WSS. This does not move funds.\nNode running\n2\nFund the address\nckt1qzda0cr08m…te8s57uy9v\nBalance: 9498.999975 CKB · auto-checks every 5s\nGet CKB ↗\nRefresh\n3\nOpen a 500 CKB channel\nCKB\nChannel ready\nOBSERVED CHANNEL LIFECYCLE\nCHANNEL_READY\n4\nSend CKB to the peer\nCKB\nSend payment\nRUNTIME EVENTS AND RESULTS\nNODE\nstate\nNode running\nPEER\nconnection\nConnected\nCH 01\nchannel_state\nCHANNEL_READY\nIMPLEMENTATION WALKTHROUGH\nBehind the scenes\n\nFollow the data and SDK calls that prepare the node, fund and open the channel, then confirm the payment.\n\nARCHITECTURE\nUnderstand the channel payment flow\n\nopenChannel() locks a chosen amount of Testnet CKB on-chain. Once the channel is ready, pay() can make multiple off-chain payments without creating a new CKB transaction for every small amount.\n\nYour browser node\nFiber WASM\n→ Fiber channel →\nPublic Fiber peer\nReceives payment\nTestnet state is real\n\nPreparing the node starts it locally and connects it to the public peer. Opening the channel and sending payments are separate actions.\n\napp/pay/page.tsx · lines 39–48\n1\nPREPARE THE NODE\nStart the node and derive its funding address\n\nstart() starts the browser node and reveals the Testnet address that must be funded. It calls startFiber(), reads the node information, and uses scriptToAddress() to convert default_funding_lock_script into its Testnet address.\n\nThe demo combines startup and connectToRouter() into one preparation action. The downloaded source keeps the helpers separate, so an application can expose more control when needed.\n\napp/pay/page.tsx · lines 23–31\n2\nWATCH FUNDING",
+          "state": "Channel ready",
+          "buttons": [
+            {
+              "text": "Search⌘K",
+              "disabled": false
+            },
+            {
+              "text": "TUTORIAL: OPEN A CHANNEL AND SEND A PAYMENT",
+              "disabled": false
+            },
+            {
+              "text": "VIEW CODE WALKTHROUGH ↓",
+              "disabled": false
+            },
+            {
+              "text": "Node running",
+              "disabled": true
+            },
+            {
+              "text": "Refresh",
+              "disabled": false
+            },
+            {
+              "text": "Channel ready",
+              "disabled": true
+            },
+            {
+              "text": "Send payment",
+              "disabled": false
+            },
+            {
+              "text": "lib/fiber.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/balance.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/amounts.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/channel.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/payment.ts",
+              "disabled": false
+            },
+            {
+              "text": "app/pay/page.tsx",
+              "disabled": false
+            },
+            {
+              "text": "COPY FILE",
+              "disabled": false
+            }
+          ]
+        },
+        "time": "2026-11-17T02:39:25.367Z"
+      },
+      {
+        "check": "public interactive receipt waits for actual 399 -> 398 CKB balance update after Success",
+        "passed": true,
+        "result": {
+          "text": "Fiber Docs\nTUTORIAL: OPEN A CHANNEL AND SEND A PAYMENT\nVIEW CODE WALKTHROUGH ↓\nDOWNLOAD PROJECT\nINTERACTIVE TUTORIAL · ABOUT 15 MINUTES\nOpen a Fiber Channel and Send a Payment\n\nFund your browser node, open a real Fiber Testnet channel, and send 1 CKB to a public peer. Testnet confirmations may take longer than the active tutorial time.\n\nNeed background on browser nodes? Review Connect to Fiber with a WASM Node.\n\n1\n\nPrepare node. Start and connect.\n\n2\n\nFund address. Receive Testnet CKB.\n\n3\n\nOpen channel. Commit the peer minimum on-chain.\n\n4\n\nSend payment. Send CKB to the peer.\n\nNODE\nNode running\nPEER\nPeer connected\nCHANNEL\nChannel ready\nPAYMENT\nPayment successful\n1\nPrepare browser node\nStart locally and connect over WSS. This does not move funds.\nNode running\n2\nFund the address\nckt1qzda0cr08m…te8s57uy9v\nBalance: 9498.999975 CKB · auto-checks every 5s\nGet CKB ↗\nRefresh\n3\nOpen a 500 CKB channel\nCKB\nChannel ready\nOBSERVED CHANNEL LIFECYCLE\nCHANNEL_READY\n4\nSend CKB to the peer\nCKB\nSend payment\nPAYMENT RECEIPT\nSTATUS\nSuccess\nAMOUNT\n1 CKB\nCHANNEL ID\n0x3cb2adf20b7f…b15b8bcf74\nPAYMENT HASH\n0x3bb2138cf5d3…ac1bc3e961\nLOCAL BALANCE\n399 CKB → 398 CKB\nRUNTIME EVENTS AND RESULTS\nNODE\nstate\nNode running\nPEER\nconnection\nConnected\nCH 01\nchannel_state\nCHANNEL_READY\n10:39:25\npayment\nSending 1 CKB with keysend…\n10:39:25\npayment\nSubmitted · 0x3bb2138cf5d3…ac1bc3e961\n10:39:25\npayment\nWaiting for a terminal payment status…\n10:39:27\npayment\nSuccess · 1 CKB · 0x3bb2138cf5d3…ac1bc3e961\nIMPLEMENTATION WALKTHROUGH\nBehind the scenes\n\nFollow the data and SDK calls that prepare the node, fund and open the channel, then confirm the payment.\n\nARCHITECTURE\nUnderstand the channel payment flow\n\nopenChannel() locks a chosen amount of Testnet CKB on-chain. Once the channel is ready, pay() can make multiple off-chain payments without creating a new CKB transaction for every small amount.\n\nYour browser node\nFiber WASM\n→ Fiber channel →\nPublic Fiber peer\nReceives payment\nTestnet state is real\n\nPreparing the node starts it locally and connects it to the public peer. Opening the channel and sending payments are separate actions.\n\napp/pay/page.tsx · lines 39–48\n1\nPREPARE THE NODE\nStart the node and derive its funding address\n\nstart() starts the browser node and reveals the Testnet address that must be fu",
+          "state": "Channel ready",
+          "buttons": [
+            {
+              "text": "Search⌘K",
+              "disabled": false
+            },
+            {
+              "text": "TUTORIAL: OPEN A CHANNEL AND SEND A PAYMENT",
+              "disabled": false
+            },
+            {
+              "text": "VIEW CODE WALKTHROUGH ↓",
+              "disabled": false
+            },
+            {
+              "text": "Node running",
+              "disabled": true
+            },
+            {
+              "text": "Refresh",
+              "disabled": false
+            },
+            {
+              "text": "Channel ready",
+              "disabled": true
+            },
+            {
+              "text": "Send payment",
+              "disabled": false
+            },
+            {
+              "text": "lib/fiber.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/balance.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/amounts.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/channel.ts",
+              "disabled": false
+            },
+            {
+              "text": "lib/payment.ts",
+              "disabled": false
+            },
+            {
+              "text": "app/pay/page.tsx",
+              "disabled": false
+            },
+            {
+              "text": "COPY FILE",
+              "disabled": false
+            }
+          ]
+        },
+        "time": "2026-11-17T02:39:27.900Z"
+      }
+    ],
+    "final_close": {
+      "checks": [
+        {
+          "check": "final interactive page confirms payment and refreshed channel balance with SDK 0.3.1 / WASM 0.10.1",
+          "passed": true,
+          "result": "Fiber Docs\nTUTORIAL: OPEN A CHANNEL AND SEND A PAYMENT\nVIEW CODE WALKTHROUGH ↓\nDOWNLOAD PROJECT\nINTERACTIVE TUTORIAL · ABOUT 15 MINUTES\nOpen a Fiber Channel and Send a Payment\n\nFund your browser node, open a real Fiber Testnet channel, and send 1 CKB to a public peer. Testnet confirmations may take longer than the active tutorial time.\n\nNeed background on browser nodes? Review Connect to Fiber with a WASM Node.\n\n1\n\nPrepare node. Start and connect.\n\n2\n\nFund address. Receive Testnet CKB.\n\n3\n\nOpen channel. Commit the peer minimum on-chain.\n\n4\n\nSend payment. Send CKB to the peer.\n\nNODE\nNode running\nPEER\nPeer connected\nCHANNEL\nChannel ready\nPAYMENT\nPayment successful\n1\nPrepare browser node\nStart locally and connect over WSS. This does not move funds.\nNode running\n2\nFund the address\nckt1qzda0cr08m…te8s57uy9v\nBalance: 9498.999975 CKB · auto-checks every 5s\nGet CKB ↗\nRefresh\n3\nOpen a 500 CKB channel\nCKB\nChannel ready\nOBSERVED CHANNEL LIFECYCLE\nCHANNEL_READY\n4\nSend CKB to the peer\nCKB\nSend payment\nPAYMENT RECEIPT\nSTATUS\nSuccess\nAMOUNT\n1 CKB\nCHANNEL ID\n0x3cb2adf20b7f…b15b8bcf74\nPAYMENT HASH\n0x3bb2138cf5d3…ac1bc3e961\nLOCAL BALANCE\n399 CKB → 398 CKB\nRUNTIME EVENTS AND RESULTS\nNODE\nstate\nNode running\nPEER\nconnection\nConnected\nCH 01\nchannel_state\nCHANNEL_READY\n10:39:25\npayment\nSending 1 CKB with keysend…\n10:39:25\npayment\nSubmitted · 0x3bb2138cf5d3…ac1bc3e961\n10:39:25\npayment\nWaiting for a terminal payment status…\n10:39:27\npayment\nSuccess · 1 CKB · 0x3bb2138cf5d3…ac1bc3e961\nIMPLEMENTATION WALKTHROUGH\nBehind the scenes\n\nFollow the data and SDK calls that prepare the node, fund and open the channel, then confirm the payment.\n\nARCHITECTURE\nUnderstand the channel payment flow\n\nopenChannel() locks a chosen amount of Testnet CKB on-chain. Once the channel is ready, pay() can make multiple off-chain payments without creating a new CKB transaction for every small amount.\n\nYour browser node\nFiber WASM\n→ Fiber channel →\nPublic Fiber peer\nReceives payment\nTestnet state is real\n\nPreparing the node starts it locally and connects it to the public peer. Opening the channel and sending payments are separate actions.\n\napp/pay/page.tsx · lines 39–48\n1\nPREPARE THE NODE\nStart the node and derive "
+        },
+        {
+          "check": "interactive node resumes from current IndexedDB with official 0.10.1 config",
+          "passed": true,
+          "result": {
+            "channels": [
+              {}
+            ]
+          }
+        },
+        {
+          "check": "UI payment balance persists after browser node restart",
+          "passed": true,
+          "result": "0x94443ce00"
+        },
+        {
+          "check": "final interactive test channel cooperatively closes on public Testnet",
+          "passed": true,
+          "result": {
+            "channel_id": "0x3cb2adf20b7f56ef4b40e3972b365daec571d034072949d7c5d4acb15b8bcf74",
+            "is_public": true,
+            "is_acceptor": false,
+            "is_one_way": false,
+            "channel_outpoint": "0x640bbdc2cfd445def1b10bdc3c7f48fa152eda053f4490d69173f0600441a57900000000",
+            "pubkey": "02b6d4e3ab86a2ca2fad6fae0ecb2e1e559e0b911939872a90abdda6d20302be71",
+            "state": {
+              "state_name": "Closed",
+              "state_flags": "COOPERATIVE"
+            },
+            "local_balance": "0x94443ce00",
+            "offered_tlc_balance": "0x0",
+            "remote_balance": "0x389fd9800",
+            "received_tlc_balance": "0x0",
+            "pending_tlcs": [],
+            "latest_commitment_transaction_hash": "0x99de52f7ce59b5e178cce394fa1e3a7119477bee3aef6f5d9670c1f607467474",
+            "created_at": "0x1a1e7577741",
+            "enabled": true,
+            "tlc_expiry_delta": "0xdbba00",
+            "tlc_fee_proportional_millionths": "0x3e8",
+            "shutdown_transaction_hash": "0xa6f96a8f7af9ae511e6e914ffec5ef3381e8e8541bab0637309d59970165f62f"
+          }
+        },
+        {
+          "check": "final interactive test node stops cleanly",
+          "passed": true,
+          "result": true
+        }
+      ]
+    }
+  },
+  "fixes": [
+    {
+      "issue": "部分页面将 AwaitingChannelReady 当作 ready",
+      "change": "只认可规范化后的 ChannelReady；现场观察到等待状态下 Send payment 按钮保持禁用。"
+    },
+    {
+      "issue": "SDK 0.3.1 内置旧 Testnet CKB Auth outpoint",
+      "change": "所有浏览器节点工厂和九个下载示例使用受限于 Testnet 的 wasmFactory，替换为官方 0.10.1 配置中的 0x12c569...:0。",
+      "live_cell_checks": [
+        {
+          "id": 1,
+          "status": "unknown",
+          "data_hash": null
+        },
+        {
+          "id": 2,
+          "status": "live",
+          "data_hash": "0x24cbc0576afd0bb1e73871363d4724d5a09f428c16090a0f2cb71de6a4221372"
+        }
+      ]
+    },
+    {
+      "issue": "Success 早于通道余额更新，旧回执曾显示 400 -> 400",
+      "change": "等待所选通道实际余额更新；超时不展示陈旧余额，余额 RPC 失败不覆盖已经确认的支付成功。",
+      "public_recheck": "重新载入当前节点后再次支付，页面实际显示 399 -> 398。"
+    },
+    {
+      "issue": "公共节点连通不保证同步图完整或具备资金路径",
+      "change": "多跳教程补充路径、流动性及接收端 Paid 前提；重启后的协作关闭说明补充通道重建握手等待。"
+    }
+  ],
+  "validation": {
+    "site_build": {
+      "command": "pnpm build --webpack",
+      "passed": true,
+      "details": "最终生产构建、TypeScript 检查和 108 个页面生成通过；使用真实 Google Fonts 下载。",
+      "default_turbopack": {
+        "command": "pnpm build",
+        "passed": false,
+        "error": "next/font/google queries have exactly one entry",
+        "note": "最终尝试遇到 Google Fonts 的 URL 解析错误；保留默认构建脚本与字体源码，使用 Webpack 完成最终构建验证。"
+      }
+    },
+    "typescript": {
+      "command": "pnpm exec tsc --noEmit",
+      "passed": true
+    },
+    "tests": 40,
+    "test_command": "node --test test/fiber-payment-balance.test.mjs examples/tutorials/verified-result-payment/lib/job.test.mjs",
+    "download_archives": 9,
+    "download_project_typechecks": [
+      {
+        "project": "close-channel",
+        "passed": true
+      },
+      {
+        "project": "connect-wasm-node",
+        "passed": true
+      },
+      {
+        "project": "encrypted-data-payment",
+        "passed": true
+      },
+      {
+        "project": "hold-invoice",
+        "passed": true
+      },
+      {
+        "project": "multi-hop-invoice",
+        "passed": true
+      },
+      {
+        "project": "open-channel-payment",
+        "passed": true
+      },
+      {
+        "project": "rusd-payment",
+        "passed": true
+      },
+      {
+        "project": "unidirectional-channel",
+        "passed": true
+      },
+      {
+        "project": "verified-result-payment",
+        "passed": true
+      }
+    ]
+  },
+  "sources": {
+    "release": "https://github.com/nervosnetwork/fiber/releases/tag/v0.10.1",
+    "testnet_config": "https://github.com/nervosnetwork/fiber/blob/v0.10.1/config/testnet/config.yml"
+  },
+  "runtime_helper_sha256": "7f2a3d196b1856b9628b2dd4c6f67a9c5e52618e34e545aaa745df577b251222",
+  "validation_scope": "本文件 validation 记录原审计工作区（Next.js 16.2.6）检查。最新 master 整合后检查见 fiber-v0.10.1.json 的 checks / integration；链上收据与公共测试结果保持原始记录。"
+}

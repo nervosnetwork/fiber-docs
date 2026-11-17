@@ -24,7 +24,7 @@ export default function Page() {
       node.current.listPeers(),
     ]);
     setChannel(findChannel(channels.channels));
-    setConnected(peers.peers.some((peer) => peer.pubkey === bottle.pubkey));
+    setConnected(peers.peers.some((peer) => peer.pubkey.replace(/^0x/, '') === bottle.pubkey.replace(/^0x/, '')));
   }
 
   async function start() {

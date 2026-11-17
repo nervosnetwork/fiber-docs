@@ -17,7 +17,7 @@ export function assertEncryptedInvoiceNotExpired(invoice: ParsedInvoice, now = D
   }
 }
 
-// fiber-js 0.10.0 stringifies the Rust RPC error; SDK 0.3.1 adds this prefix.
+// fiber-js 0.10.1 stringifies the Rust RPC error; SDK 0.3.1 adds this prefix.
 // Read the actual message, never a similar phrase in RPC parameters or data.
 function rpcMessage(error: unknown): string {
   if (!(error instanceof Error)) return '';
@@ -34,7 +34,7 @@ function rpcMessage(error: unknown): string {
   return message;
 }
 
-// These v0.10.0 validation errors return before the payment actor is created.
+// These v0.10.1 validation errors return before the payment actor is created.
 // Route failures, worker failures and timeouts do not prove non-submission.
 const preSubmissionRejections = new Set([
   'invoice is expired',

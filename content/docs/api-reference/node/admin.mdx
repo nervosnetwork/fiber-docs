@@ -1,15 +1,17 @@
 ---
 title: Module `Admin`
 description: Node administration RPC methods
-date: 2026-08-17
+date: 2026-11-16
 ---
 
 ## Module `Admin`
 
 The `admin` module contains privileged node-administration operations. It is
-available on native v0.9.1 nodes but is not enabled by default. Add `admin` to
+available on native v0.10.1 nodes but is not enabled by default. Add `admin` to
 `rpc.enabled_modules` and protect any non-local RPC listener with Biscuit
 authentication before using it.
+
+With Biscuit authentication enabled, `backup` requires `write("node")`.
 
 ### Method `backup`
 

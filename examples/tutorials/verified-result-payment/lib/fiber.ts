@@ -1,3 +1,4 @@
+import { createTestnetFiberFactory } from './fiber-testnet-runtime';
 import type { Channel, FiberBrowserNode } from '@fiber-pay/sdk/browser';
 import { browserNodeTransport } from './job';
 
@@ -39,7 +40,7 @@ function profile(role: 'customer' | 'solver') {
 export async function startRole(role: 'customer' | 'solver') {
   const { FiberBrowserNode, RawKeyCredentialProvider } = await import('@fiber-pay/sdk/browser');
   const keys = profile(role);
-  const node = new FiberBrowserNode({
+  const node = new FiberBrowserNode({wasmFactory:await createTestnetFiberFactory(),
     network: 'testnet',
     credential: new RawKeyCredentialProvider(keys.fiberKey, keys.ckbKey, keys.identifier),
     nodeConfig: { bootnodes: [], logLevel: 'info', ...browserNodeTransport(role) },
@@ -55,7 +56,7 @@ function ready(channel: Channel) {
 export async function connectAndOpenChannel(node: FiberBrowserNode) {
   await node.connectPeer(bottle);
   const current = (await node.listChannels()).channels.find(
-    (channel) => channel.pubkey.toLowerCase() === bottle.pubkey.toLowerCase() &&
+    (channel) => channel.pubkey.replace(/^0x/, '').toLowerCase() === bottle.pubkey.replace(/^0x/, '').toLowerCase() &&
       !['CLOSED', 'SHUTTING_DOWN'].includes(channel.state.state_name),
   );
   if (!current) {
@@ -63,7 +64,7 @@ export async function connectAndOpenChannel(node: FiberBrowserNode) {
   }
   for (let attempt = 0; attempt < 120; attempt += 1) {
     const channel = (await node.listChannels()).channels.find(
-      (item) => item.pubkey.toLowerCase() === bottle.pubkey.toLowerCase(),
+      (item) => item.pubkey.replace(/^0x/, '').toLowerCase() === bottle.pubkey.replace(/^0x/, '').toLowerCase(),
     );
     if (channel && ready(channel)) return channel;
     await wait(2_000);

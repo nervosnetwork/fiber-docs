@@ -1,6 +1,6 @@
 ---
 title: How Fiber Network Works
-date: 2026-06-17
+date: 2026-11-16
 ---
 
 import SimpleChannelCanvas from '@/components/simple-channel-canvas';
@@ -13,7 +13,7 @@ This page explains the core mechanisms behind Fiber: payment channels, multi-hop
 
 ## Payment Channels
 
-A payment channel is a direct relationship between two participants. To open a channel, both participants lock assets into a shared on-chain Script. This funding transaction defines the initial state of the channel.
+A payment channel is a direct relationship between two participants. To open a channel, the participants lock assets into a shared on-chain Script. A normal channel reserves CKB from each side; a private one-way channel can be funded entirely by its initiator. This funding transaction defines the initial state of the channel.
 
 After the channel is opened, participants can start exchanging payments off-chain. Instead of sending every payment to Layer 1, they keep track of the latest balance between themselves and only submit the final result when the channel is closed.
 

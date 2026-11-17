@@ -1,7 +1,7 @@
 ---
 title: Hold Invoice
 description: Deferred settlement invoices for conditional payments in the Fiber network
-date: 2026-06-15
+date: 2026-11-16
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -18,7 +18,7 @@ A **hold invoice** (also known as a HODL invoice) is a special type of invoice w
 
 ```bash
 # Create a hold invoice (note: no --payment-preimage)
-fnn-cli invoice new_invoice --amount 1000 --currency fibt --payment-hash 0x<hash> --description "atomic swap"
+fnn-cli invoice new_invoice --amount 1000 --currency fibt --payment-hash 0x<hash> --hash-algorithm sha256 --description "atomic swap"
 
 # Later, settle it with the preimage
 fnn-cli invoice settle_invoice --payment-hash 0x<hash> --payment-preimage 0x<preimage>
@@ -97,7 +97,7 @@ A hold invoice guarantees that **funds are locked** once the sender pays, but it
 
 **Sender holds the preimage.** The sender pays the hold invoice and later reveals the preimage to let the recipient claim the funds. This is equivalent to "I'll pay you after I'm satisfied." The risk is reversed: the sender could simply never reveal the preimage, leaving the recipient unpaid even after delivering goods.
 
-**Third-party escrow.** A trusted arbitrator holds the preimage. Neither the sender nor the recipient can unilaterally settle or cancel — only the escrow agent can. When both parties agree, the agent settles; when there is a dispute, the agent reviews evidence and decides whether to settle or cancel. This is the closest analogue to traditional escrow services.
+**Third-party escrow.** A trusted arbitrator holds the preimage. Only the preimage holder can authorize settlement, but the receiver still controls `cancel_invoice` unless the application restricts its RPC access. When both parties agree, the agent settles; when there is a dispute, the agent reviews evidence and decides whether to settle or cancel. This is the closest analogue to traditional escrow services.
 
 **Automated / programmatic release.** The preimage is released by an external system when a verifiable condition is met — for example, an on-chain oracle confirming a transaction, or a smart contract callback. Fiber's cross-chain hub uses this model: the preimage is automatically obtained from the outgoing payment on the other chain, so there is no human judgment involved and no opportunity for either party to cheat.
 
@@ -107,7 +107,7 @@ A common question is: why not use a regular invoice and simply call `send_paymen
 
 With a regular invoice, the buyer has made no commitment at all — they could walk away at any time, and the seller has no proof that the buyer ever intended to pay. The seller ships goods entirely on trust.
 
-With a hold invoice, the buyer has already called `send_payment` and the funds are locked in the network. The seller can observe the `Received` state as verifiable proof that funds are committed and waiting. The buyer cannot double-spend or withdraw the locked funds. Both parties are protected: the seller knows the money is there, and the buyer knows the seller cannot claim it without fulfilling the condition.
+With a hold invoice, the buyer has already called `send_payment` and the funds are locked in the network. The seller can observe the `Received` state as verifiable proof that funds are committed and waiting. The buyer cannot double-spend or withdraw the locked funds. The seller can observe the held payment. Buyer protection still depends on who controls the preimage and the application release rule; Fiber does not verify delivery of goods.
 
 ### Why Not Use a Platform with Regular Invoices?
 
@@ -120,7 +120,7 @@ With a hold invoice, the funds never reach the recipient's account until `settle
 | **Funds after payment** | In the platform's account | Locked in the network, not claimable by anyone |
 | **Buyer protection** | Relies on the platform's refund policy | Enforced by the protocol — funds cannot be claimed without settlement |
 | **Refund mechanism** | Platform sends a new payment from its own balance | `cancel_invoice` releases the original locked funds automatically |
-| **Trust assumption** | Buyer trusts the platform | Neither party needs to trust the other |
+| **Trust assumption** | Buyer trusts the platform | Depends on who controls the preimage and release rule |
 
 In short, hold invoices separate the **cryptographic commitment** (funds locked, preimage required to unlock) from the **business logic** (who decides when the condition is met). The commitment layer is universal; the trust model is built on top by your application.
 
@@ -132,8 +132,9 @@ To create a hold invoice, first generate a preimage and compute its hash on your
 
 ```bash
 # Example: generate a random preimage and compute its SHA-256 hash
-PREIMAGE="0x$(openssl rand -hex 32)"
-PAYMENT_HASH="0x$(echo -n "$PREIMAGE" | xxd -r -p | sha256sum | awk '{print $1}')"
+PREIMAGE_HEX="$(openssl rand -hex 32)"
+PREIMAGE="0x$PREIMAGE_HEX"
+PAYMENT_HASH="0x$(printf %s "$PREIMAGE_HEX" | xxd -r -p | openssl dgst -sha256 -r | awk '{print $1}')"
 echo "Preimage: $PREIMAGE"
 echo "Payment hash: $PAYMENT_HASH"
 ```
@@ -149,6 +150,7 @@ fnn-cli invoice new_invoice \
   --amount 1000 \
   --currency fibt \
   --payment-hash "$PAYMENT_HASH" \
+  --hash-algorithm sha256 \
   --expiry 3600 \
   --description "Hold invoice for atomic swap"
 ```
@@ -164,6 +166,7 @@ fnn-cli invoice new_invoice \
       "amount": "0x3E8",
       "currency": "Fibt",
       "payment_hash": "0x<your-payment-hash>",
+      "hash_algorithm": "sha256",
       "expiry": "0xE10",
       "description": "Hold invoice for atomic swap"
     }

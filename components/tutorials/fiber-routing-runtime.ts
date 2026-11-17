@@ -1,5 +1,7 @@
 'use client';
 
+import { createTestnetFiberFactory } from './fiber-testnet-runtime';
+
 import { createBrowserNodeSession } from './browser-node-session';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -125,6 +127,7 @@ export function isReusableChannel(channel: Channel) {
   return (
     state !== 'closed' &&
     state !== 'shuttingdown' &&
+    state !== 'stale' &&
     !state.includes('failed') &&
     !state.includes('aborted')
   );
@@ -137,7 +140,7 @@ export function findReusableChannel(channels: Channel[], pubkey: string) {
   );
   return (
     matches.find((channel) =>
-      normalizedChannelState(channel.state.state_name).includes('ready'),
+      normalizedChannelState(channel.state.state_name) === 'channelready',
     ) ?? matches[0]
   );
 }
@@ -225,6 +228,7 @@ export function useFiberRoutingNode(
         } = await import('@fiber-pay/sdk/browser');
         const profile = getOrCreateProfile(profileKey);
         const node = new FiberBrowserNode({
+          wasmFactory: await createTestnetFiberFactory(),
           network: 'testnet',
           credential: new RawKeyCredentialProvider(
             profile.fiberKey,

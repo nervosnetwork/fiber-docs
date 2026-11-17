@@ -1,7 +1,7 @@
 ---
 title: External Funding
 description: Open a payment channel using a funding transaction signed by an external wallet
-date: 2026-06-17
+date: 2026-11-16
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -36,6 +36,17 @@ For **Rust developers** using secp256k1-sighash locks, Fiber includes a developm
 This helper only covers secp256k1 signing and should be treated as a development reference, not a production wallet integration.
 
 For **JavaScript developers**, see the pinned [`fiber-wallet`](https://github.com/joii2020/fiber-wallet/blob/77decbbe17ef39f1e443015bae41e74e6dd3960d/apps/src/wallet/manager.ts#L553-L584) example using `@ckb-ccc/ccc`. The example includes JSON-RPC to CCC transaction conversion, copying signed witnesses back to the original transaction, standard CCC signers, OmniLock witness preparation, and JoyID redirect signing.
+
+## Timeouts, Cancellation, and Recovery
+
+Before signed submission, `fiber.external_funding_timeout_seconds` limits the wallet-signing wait (default: 5 minutes). You can also cancel with `abandon_channel`.
+
+After `submit_signed_funding_tx` succeeds, FNN disables time-based funding cancellation, manual `abandon_channel`, and peer `TxAbort` for that opening. The signed inputs could still fund the channel on-chain, so FNN must retain its saved commitment transaction and channel state.
+
+- If the peer goes offline before broadcast, spend one of the funding input cells in another wallet transaction. Once the conflict confirms and reaches FNN's tracing confirmation depth, FNN aborts the opening with `FUNDING_ABORTED`.
+- If the funding transaction already confirmed, call `shutdown_channel` with `force: true` to publish the saved initial commitment transaction and recover through on-chain settlement.
+
+Keep the node state until cancellation or settlement is confirmed. See the [0.10.1 recovery notes](https://github.com/nervosnetwork/fiber/blob/v0.10.1/docs/external-funding.md#timeouts-cancellation-and-stuck-opening-recovery).
 
 ## Related APIs
 

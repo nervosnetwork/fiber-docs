@@ -1,11 +1,13 @@
 ---
 title: Using fiber-js in a Browser Extension
 description: Guide for running @nervosnetwork/fiber-js inside a Chrome browser extension using Offscreen Documents
-date: 2026-06-17
+date: 2026-11-16
 url: /docs/build/browser-extension
 ---
 
 ## Introduction
+
+> **0.10.1 compatibility:** The extension repository is an independent demo. The official 0.10.1 npm bundle creates Blob-backed workers, so the demo's `worker-src 'self'` policy alone does not admit those worker URLs. Package extension-local worker entry files and verify the Manifest V3 CSP before upgrading the demo. The ordinary browser-page WASM test does not validate an extension deployment.
 
 This demo verifies whether `@nervosnetwork/fiber-js` can run inside a browser extension.
 

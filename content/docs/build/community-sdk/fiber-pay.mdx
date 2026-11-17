@@ -1,14 +1,14 @@
 ---
 title: fiber-pay
 description: Community toolchain for Fiber RPC, browser nodes, passkeys, React payment flows, and automation
-date: 2026-08-17
+date: 2026-11-17
 dependencies:
   - name: "@fiber-pay/sdk"
     minVersion: "0.3.1"
     link: "https://www.npmjs.com/package/@fiber-pay/sdk"
   - name: Fiber Node
-    minVersion: "0.9.1"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.9.1"
+    minVersion: "0.10.1"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.10.1"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -23,7 +23,7 @@ local node lifecycle helpers, and an automation-friendly CLI.
   `fiber-pay` is maintained independently of the official Fiber repository.
   Version 0.3.1 declares compatibility with the stable Fiber WASM package
   `@nervosnetwork/fiber-js ~0.9.0`. Pin compatible package and node versions,
-  and rerun integration tests before upgrading either side.
+  and rerun integration tests before upgrading either side. Fiber 0.10.1 is outside this declared peer range. This site tests its pinned 0.3.1 wrapper with Fiber JS 0.10.1 for the browser tutorials; that is not an upstream compatibility guarantee.
 </Callout>
 
 ## Where it fits
@@ -115,6 +115,7 @@ import {
   FiberBrowserNode,
   PasskeyCredentialProvider,
 } from "@fiber-pay/sdk/browser";
+import { createTestnetFiberFactory } from "./fiber-testnet-runtime";
 
 const credential = new PasskeyCredentialProvider("my-wallet-testnet");
 
@@ -122,6 +123,7 @@ const credential = new PasskeyCredentialProvider("my-wallet-testnet");
 await credential.register("alice");
 
 const node = new FiberBrowserNode({
+  wasmFactory: await createTestnetFiberFactory(),
   network: "testnet",
   credential,
 });
@@ -130,6 +132,11 @@ await node.start();
 const info = await node.getNodeInfo();
 console.log(info.pubkey);
 ```
+
+For SDK 0.3.1 with Fiber JS 0.10.1, copy the
+[`fiber-testnet-runtime.ts` helper](/docs/build/connect-wasm-node#testnet-configuration-for-0101)
+from the browser-node guide or a downloadable tutorial. It updates the SDK's
+obsolete Testnet CKB Auth dependency to the official 0.10.1 configuration.
 
 Persist a stable `walletId` or credential identifier for the same user and
 network. Changing it creates a different local identity instead of reopening

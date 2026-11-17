@@ -1,7 +1,7 @@
 ---
 title: "Tutorial: Open a Fiber Channel and Send a Payment"
 description: "Fund a Fiber WASM browser node, open a real Testnet channel, and send 1 CKB to a public peer from React"
-date: 2026-09-04
+date: 2026-11-17
 full: true
 ---
 
@@ -78,7 +78,7 @@ repeats the check every five seconds while the page is visible, allowing the
 interface to unlock channel creation once the address can cover the requested
 funding amount. The demo also provides a manual refresh action.
 
-Open the tutorial channel with 500 CKB on [Fiber v0.10.0](https://github.com/nervosnetwork/fiber/releases/tag/v0.10.0).
+Open the tutorial channel with 500 CKB on [Fiber v0.10.1](https://github.com/nervosnetwork/fiber/releases/tag/v0.10.1).
 Hover or focus **500 CKB** in the demo for the breakdown: **500 CKB funded −
 100 CKB reserved = 400 CKB initially available for payments**. The 100 CKB is reserved for on-chain settlement when the channel closes.
 Transfers and pending payments change the available balance afterward.
@@ -174,6 +174,11 @@ the full channel ID, payment hash, and funding-transaction explorer link even
 when the displayed value is shortened. A tooltip confirms successful copying.
 The funding link appears once the node reports the transaction outpoint.
 
+In 0.10.1, `Success` can arrive before the channel's balance snapshot updates.
+The receipt polls for that update rather than displaying a stale balance. If
+the balance cannot be refreshed, the confirmed payment keeps its successful
+status.
+
 ### Wire the complete flow into React
 
 `PayPage()` turns SDK state into a guided interface that prevents actions from
@@ -201,3 +206,5 @@ npm run dev
 ```
 
 Then open `http://localhost:3000/pay` in your browser.
+
+The page and download use Fiber JS 0.10.1 with SDK 0.3.1 and the [Testnet configuration helper](/docs/build/connect-wasm-node#testnet-configuration-for-0101).

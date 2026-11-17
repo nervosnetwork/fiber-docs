@@ -50,7 +50,7 @@ export default function Page() {
     const result = await prepareReceiverInbound(receiver.current);
     setStatus(result.status === 'Success' ? 'Receiver C can now receive the held payment' : `Inbound preparation ${result.status}`);
     const channels = (await receiver.current.listChannels()).channels;
-    setReceiverChannel(channels.find((channel) => channel.pubkey === bottle.pubkey) ?? null);
+    setReceiverChannel(channels.find((channel) => channel.pubkey.replace(/^0x/, '') === bottle.pubkey.replace(/^0x/, '')) ?? null);
   }
 
   async function create() {
@@ -95,11 +95,11 @@ export default function Page() {
     const refreshChannels = async () => {
       if (sender.current) {
         const channels = (await sender.current.listChannels()).channels;
-        setSenderChannel(channels.find((channel) => channel.pubkey === bottle.pubkey) ?? null);
+        setSenderChannel(channels.find((channel) => channel.pubkey.replace(/^0x/, '') === bottle.pubkey.replace(/^0x/, '')) ?? null);
       }
       if (receiver.current) {
         const channels = (await receiver.current.listChannels()).channels;
-        setReceiverChannel(channels.find((channel) => channel.pubkey === bottle.pubkey) ?? null);
+        setReceiverChannel(channels.find((channel) => channel.pubkey.replace(/^0x/, '') === bottle.pubkey.replace(/^0x/, '')) ?? null);
       }
     };
     void refreshChannels();

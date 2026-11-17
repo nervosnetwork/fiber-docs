@@ -1,7 +1,7 @@
 ---
 title: WASM Node
 description: Run Fiber Network node using WebAssembly
-date: 2026-06-18
+date: 2026-11-16
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -27,9 +27,9 @@ Because it runs in the browser, the lifecycle of a `fiber-js` node is affected b
 Install the npm package:
 
 ```sh
-npm install @nervosnetwork/fiber-js@0.10.0
+npm install @nervosnetwork/fiber-js@0.10.1
 # or
-pnpm add @nervosnetwork/fiber-js@0.10.0
+pnpm add @nervosnetwork/fiber-js@0.10.1
 ```
 
 Then import from `@nervosnetwork/fiber-js`:
@@ -46,13 +46,13 @@ Before using it, make sure your project environment meets these requirements:
 - Serve WASM files with the correct `application/wasm` MIME type in deployment.
 - Configure CORS, SSL/TLS, and browser isolation appropriately, as described later in this document.
 
-When connecting to public nodes or self-hosted peers, keep `fiber-js`, `fnn`, and the peer node release line aligned, since small RPC or protocol differences can otherwise surface during peer, channel, or payment flows.
+These examples pin the official 0.10.1 package. New channels require 0.10.x peers because this release uses V2 P2P messaging; a pre-0.10 peer cannot open a new channel with this node. Keep the browser runtime and peer release line aligned.
 
 ### Basic Usage
 
 The minimum startup flow is: create a `Fiber` instance, prepare a YAML config, provide the Fiber node key and optional CKB secret key, call `start()`, and then verify node state with `nodeInfo()` or `listPeers()`.
 
-The example below is adapted from the upstream [`fiber-js/README.md`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/fiber-js/README.md) and [`fiber-js/src/index.ts`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/fiber-js/src/index.ts). `Fiber`, `randomSecretKey()`, `start()`, `nodeInfo()`, and `listPeers()` are all public exports from the current `@nervosnetwork/fiber-js` package. This is not a complete demo that runs out of the box on this site. Before running it, publish the YAML config for the target network at `/fiber-config/testnet.yml`, or change `configPath` to your own static asset path, and satisfy the browser isolation, CORS, CSP, and WSS peer requirements described later.
+The example below is adapted from the upstream [`fiber-js/README.md`](https://github.com/nervosnetwork/fiber/blob/v0.10.1/fiber-js/README.md) and [`fiber-js/src/index.ts`](https://github.com/nervosnetwork/fiber/blob/v0.10.1/fiber-js/src/index.ts). `Fiber`, `randomSecretKey()`, `start()`, `nodeInfo()`, and `listPeers()` are all public exports from the current `@nervosnetwork/fiber-js` package. This is not a complete demo that runs out of the box on this site. Before running it, publish the YAML config for the target network at `/fiber-config/testnet.yml`, or change `configPath` to your own static asset path, and satisfy the browser isolation, CORS, CSP, and WSS peer requirements described later.
 
 ```ts
 import { Fiber, randomSecretKey } from "@nervosnetwork/fiber-js";
@@ -92,15 +92,15 @@ This example uses a plaintext CKB key. Make sure it is handled securely and neve
 
 ### Configuration
 
-The `config` argument of `start(config, ...)` uses a YAML configuration close to `fnn`. The default config files can be obtained from the [`config`](https://github.com/nervosnetwork/fiber/tree/v0.10.0/config) directory in the Fiber source code and selected for the target network:
+The `config` argument of `start(config, ...)` uses a YAML configuration close to `fnn`. The default config files can be obtained from the [`config`](https://github.com/nervosnetwork/fiber/tree/v0.10.1/config) directory in the Fiber source code and selected for the target network:
 
-- testnet: [`config/testnet/config.yml`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/config/testnet/config.yml)
-- mainnet: [`config/mainnet/config.yml`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/config/mainnet/config.yml)
+- testnet: [`config/testnet/config.yml`](https://github.com/nervosnetwork/fiber/blob/v0.10.1/config/testnet/config.yml)
+- mainnet: [`config/mainnet/config.yml`](https://github.com/nervosnetwork/fiber/blob/v0.10.1/config/mainnet/config.yml)
 
 Use `fnn --help` to get detailed config argument information. The fiber config file and CLI arguments mostly come from the same config definitions.
 
 <p className="text-sm text-fd-muted-foreground">
-For deeper logic or implementation details behind a config option, see the config definitions in the Fiber source code: <a href="https://github.com/nervosnetwork/fiber/blob/v0.10.0/crates/fiber-lib/src/config.rs">config.rs</a> aggregates the <code>fiber</code>, <code>rpc</code>, <code>ckb</code>, and other config sections, while concrete fields are defined in <a href="https://github.com/nervosnetwork/fiber/blob/v0.10.0/crates/fiber-lib/src/fiber/config.rs">fiber/config.rs</a>, <a href="https://github.com/nervosnetwork/fiber/blob/v0.10.0/crates/fiber-lib/src/rpc/config.rs">rpc/config.rs</a>, and <a href="https://github.com/nervosnetwork/fiber/blob/v0.10.0/crates/fiber-lib/src/ckb/config.rs">ckb/config.rs</a>.
+For deeper logic or implementation details behind a config option, see the config definitions in the Fiber source code: <a href="https://github.com/nervosnetwork/fiber/blob/v0.10.1/crates/fiber-lib/src/config.rs">config.rs</a> aggregates the <code>fiber</code>, <code>rpc</code>, <code>ckb</code>, and other config sections, while concrete fields are defined in <a href="https://github.com/nervosnetwork/fiber/blob/v0.10.1/crates/fiber-lib/src/fiber/config.rs">fiber/config.rs</a>, <a href="https://github.com/nervosnetwork/fiber/blob/v0.10.1/crates/fiber-lib/src/rpc/config.rs">rpc/config.rs</a>, and <a href="https://github.com/nervosnetwork/fiber/blob/v0.10.1/crates/fiber-lib/src/ckb/config.rs">ckb/config.rs</a>.
 </p>
 
 When connecting to CKB testnet or mainnet, use the config for the corresponding network. Production environments must use the mainnet config.
@@ -156,6 +156,8 @@ The key restriction is that the signer may only fill witnesses or signature fiel
 If the browser page cannot complete signing directly, for example because the target wallet or signing page does not provide a usable CORS interface, the signing process can be split into a redirect flow. First call `openChannelWithExternalFunding()` on the current page and save the returned `channel_id` and `unsigned_funding_tx`. Then redirect to the wallet page to finish signing. After signing, return to the original page and call `submitSignedFundingTx()` with the same `channel_id` and the signed transaction. As long as the signing page does not change the transaction structure and returns before the external funding timeout, this cross-page signing and resume-submit flow is valid.
 
 The default external funding timeout is 5 minutes and is controlled by `fiber.external_funding_timeout_seconds`. For mobile wallet redirects, slow user confirmation, or longer signing flows, increase this value and show the remaining time clearly in the UI.
+
+After `submitSignedFundingTx()` succeeds, the signing timeout and ordinary funding timeout no longer discard the channel, and `abandonChannel()` cannot cancel it. If the peer disappears before broadcast, spend a funding input in a conflicting wallet transaction and wait for confirmation; FNN then marks the opening `FUNDING_ABORTED`. If funding already confirmed, use a force close. See [External Funding](/docs/concept/channels/external-funding) for recovery details.
 
 ## API Model
 
@@ -214,7 +216,8 @@ Design the prefix around these dimensions:
 Lifecycle notes:
 
 - After a page refresh, if `fiberKeyPair` and `databasePrefix` stay the same, the node reuses state from IndexedDB.
-- `stop()` only terminates workers. It does not delete IndexedDB data.
+- In 0.10.1, `await stop()` shuts down the node, waits for final storage writes, and then terminates both workers. It does not delete IndexedDB data. A 30-second timeout rejects the promise and forces worker termination; a safe backup is then not guaranteed.
+- A `Fiber` instance can be started only once. After stopping it, create a new `Fiber` instance to restart with the same keys and `databasePrefix`.
 - When switching accounts, switching networks, or logging out, call `await fiber.stop()` before starting a new instance.
 - Do not open the same `databasePrefix` from two pages or two instances at the same time. This can cause state races.
 - When the browser enters the background, the mobile operating system enables power saving, or the page is closed, the Fiber node may be paused. Use an always-online `fnn` for high-availability receiving, route forwarding, or watchtower capabilities.
@@ -262,8 +265,8 @@ Node.js environments are only suitable for testing or special integration scenar
 
 ## Where to Look Next
 
-- API shape: [`fiber-js/src/index.ts`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/fiber-js/src/index.ts) and [`fiber-js/src/types`](https://github.com/nervosnetwork/fiber/tree/v0.10.0/fiber-js/src/types) are the direct sources for `fiber-js` methods and parameter types.
-- Runtime details: [`crates/fiber-wasm/src/lib.rs`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/crates/fiber-wasm/src/lib.rs) shows how WASM starts the Fiber actor, loads config, and initializes the store.
-- Browser WSS examples: [`fiber-js/README.md`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/fiber-js/README.md) shows WSS bootnode config for browser use, and [`docs/network-nodes.md`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/docs/network-nodes.md) lists public node pubkeys.
-- External funding: [External Funding](/docs/concept/channels/external-funding) explains the flow semantics. [`fiber-js/README.md`](https://github.com/nervosnetwork/fiber/blob/v0.10.0/fiber-js/README.md) records the current constraints of `openChannelWithExternalFunding()` and `submitSignedFundingTx()`.
+- API shape: [`fiber-js/src/index.ts`](https://github.com/nervosnetwork/fiber/blob/v0.10.1/fiber-js/src/index.ts) and [`fiber-js/src/types`](https://github.com/nervosnetwork/fiber/tree/v0.10.1/fiber-js/src/types) are the direct sources for `fiber-js` methods and parameter types.
+- Runtime details: [`crates/fiber-wasm/src/lib.rs`](https://github.com/nervosnetwork/fiber/blob/v0.10.1/crates/fiber-wasm/src/lib.rs) shows how WASM starts the Fiber actor, loads config, and initializes the store.
+- Browser WSS examples: [`fiber-js/README.md`](https://github.com/nervosnetwork/fiber/blob/v0.10.1/fiber-js/README.md) shows WSS bootnode config for browser use, and [`docs/network-nodes.md`](https://github.com/nervosnetwork/fiber/blob/v0.10.1/docs/network-nodes.md) lists public node pubkeys.
+- External funding: [External Funding](/docs/concept/channels/external-funding) explains the flow semantics. [`fiber-js/README.md`](https://github.com/nervosnetwork/fiber/blob/v0.10.1/fiber-js/README.md) records the current constraints of `openChannelWithExternalFunding()` and `submitSignedFundingTx()`.
 - RPC details: [API Reference](/docs/api-reference) can be used to verify field names, state names, and error meanings.

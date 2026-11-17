@@ -1,13 +1,13 @@
 ---
 title: "Multi-hop Transfers"
 description: Route Testnet payments through Fiber's public relay nodes
-date: 2026-08-17
+date: 2026-11-17
 author: "sunchengzhu"
 authorUrl: "https://github.com/sunchengzhu"
 dependencies:
   - name: Fiber Node
-    minVersion: "0.10.0"
-    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.10.0"
+    minVersion: "0.10.1"
+    link: "https://github.com/nervosnetwork/fiber/releases/tag/v0.10.1"
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -15,7 +15,7 @@ import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
 
 ## TL;DR
 
-Run two local v0.10.0 nodes, connect each one to a different public Testnet relay, open two public channels, and pay an invoice from Node A to Node B. Neither local node needs a public IP.
+Run two local v0.10.1 nodes, connect them to public Testnet relays, open two public channels, and pay an invoice from Node A to Node B. Neither local node needs a public IP. Different relays must have an active channel path between them with enough liquidity in the payment direction.
 
 ~~~text
 ┌────────┐       ┌────────┐       ┌────────┐       ┌────────┐
@@ -25,6 +25,10 @@ Run two local v0.10.0 nodes, connect each one to a different public Testnet rela
   sender           relay 1          relay 2          receiver
 ~~~
 
+<Callout type="info" title="Check the relay path first">
+The diagram describes the intended route. Connecting to both relays and opening your two channels does not guarantee that a usable route exists between bottle and bracer. Their channels, enabled directions, and liquidity can change. To establish a simpler baseline, connect both local nodes to bottle and open a channel from each node to bottle; this produces a real two-hop payment through the public relay: Node A → bottle → Node B. Use different relays after confirming an available path between them.
+</Callout>
+
 Fiber supports two routing modes:
 
 - **Gossip routing**: Node A learns the network graph and builds the route.
@@ -33,7 +37,7 @@ Fiber supports two routing modes:
 ## Prerequisites
 
 - Complete [Basic Transfer](/docs/quick-start/basic-transfer) first.
-- Use the v0.10.0 <code>fnn</code>, <code>fnn-cli</code>, and <code>config/testnet/config.yml</code> files from the same [release package](https://github.com/nervosnetwork/fiber/releases/tag/v0.10.0).
+- Use the v0.10.1 <code>fnn</code>, <code>fnn-cli</code>, and <code>config/testnet/config.yml</code> files from the same [release package](https://github.com/nervosnetwork/fiber/releases/tag/v0.10.1).
 - Fund **each** local node with at least 562 Testnet CKB: 500 CKB for the channel, about 61 CKB for a change cell, and a small transaction-fee margin.
 
 <Callout type="warning">
@@ -159,7 +163,7 @@ Run <code>peer list_peers</code> on both local RPC endpoints and confirm that th
 
 ## 3. Open Both Public Channels
 
-Fund each channel with 500 CKB, including 100 CKB for on-chain settlement. In shannons, 500 CKB is <code>50000000000</code>; its RPC hex quantity is <code>0xba43b7400</code>.
+The documented public relays auto-accept a channel funded with at least 500 CKB. In shannons, 500 CKB is <code>50000000000</code>; its RPC hex quantity is <code>0xba43b7400</code>.
 
 <Tabs items={['CLI', 'RPC', 'CCC']}>
   <Tab value="CLI">
@@ -303,6 +307,8 @@ To delegate route finding to <code>bottle</code>, pass its pubkey as the trampol
 
 The equivalent RPC field is <code>"trampoline_hops": ["02b6...be71"]</code>; the CCC field is <code>trampolineHops</code>.
 
+Trampoline routing delegates pathfinding; it still needs funded channels and sufficient outbound liquidity along the remaining route. It cannot bridge two relay components that have no usable channel path.
+
 <Callout type="warning" title="Payments are asynchronous">
 <code>send_payment</code> may return <code>Created</code> or <code>Inflight</code>. Copy its <code>payment_hash</code> and poll until the status is <code>Success</code> or <code>Failed</code>.
 </Callout>
@@ -313,6 +319,8 @@ The equivalent RPC field is <code>"trampoline_hops": ["02b6...be71"]</code>; the
 ~~~
 
 After <code>Success</code>, compare <code>channel list_channels</code> on Node A and Node B. Node A's local balance decreases by the invoice amount plus relay fees; Node B's local balance increases by the invoice amount.
+
+Also verify the receiver's receipt with <code>fnn-cli --url http://127.0.0.1:8237 invoice get_invoice --payment-hash &lt;payment_hash&gt;</code>. The ordinary invoice should report <code>Paid</code>.
 
 ## 6. Close Both Channels
 

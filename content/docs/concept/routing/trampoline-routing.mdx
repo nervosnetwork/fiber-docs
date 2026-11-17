@@ -1,7 +1,7 @@
 ---
 title: Trampoline Routing
 description: How Fiber delegates pathfinding to trampoline nodes so lightweight clients can route payments without a full network graph
-date: 2026-06-15
+date: 2026-11-16
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -253,7 +253,7 @@ Set the `trampoline_hops` field in the `send_payment` RPC to specify the trampol
 The `trampoline_hops` array is an ordered list of public keys. The first entry is the node the sender routes to directly; subsequent entries form the trampoline chain. The final recipient is implied by the invoice and must not appear in the trampoline hops list.
 
 <Callout type="warning">
-  When using `trampoline_hops`, `max_fee_amount` is required. This sets the total fee budget for the entire trampoline route, including both the outer route and all trampoline sub-routes.
+  `send_payment` computes a fee budget from `max_fee_rate` even when `max_fee_amount` is omitted. Set an explicit `max_fee_amount` to cap the budget further; the effective cap is the lower of that amount and the rate-derived limit. This covers the outer route and all trampoline sub-routes.
 </Callout>
 
 ### Feature Negotiation
@@ -273,7 +273,7 @@ Trampoline routing introduces several constraints beyond those of standard multi
 | Constraint | Value | Notes |
 |------------|-------|-------|
 | Max trampoline hops | 5 | Defined as `MAX_TRAMPOLINE_HOPS_LIMIT` |
-| `max_fee_amount` | Required | Must be set when `trampoline_hops` is provided |
+| `max_fee_amount` | Optional RPC cap | Otherwise derived from `max_fee_rate`; an explicit cap cannot exceed that rate-derived limit |
 | Duplicate hops | Rejected | The trampoline hops list must not contain duplicates |
 | Target in hops | Rejected | The final recipient must not appear in `trampoline_hops` |
 | Self-payment | Incompatible | `allow_self_payment` cannot be used with trampoline routing |
@@ -281,7 +281,7 @@ Trampoline routing introduces several constraints beyond those of standard multi
 | Inner packet size | 1300 bytes | Smaller than the outer onion's 6500 bytes |
 
 <Callout type="info">
-  The MPP (Multi-Path Payment) restriction exists because splitting a trampoline payment across multiple paths would require coordinating multiple inner onions, each with their own trampoline hop chain. With a single trampoline hop, MPP works normally — the sender splits the payment across multiple routes to the trampoline node, and the trampoline node forwards each part independently.
+  The MPP (Multi-Path Payment) restriction exists because splitting a trampoline payment across multiple paths would require coordinating multiple inner onions, each with their own trampoline hop chain. With a single trampoline hop, `max_parts` can authorize splitting on the trampoline's downstream payment. The source payment to the first trampoline remains single-part in 0.10.1.
 </Callout>
 
 ## Trampoline vs. Source Routing

@@ -7,14 +7,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 
-const FIBER_PROJECT_ROOT = path.resolve(
-  process.env.FIBER_PROJECT_ROOT || "/Users/sonny/nervos/fiber",
-);
-const FIBER_DOCS_REF = process.env.FIBER_DOCS_REF || "v0.9.1";
+// A host's unpinned checkout may contain older docs than FIBER_DOCS_REF.
+// Index upstream docs only when the caller explicitly supplies a matching source tree.
+const FIBER_PROJECT_ROOT = process.env.FIBER_PROJECT_ROOT
+  ? path.resolve(process.env.FIBER_PROJECT_ROOT)
+  : null;
+const FIBER_DOCS_REF = process.env.FIBER_DOCS_REF || "v0.10.1";
 
 const DOC_DIRS = [
   path.join(PROJECT_ROOT, "content"),
-  path.join(FIBER_PROJECT_ROOT, "docs"),
+  ...(FIBER_PROJECT_ROOT ? [path.join(FIBER_PROJECT_ROOT, "docs")] : []),
 ];
 
 const EXTS = [".md", ".mdx"];
@@ -79,7 +81,7 @@ function computeUrl(filePath, frontmatter) {
     const cleaned = withoutExt.startsWith("docs/") ? withoutExt.slice(5) : withoutExt;
     return `/docs/${cleaned}`;
   }
-  if (filePath.includes("/nervos/fiber/docs/")) {
+  if (FIBER_PROJECT_ROOT && filePath.startsWith(path.join(FIBER_PROJECT_ROOT, "docs") + path.sep)) {
     return `https://github.com/nervosnetwork/fiber/blob/${FIBER_DOCS_REF}/docs/${rel}`;
   }
   return `/${withoutExt}`;

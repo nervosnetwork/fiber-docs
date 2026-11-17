@@ -70,7 +70,8 @@ export async function readOneWayChannel(
   const { channels } = await node.listChannels();
   return channels.find(
     (channel) =>
-      channel.pubkey === acceptorPubkey && channel.is_one_way,
+      channel.pubkey.replace(/^0x/, '') === acceptorPubkey.replace(/^0x/, '') &&
+      channel.is_one_way,
   );
 }`,
   },

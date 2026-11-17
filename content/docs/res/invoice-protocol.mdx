@@ -1,7 +1,7 @@
 ---
 title: Fiber Invoice Protocol
 description: Fiber Network Invoice Protocol
-date: 2026-06-09
+date: 2026-11-16
 ---
 
 ## Overall Design
@@ -37,7 +37,7 @@ For decoding, we simply perform the inverse decompression operation.
 The `signature` field: [optional] with type of `[u8; 65]` = 520 bits
 
 - The secp256k1 signature of the entire invoice, can be used to verify the integrity and correctness of the invoice, may also be used to imply the generator node of this invoice.
-By default, this filed is none, the method to generate signature:
+Native 0.10.1 `new_invoice` signs invoices with the node identity key, and `send_payment` rejects unsigned invoices. The encoding can still represent an unsigned invoice for parsing. The signature is generated as follows:
   - `message_hash = SHA256-hash (((human-readable part) → bytes) + (data bytes))`
        then sign it with `Secp256k1`
   - It may use a customized sign function: `Secp256k1::new().sign_ecdsa_recoverable(hash, &private_key)`
@@ -50,20 +50,19 @@ The data part is designed to add non-mandatory fields easily, and it is very lik
     - milliseconds since 1970
     - The time the invoice was generated
 2. `payment_hash`: [mandatory] 256 bits
-    - SHA256 payment_hash, could specified when creating a invoice, but we need to make sure `payment_hash` is the unique identifier of a invoice.
-    - If creating a `HODL` invoice, a `preimage` parameter must be provided, and the `payment_hash` is generated using `blake2b_256(preimage)` when the invoice is created.
-    - For `AMP invoices` (Atomic Multi-path Payments), the `payment_hash` is randomly generated.
-3. `expiry`: [optional] 32 bits
-    - `timestamp + expiry` is the expiration time of the invoice
+    - The unique payment identifier, computed from the preimage with `ckb_hash` (default) or `sha256`.
+    - A hold invoice supplies only `payment_hash` at creation; reveal the matching preimage later with `settle_invoice`.
+    - MPP parts share the invoice payment hash; the invoice also carries a payment secret for aggregating parts.
+3. `expiry`: [optional] 64 bits
+    - `timestamp + expiry * 1000` is the expiration time in milliseconds
     - Unit: seconds
 4. `description`: [optional] variable length
     - A string of UTF-8 text to display payment information, such as "a cup of coffee"
-5. `final htlc timeout`: [optional] 32 bits
-    - Specifies the final htlc timeout, which may be longer because it may take more hops to reach CKB network
-    - Unit: seconds
+5. `final_htlc_minimum_expiry_delta`: [optional] 64 bits
+    - Minimum relative expiry for the final TLC, in milliseconds. Native 0.10.1 `new_invoice` defaults to 9,600,000 ms (160 minutes); `final_htlc_timeout` is a deprecated attribute.
 6. `fallback`: [optional] variable length
     - A CKB address used for fallback in case the invoice payment fails
-7. `feature`: [optional] 32 bits
+7. `feature`: [optional] variable-length byte vector
     - Feature flag to specify features supported by the payment
 8. `payee_public_key`: [optional] 33 bytes
     - The public key of the payee
@@ -73,3 +72,5 @@ The data part is designed to add non-mandatory fields easily, and it is very lik
     - The hash algorithm used to generate the `payment_hash` from the preimage. When this is missing, the default hash algorithm ckb hash is used.
         - 0: ckb hash
         - 1: sha256
+11. `payment_secret`: [optional] 256 bits
+    - Required for MPP aggregation; generated when an invoice enables MPP.

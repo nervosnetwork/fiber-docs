@@ -1,7 +1,7 @@
 ---
 title: Configuration Reference
 description: Reference for Fiber Node config.yml fields, supported overrides, and defaults
-date: 2026-08-17
+date: 2026-11-16
 ---
 
 Fiber Node is mainly configured by `config.yml`. Many fields in this file can also be set from command-line flags or environment variables when starting `fnn`.
@@ -32,7 +32,7 @@ These options affect native `fnn` startup. They are not `config.yml` fields.
 | `-d, --dir <BASE_DIR>` | Set `BASE_DIR`; also changes the implicit config path to `$BASE_DIR/config.yml` when `--config` is not provided. |
 | `-s, --services <services>` | Services to start. When present, this replaces the `services` list from `config.yml`. Values are comma-separated or space-separated. |
 | `--check-validate` | Validate the Fiber store database and exit without starting services. |
-| `--restore <BACKUP_PATH>` | Restore the Fiber database and node keys from a v0.9.1 timestamped backup directory, then exit. See the [native v0.9.1 restore requirements](/docs/operate/backup#restore-a-v090-online-backup). |
+| `--restore <BACKUP_PATH>` | Restore the Fiber database and node keys from a v0.10.1 timestamped backup directory, then exit. See the [native v0.10.1 restore requirements](/docs/operate/backup#restore-a-v090-online-backup). |
 
 ## Top-Level Fields
 
@@ -72,6 +72,7 @@ Service dependencies:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `listening_addr` | string | `/ip4/0.0.0.0/tcp/0` | TCP listening address for P2P connections (multiaddr format) |
+| `listening_addrs` | string[] | `[]` | Additional P2P listening addresses, appended to `listening_addr`, for example an IPv6 or QUIC listener. |
 | `reuse_port_for_websocket` | bool | `true` | Also listen on a WebSocket multiaddr using the same TCP port. |
 | `announce_listening_addr` | bool | `false` | Whether to announce the listening address to peers |
 | `announce_private_addr` | bool | `false` | Whether to announce and process private addresses. Keep `false` unless testing or running a private network. |
@@ -109,13 +110,19 @@ fiber:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `open_channel_auto_accept_min_ckb_funding_amount` | u64 | `10000000000` (100 CKB) | Minimum CKB funding to auto-accept channel requests |
-| `auto_accept_channel_ckb_funding_amount` | u64 | `9900000000` (99 CKB) | CKB amount to auto-accept. Set to `0` to disable auto-accept. |
+| `open_channel_auto_accept_min_ckb_funding_amount` | u64 | `10000000000` (100 CKB) | Minimum spendable CKB contribution from the opener, after its channel reserve is deducted, for automatic acceptance. With the standard V2 reserve, the default requires at least 200 CKB total opener funding. |
+| `auto_accept_channel_ckb_funding_amount` | u64 | `10000000000` (100 CKB) | CKB contributed when auto-accepting a CKB channel. Set to `0` to disable auto-accept. |
 | `to_be_accepted_channels_number_limit` | usize | `20` | Max pending channels from one peer |
 | `to_be_accepted_channels_bytes_limit` | usize | `51200` (50 KiB) | Max storage bytes of pending channels from one peer |
 | `pending_channels_number_limit` | usize | `100` | Max pending channel openings globally |
-| `funding_timeout_seconds` | u64 | `86400` (1 day) | Timeout for funding transaction confirmation |
+| `funding_timeout_seconds` | u64 | `86400` (1 day) | Timeout for ordinary funding. Disabled for external funding after signed submission succeeds; see [External Funding](/docs/concept/channels/external-funding). |
 | `external_funding_timeout_seconds` | u64 | `300` (5 min) | Timeout waiting for externally signed funding tx |
+
+### Storage Durability
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `store_sync_writes` | bool | `false` | Wait for each database write to reach disk. Enable for nodes holding funds for others; it trades throughput for protection against losing recent channel writes after power loss or a hard reboot. |
 
 ### TLC
 
@@ -267,6 +274,7 @@ Only fields wired to `clap` can be overridden by environment variables. List val
 | Field | Environment variable |
 |-------|----------------------|
 | `listening_addr` | `FIBER_LISTENING_ADDR` |
+| `listening_addrs` | `FIBER_LISTENING_ADDRS` |
 | `announce_listening_addr` | `FIBER_ANNOUNCE_LISTENING_ADDR` |
 | `announce_private_addr` | `FIBER_ANNOUNCE_PRIVATE_ADDR` |
 | `announced_addrs` | `FIBER_ANNOUNCED_ADDRS` |
@@ -289,6 +297,7 @@ Only fields wired to `clap` can be overridden by environment variables. List val
 | `gossip_network_num_targeted_active_syncing_peers` | `FIBER_GOSSIP_NETWORK_NUM_TARGETED_ACTIVE_SYNCING_PEERS` |
 | `gossip_network_num_targeted_outbound_passive_syncing_peers` | `FIBER_GOSSIP_NETWORK_NUM_TARGETED_OUTBOUND_PASSIVE_SYNCING_PEERS` |
 | `sync_network_graph` | `FIBER_SYNC_NETWORK_GRAPH` |
+| `store_sync_writes` | `FIBER_STORE_SYNC_WRITES` |
 | `watchtower_check_interval_seconds` | `FIBER_WATCHTOWER_CHECK_INTERVAL_SECONDS` |
 | `standalone_watchtower_rpc_url` | `FIBER_STANDALONE_WATCHTOWER_RPC_URL` |
 | `standalone_watchtower_token` | `FIBER_STANDALONE_WATCHTOWER_TOKEN` |
@@ -400,4 +409,4 @@ services:
   - ckb
 ```
 
-> **Tip**: Use the config files from the [Fiber v0.9.1 release](https://github.com/nervosnetwork/fiber/tree/v0.9.1/config) as starting points. They include the matching script hashes, cell deps, UDT whitelist entries, and bootnode addresses for each network.
+> **Tip**: Use the config files from the [Fiber v0.10.1 release](https://github.com/nervosnetwork/fiber/tree/v0.10.1/config) as starting points. They include the matching script hashes, cell deps, UDT whitelist entries, and bootnode addresses for each network.

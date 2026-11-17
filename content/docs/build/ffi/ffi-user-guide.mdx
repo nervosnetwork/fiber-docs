@@ -1,7 +1,7 @@
 ---
 title: Fiber FFI User Guide
 description: Embed Fiber nodes through a C ABI for mobile, desktop, and other native runtimes
-date: 2026-07-07
+date: 2026-11-16
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -11,6 +11,7 @@ import { Callout } from 'fumadocs-ui/components/callout';
 
 <Callout type="warning" title="About fiber-ffi">
   `fiber-ffi` currently lives in a personal repository. It is used here as an exploratory reference for Fiber native/mobile integration, not as an official Fiber release artifact, supported SDK, or compatibility commitment.
+  The referenced upstream `Cargo.toml` pins `fnn` to `v0.9.0-rc2`, so this build is not a Fiber 0.10.1 runtime. To open new channels with 0.10.x peers, the FFI maintainer must update the core dependency and verify the ABI, storage migration, and V2 recovery behavior. See the [dependency declaration](https://github.com/joii2020/fiber-ffi/blob/master/Cargo.toml).
 </Callout>
 
 This FFI layer originally came from an exploration of mobile support. The community hoped that Fiber could support mobile platforms, so we tried to run the existing Rust Fiber node inside Android/iOS app processes instead of reimplementing the node logic on mobile.

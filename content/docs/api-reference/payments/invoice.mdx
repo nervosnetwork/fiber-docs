@@ -1,7 +1,7 @@
 ---
 title: Module `Invoice`
 description: Invoice management RPC methods
-date: 2026-05-25
+date: 2026-11-16
 ---
 
 ## Module `Invoice`
@@ -25,7 +25,7 @@ Generates a new invoice.
 * `expiry` - `Option<u64>`, The expiry time of the invoice, in seconds.
 * `fallback_address` - `Option<String>`, The fallback address of the invoice.
 * `final_expiry_delta` - `Option<u64>`, The final HTLC timeout of the invoice, in milliseconds.
- Minimal value is 16 hours, and maximal value is 14 days.
+ The 0.10.1 release binary accepts a minimum of 9,600,000 ms (160 minutes) and a maximum of 14 days. Omission uses that minimum; the upstream generated help still says 16 hours.
 * `udt_type_script` - `Option<Script>`, The UDT type script of the invoice.
 * `hash_algorithm` - `Option<[HashAlgorithm](#type-hashalgorithm)>`, The hash algorithm of the invoice.
 * `allow_mpp` - `Option<bool>`, Whether allow payment to use MPP
@@ -76,7 +76,7 @@ Retrieves an invoice.
 
 ### Method `cancel_invoice`
 
-Cancels an invoice, only when invoice is in status `Open` can be canceled.
+Cancels an unpaid invoice in `Open`, `Received`, or `Expired` state. Cancelling a received hold invoice rejects its held TLCs. `Paid` and `Cancelled` invoices cannot be cancelled again.
 
 #### Params
 
@@ -103,4 +103,4 @@ Settles an invoice by saving the preimage to this invoice.
 
 #### Returns
 
-* None
+* An empty object (`{}`).

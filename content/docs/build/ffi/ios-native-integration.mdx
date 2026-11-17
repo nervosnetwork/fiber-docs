@@ -1,7 +1,7 @@
 ---
 title: iOS Native Integration
 description: Integrate fiber-ffi into an iOS app through Swift and an Objective-C bridging header
-date: 2026-07-07
+date: 2026-11-16
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -10,6 +10,7 @@ import { Callout } from 'fumadocs-ui/components/callout';
 
 <Callout type="warning" title="About fiber-ffi">
   `fiber-ffi` currently lives in a personal repository. This page uses it as an exploratory reference for iOS native integration, not as an official Fiber iOS SDK or support commitment.
+  The referenced upstream `Cargo.toml` pins `fnn` to `v0.9.0-rc2`, so this build is not a Fiber 0.10.1 runtime. To open new channels with 0.10.x peers, the FFI maintainer must update the core dependency and verify the ABI, storage migration, and V2 recovery behavior. See the [dependency declaration](https://github.com/joii2020/fiber-ffi/blob/master/Cargo.toml).
 </Callout>
 
 This document uses `fiber-ffi` as a reference example to explain how the existing Rust Fiber node can be integrated into an iOS app through Swift and an Objective-C bridging header. The repository provides a runnable demo:

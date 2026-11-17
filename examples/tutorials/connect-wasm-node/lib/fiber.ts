@@ -1,3 +1,4 @@
+import { createTestnetFiberFactory } from './fiber-testnet-runtime';
 import type { BrowserNodeState, FiberBrowserNode } from '@fiber-pay/sdk/browser';
 
 export const router = '/dns4/bottle.fiber.channel/tcp/443/wss/p2p/QmXen3eUHhywmutEzydCsW4hXBoeVmdET2FJvMX69XJ1Eo';
@@ -11,7 +12,7 @@ export async function startFiber(onState: (state: BrowserNodeState) => void) {
     crypto.getRandomValues(new Uint8Array(32)),
     crypto.randomUUID(),
   );
-  const node = new FiberBrowserNode({
+  const node = new FiberBrowserNode({wasmFactory:await createTestnetFiberFactory(),
     network: 'testnet', credential,
     nodeConfig: { bootnodes: [], logLevel: 'info' },
   });
